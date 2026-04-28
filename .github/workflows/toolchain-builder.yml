@@ -1,9 +1,8 @@
-  name: Toolchain Builder
-# REGENERATES THE LLVM-MINGW for Alpine Linux with fresh code.
+name: Toolchain Builder
+
 on:
   schedule:
     - cron: '51 10 * * SAT'
-    # runs at 10:51 UTC every Saturday
   workflow_dispatch:
     inputs:
       debug_enabled:
@@ -14,35 +13,41 @@ on:
 
 jobs:
   build:
-    if: ${{ true }}
     name: Builds toolchain
     runs-on: ubuntu-latest
-    container: alpine:edge
-    defaults:
-      run:
-        shell: bash
+    container: 
+      image: alpine:edge
+      options: --user root
+    
     steps:
-    - name: "⏬ Download tools"
-      if: ${{ job.container }}
+    - name: "⏬ Install Base Dependencies"
       shell: sh
       run: |
         apk update && apk upgrade
-        apk add  git bash curl jq tar \
-           build-base python3 cmake linux-headers coreutils perl
-        # set PATH like in Ubuntu
+        apk add git bash curl jq tar build-base python3 cmake linux-headers coreutils perl openssh-client xz
+        # Ensure the bin directory exists for the path export
+        mkdir -p $HOME/.local/bin
         echo "PATH=$HOME/.local/bin:$PATH" >> $GITHUB_ENV
-        # this seems to be needed when running in a container (beause of UID mismatch??)
         git config --global --add safe.directory '*'
-        
+
+    - name: "💾 Cache Toolchain"
+      uses: actions/cache@v4 # Use v4 for better Node 20 compatibility
+      id: cache-toolchain
+      with:
+        path: llvm-mingw
+        key: llvm-mingw-${{ github.run_id }}
+        restore-keys: |
+          llvm-mingw-
+
     - name: "🔧 Prepare debug session"
       if: github.event.inputs.debug_enabled == 'true'
+      shell: bash
       run: |
-        apk add bash nano-syntax iproute2 util-linux-misc
-        wget https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/posh-linux-amd64 -O /usr/local/bin/oh-my-posh
+        apk add nano iproute2 util-linux
+        curl -fsSL https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/posh-linux-amd64 -o /usr/local/bin/oh-my-posh
         chmod +x /usr/local/bin/oh-my-posh
-        wget -q https://github.com/okibcn/miniU/raw/main/Github_Linux/.nanorc -O /etc/nanorc
-        wget -q https://github.com/okibcn/miniU/raw/main/Github_Linux/profile.sh -O ~/.zshrc
-        cat ~/.zshrc >> ~/.bashrc 
+        # Minimal bash config for debug
+        echo 'eval "$(oh-my-posh init bash)"' >> ~/.bashrc
 
     - name: "🐞 Debug session"
       uses: mxschmitt/action-tmate@v3
@@ -51,18 +56,19 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: "⚙️ Build LLVM-MinGW Master"
+      shell: bash
       run: |
-        echo " Using SHELL: $0"
-        git clone https://github.com/mstorsjo/llvm-mingw.git llvm
+        echo "Using SHELL: $SHELL"
+        # Only clone if the directory doesn't exist (if cache miss)
+        if [ ! -d "llvm" ]; then
+          git clone --depth 1 https://github.com/mstorsjo/llvm-mingw.git llvm
+        fi
         cd llvm
-          ./build-all.sh ../llvm-mingw
+        # Ensure the destination directory exists
+        mkdir -p ../llvm-mingw
+        ./build-all.sh ../llvm-mingw
 
     - name: "🚮 Recycle Cache"
+      # Only delete old caches if the build was successful
+      if: success()
       uses: snnaplab/delete-branch-cache-action@v1
-
-    - name: "💾 Save Build Folder"
-      uses: actions/cache@v5
-      id: cache-folder
-      with:
-        key: llvm-folder
-        path: llvm-mingw
