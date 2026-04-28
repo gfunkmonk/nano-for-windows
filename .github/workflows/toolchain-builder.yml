@@ -81,8 +81,20 @@ jobs:
       if: steps.cache-toolchain.outputs.cache-hit != 'true'
       shell: bash
       run: |
-        export CC="ccache gcc"
-        export CXX="ccache g++"
+        # Create ccache symlinks for Alpine if they don't exist
+        # This ensures 'gcc' actually points to 'ccache'
+        mkdir -p $HOME/.local/bin
+        ln -sf /usr/bin/ccache $HOME/.local/bin/gcc
+        ln -sf /usr/bin/ccache $HOME/.local/bin/g++
+        ln -sf /usr/bin/ccache $HOME/.local/bin/cc
+        ln -sf /usr/bin/ccache $HOME/.local/bin/c++
+        
+        # Ensure our local bin is at the front of the PATH
+        export PATH="$HOME/.local/bin:$PATH"
+        
+        # Verify ccache is active
+        which gcc # Should return /root/.local/bin/gcc
+
         echo "Using SHELL: $SHELL"
         if [ ! -d "llvm" ]; then
           git clone --depth 1 https://github.com/mstorsjo/llvm-mingw.git llvm
