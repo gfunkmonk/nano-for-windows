@@ -40,7 +40,7 @@ jobs:
       id: checks
       shell: bash
       run: |
-        git clone --depth=1 -n git://git.savannah.gnu.org/nano.git
+        git clone --depth=1 -n https://git.savannah.gnu.org/git/nano.git
         cd nano
         LAST_NANO=$( TZ=UTC git show --quiet --date='format-local:%Y-%m-%dT%H:%M:%SZ' --format="%cd" )
         CHANGES_NANO="$(git log -1 --pretty=%B)"
@@ -52,7 +52,7 @@ jobs:
         CHANGES_CURSES="$(git log -1 --pretty=%B)"
         cd ../..
         rm -rf nano
-        LAST_RELEASE=$( wget -qO- https://github.com/$GITHUB_REPOSITORY/releases | sed -nE 's|^.*datetime="([0-9TZ.:-]+).*|\1|p' | head -1 ) \
+        LAST_RELEASE=$( curl -fsSL https://github.com/$GITHUB_REPOSITORY/releases | sed -nE 's|^.*datetime="([0-9TZ.:-]+).*|\1|p' | head -1 ) \
           || LAST_RELEASE="2000.01.01T00:00:00Z"
         echo "n4win last release DATE:  $LAST_RELEASE"
         if [[ $LAST_NANO > $LAST_RELEASE ]]; then
@@ -79,14 +79,14 @@ jobs:
         fi
 
         if [ -f body.txt ]; then
-          wget -q "http://git.savannah.gnu.org/gitweb/?p=nano.git;a=shortlog" -O log.html
+          curl -fsSL -o log.html "https://git.savannah.gnu.org/gitweb/?p=nano.git;a=shortlog"
           NANO_VERSION=$(grep -m 1 "title=\"tags/" log.html | grep -Eo "v[0-9]+\.[0-9]+" | head -1)
           echo "Nano main VERSION: $NANO_VERSION"
           NANO_SUBVER=$( awk '1; /"tag indirect"/{exit}' log.html | grep -c '</tr>')
           echo "Nano SUBVERSION: $NANO_SUBVER"
           [ $NANO_SUBVER -gt 0 ] && NANO_VERSION="${NANO_VERSION}-${NANO_SUBVER}"
           echo "Current nano version: ${NANO_VERSION}"
-          LAST_BUILD=$( wget -qO- https://github.com/$GITHUB_REPOSITORY/releases | sed -nE "s|^.*tag/(v[0-9.-]+).*|\1|p" | head -1 ) || echo "FIRST RELEASE!!!!"
+          LAST_BUILD=$( curl -fsSL https://github.com/$GITHUB_REPOSITORY/releases | sed -nE "s|^.*tag/(v[0-9.-]+).*|\1|p" | head -1 ) || echo "FIRST RELEASE!!!!"
           echo "Last Nano for Windows build: ${LAST_BUILD}"
           LAST_VERSION=$( echo $LAST_BUILD | awk -F '-' '{print $1}' )
           echo "Last Nano for Windows main Version: ${LAST_VERSION}"
@@ -139,7 +139,7 @@ jobs:
         apk add bash curl jq tar xz github-cli \
           git make texinfo groff gettext-dev automake autoconf pkgconf coreutils upx p7zip
         echo "PATH=$(pwd)/llvm-mingw/bin:$PATH" >> $GITHUB_ENV
-        # this seems to be needed when running in a container (beause of UID mismatch??)
+        # this seems to be needed when running in a container (because of UID mismatch??)
         git config --global --add safe.directory '*'
 
     - name: "📂 Restore LLVM-MinGW Folder"
@@ -151,10 +151,10 @@ jobs:
 
     - name: "⏬ Download Sources"
       run: |
-        git clone git://git.savannah.gnu.org/nano.git --depth 1
+        git clone https://git.savannah.gnu.org/git/nano.git --depth 1
         cd nano
         git clone https://github.com/Bill-Gray/PDCursesMod.git curses
-        git clone git://git.sv.gnu.org/gnulib.git --depth 1
+        git clone https://git.savannah.gnu.org/git/gnulib.git --depth 1
         autopoint --force
         glibmodules="
             futimens
@@ -270,7 +270,7 @@ jobs:
 
         # Solve window resize crashes
         echo -e "\n\nPATCH: Window resize fix."
-        sed -i.bak -e "/LINES and COLS accordingly/{n;N;d}" src/nano.c # delets 2 next lines
+        sed -i.bak -e "/LINES and COLS accordingly/{n;N;d}" src/nano.c # deletes 2 next lines
         sed -i "/LINES and COLS accordingly/a\
             \\\\tresize_term(0, 0);\\n\
             erase();" src/nano.c
@@ -328,7 +328,7 @@ jobs:
 
 
         ####                               ####
-        #### PDCursesMod especific patches ####
+        #### PDCursesMod specific patches ####
         ####                               ####
 
         # Solve duplicated definitions ALT-ARROWS already in PDCursesMod
@@ -385,9 +385,9 @@ jobs:
         sed -i.bak '1,/#/ s/#/#define wchar_t int\n&/' src/definitions.h curses/curses.h
         _diff
         echo -e "\n\nPATCH: fix for emojis input and output and transparent background."
-        wget -q https://github.com/okibcn/nano-editor/raw/my-github-sync/curses/pdcurses/getch.c
-        wget -q https://github.com/okibcn/nano-editor/raw/my-github-sync/curses/wincon/pdcdisp.c
-        wget -q https://github.com/okibcn/nano-editor/raw/my-github-sync/curses/wincon/pdckbd.c
+        curl -fsSL -O https://github.com/okibcn/nano-editor/raw/my-github-sync/curses/pdcurses/getch.c
+        curl -fsSL -O https://github.com/okibcn/nano-editor/raw/my-github-sync/curses/wincon/pdcdisp.c
+        curl -fsSL -O https://github.com/okibcn/nano-editor/raw/my-github-sync/curses/wincon/pdckbd.c
         mv -b --suffix=.bak getch.c curses/pdcurses
         mv -b --suffix=.bak pdc*.c curses/wincon
         _diff
@@ -426,7 +426,7 @@ jobs:
         CURSES="PDCursesMod ${CURSES} build $(git rev-list --count HEAD), ${CURSES_DATE}"
         cd ..
         sed -i.bak 's/ GNU nano from git,//' src/nano.c
-        sed -i 's|Compiled options|Project info at http://github.com/okibcn/nano-for-windows\\n Using '"${CURSES}"'\\n &|' src/nano.c
+        sed -i 's|Compiled options|Project info at https://github.com/gfunkmonk/nano-for-windows\\n Using '"${CURSES}"'\\n &|' src/nano.c
         _diff
 
     - name: "⚙️ Compile curses lib for ${{ matrix.name}}"
@@ -498,8 +498,8 @@ jobs:
         CWD=$(pwd)
         cd nano/pkg
           export UPX="--lzma --best"
-          wget -q https://raw.githubusercontent.com/okibcn/nano-for-windows/releases/LICENSE
-          wget -q https://raw.githubusercontent.com/okibcn/nano-for-windows/releases/README.md
+          curl -fsSL -O https://raw.githubusercontent.com/gfunkmonk/nano-for-windows/releases/LICENSE
+          curl -fsSL -O https://raw.githubusercontent.com/gfunkmonk/nano-for-windows/releases/README.md
           mv bin/nano.exe share/doc/nano/* $CWD/nano/doc/sample.nanorc.in .
           mv share/nano syntax
           mv sample.nanorc.in .nanorc
@@ -521,10 +521,10 @@ jobs:
       if: github.event.inputs.debug_enabled == 'true'
       run: |
         apk add bash nano-syntax iproute2 util-linux-misc
-        wget https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/posh-linux-amd64 -O /usr/local/bin/oh-my-posh
+        curl -fsSL -o /usr/local/bin/oh-my-posh https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/posh-linux-amd64
         chmod +x /usr/local/bin/oh-my-posh
-        wget -q https://github.com/okibcn/miniU/raw/main/Github_Linux/.nanorc -O /etc/nanorc
-        wget -q https://github.com/okibcn/miniU/raw/main/Github_Linux/profile.sh -O ~/.zshrc
+        curl -fsSL -o /etc/nanorc https://github.com/okibcn/miniU/raw/main/Github_Linux/.nanorc
+        curl -fsSL -o ~/.zshrc https://github.com/okibcn/miniU/raw/main/Github_Linux/profile.sh
         cat ~/.zshrc >> ~/.bashrc
 
     - name: "🐞 Debug session"
@@ -590,10 +590,10 @@ jobs:
       if: github.event.inputs.debug_enabled == 'true'
       run: |
         sudo apt install zsh zsh-syntax-highlighting
-        sudo wget https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/posh-linux-amd64 -O /usr/local/bin/oh-my-posh
+        sudo curl -fsSL -o /usr/local/bin/oh-my-posh https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/posh-linux-amd64
         sudo chmod +x /usr/local/bin/oh-my-posh
-        wget -q https://github.com/okibcn/miniU/raw/main/Github_Linux/.nanorc -O ~/.nanorc
-        wget -q https://github.com/okibcn/miniU/raw/main/Github_Linux/profile.sh -O ~/.zshrc
+        curl -fsSL -o ~/.nanorc https://github.com/okibcn/miniU/raw/main/Github_Linux/.nanorc
+        curl -fsSL -o ~/.zshrc https://github.com/okibcn/miniU/raw/main/Github_Linux/profile.sh
         cp /etc/bash.bashrc ~
         cat ~/.zshrc >> ~/bash.bashrc
         sudo cp ~/bash.bashrc /etc/bash.bashrc -f
