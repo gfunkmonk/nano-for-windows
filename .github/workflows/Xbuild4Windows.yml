@@ -23,7 +23,7 @@ on:
         type: choice
         options:
           - "Artifact"
-          - "Release"        
+          - "Release"
 
 jobs:
   ## PRECHECK ##############################################################################
@@ -143,7 +143,7 @@ jobs:
         git config --global --add safe.directory '*'
 
     - name: "📂 Restore LLVM-MinGW Folder"
-      uses: actions/cache@v3.3.1
+      uses: actions/cache@v5
       id: cache-folder
       with:
         key: llvm-folder
@@ -525,7 +525,7 @@ jobs:
         chmod +x /usr/local/bin/oh-my-posh
         wget -q https://github.com/okibcn/miniU/raw/main/Github_Linux/.nanorc -O /etc/nanorc
         wget -q https://github.com/okibcn/miniU/raw/main/Github_Linux/profile.sh -O ~/.zshrc
-        cat ~/.zshrc >> ~/.bashrc 
+        cat ~/.zshrc >> ~/.bashrc
 
     - name: "🐞 Debug session"
       uses: mxschmitt/action-tmate@v3
@@ -546,12 +546,12 @@ jobs:
         shell: bash
     steps:
     - name: "📬 Receive Packages"
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v8
       with:
         path: ./
 
     - name: "🚮 Recycle Packaging"
-      uses: geekyeggo/delete-artifact@v2
+      uses: geekyeggo/delete-artifact@v6
       with:
           name: '*'
 
@@ -562,7 +562,7 @@ jobs:
         echo "${{ needs.checks.outputs.body }}" | base64 -d > body.txt
 
     - name: "👍 Upload nano-for-windows_${{ needs.checks.outputs.build }} as Artifact"
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v7
       if: github.event.inputs.release == 'Artifact'
       with:
         name: nano-for-windows_${{ needs.checks.outputs.build }}
@@ -571,7 +571,7 @@ jobs:
           *.txt
 
     - name: "🎉 Publish Release ${{ needs.checks.outputs.build }}"
-      uses: softprops/action-gh-release@v0.1.15
+      uses: softprops/action-gh-release@v3
       # WARNING: before useing this action go to https://github.com/OWNER/REPO/settings/actions
       # and in **Workflow Permissions** section give actions **Read and Write permissions**.
       if: github.event_name != 'workflow_dispatch' || github.event.inputs.release == 'Release'
