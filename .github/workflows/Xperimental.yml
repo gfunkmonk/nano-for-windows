@@ -30,17 +30,17 @@ jobs:
         apk add git bash curl jq tar
         # set PATH like in Ubuntu
         echo "PATH=$HOME/.local/bin:$PATH" >> $GITHUB_ENV
-        # this seems to be needed when running in a container (beause of UID mismatch??)
+        # this seems to be needed when running in a container (because of UID mismatch??)
         git config --global --add safe.directory '*'
         
     - name: "🔧 Prepare debug session"
       if: github.event.inputs.debug_enabled == 'true'
       run: |
         apk add bash nano-syntax iproute2 util-linux-misc
-        wget https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/posh-linux-amd64 -O /usr/local/bin/oh-my-posh
+        curl -fsSL -o /usr/local/bin/oh-my-posh https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/posh-linux-amd64
         chmod +x /usr/local/bin/oh-my-posh
-        wget -q https://github.com/okibcn/miniU/raw/main/Github_Linux/.nanorc -O /etc/nanorc
-        wget -q https://github.com/okibcn/miniU/raw/main/Github_Linux/profile.sh -O ~/.zshrc
+        curl -fsSL -o /etc/nanorc https://github.com/okibcn/miniU/raw/main/Github_Linux/.nanorc
+        curl -fsSL -o ~/.zshrc https://github.com/okibcn/miniU/raw/main/Github_Linux/profile.sh
         cat ~/.zshrc >> ~/.bashrc 
 
     - name: "🐞 Debug session"
@@ -86,7 +86,7 @@ jobs:
           git make texinfo groff gettext-dev automake autoconf pkgconf coreutils upx p7zip
         # set PATH like in Ubuntu
         echo "PATH=$HOME/.local/bin:$PATH" >> $GITHUB_ENV
-        # this seems to be needed when running in a container (beause of UID mismatch??)
+        # this seems to be needed when running in a container (because of UID mismatch??)
         git config --global --add safe.directory '*'
 
     - name: "📂 Load LLVM-MinGW Folder"
@@ -101,16 +101,16 @@ jobs:
         curl \
           -H "Accept: application/vnd.github.v3+json" \
           -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-          http://github.com/repos/$GITHUB_REPOSITORY/actions/caches
+          https://api.github.com/repos/$GITHUB_REPOSITORY/actions/caches
       
     - name: "🔧 Prepare debug session"
       if: github.event.inputs.debug_enabled == 'true'
       run: |
         apk add bash nano-syntax iproute2 util-linux-misc
-        wget https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/posh-linux-amd64 -O /usr/local/bin/oh-my-posh
+        curl -fsSL -o /usr/local/bin/oh-my-posh https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/posh-linux-amd64
         chmod +x /usr/local/bin/oh-my-posh
-        wget -q https://github.com/okibcn/miniU/raw/main/Github_Linux/.nanorc -O /etc/nanorc
-        wget -q https://github.com/okibcn/miniU/raw/main/Github_Linux/profile.sh -O ~/.zshrc
+        curl -fsSL -o /etc/nanorc https://github.com/okibcn/miniU/raw/main/Github_Linux/.nanorc
+        curl -fsSL -o ~/.zshrc https://github.com/okibcn/miniU/raw/main/Github_Linux/profile.sh
         cat ~/.zshrc >> ~/.bashrc 
 
     - name: "🐞 Debug session"
@@ -119,7 +119,7 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: " Fast Build nano"
+    - name: "⚡ Fast Build nano"
       env:
         GH_TOKEN: ${{ github.token }}
       run: |
@@ -132,14 +132,14 @@ jobs:
         echo "OS PACKAGES:"
         apk list -I | sort
         echo ""
-        wget -q "http://git.savannah.gnu.org/gitweb/?p=nano.git;a=shortlog" -O log.html
-        VER=$(cat log.html | grep -m 1 "title=\"tags/" | grep -Eo "v[0-9]+\.[0-9]+" | head -1)
-        SUBVER=$(cat log.html | awk '1; /"tag indirect"/{exit}' | grep -c '</tr>')
-        NANO_VERSION="${VER}-$(SUBVER)"
-        git clone git://git.savannah.gnu.org/nano.git
+        curl -fsSL -o log.html "https://git.savannah.gnu.org/gitweb/?p=nano.git;a=shortlog"
+        VER=$(grep -m 1 "title=\"tags/" log.html | grep -Eo "v[0-9]+\.[0-9]+" | head -1)
+        SUBVER=$(awk '1; /"tag indirect"/{exit}' log.html | grep -c '</tr>')
+        NANO_VERSION="${VER}-${SUBVER}"
+        git clone https://git.savannah.gnu.org/git/nano.git
         cd nano
         git clone https://github.com/Bill-Gray/PDCursesMod.git curses
-        git clone git://git.sv.gnu.org/gnulib.git --depth 1
+        git clone https://git.savannah.gnu.org/git/gnulib.git --depth 1
         autopoint --force
         glibmodules="
             futimens
@@ -252,7 +252,7 @@ jobs:
 
         # Solve window resize crashes
         echo -e "\n\nPATCH: Window resize fix."
-        sed -i.bak -e "/LINES and COLS accordingly/{n;N;d}" src/nano.c # delets 2 next lines
+        sed -i.bak -e "/LINES and COLS accordingly/{n;N;d}" src/nano.c # deletes 2 next lines
         sed -i "/LINES and COLS accordingly/a\
             \\\\tresize_term(0, 0);\\n\
             erase();" src/nano.c
@@ -310,7 +310,7 @@ jobs:
 
 
         ####                               ####
-        #### PDCursesMod especific patches ####
+        #### PDCursesMod specific patches ####
         ####                               ####
 
         # Solve duplicated definitions ALT-ARROWS already in PDCursesMod
@@ -367,9 +367,9 @@ jobs:
         sed -i.bak '1,/#/ s/#/#define wchar_t int\n&/' src/definitions.h curses/curses.h
         _diff
         echo -e "\n\nPATCH: fix for emojis input and output and transparent background."
-        wget -q https://github.com/okibcn/nano-editor/raw/my-github-sync/curses/pdcurses/getch.c
-        wget -q https://github.com/okibcn/nano-editor/raw/my-github-sync/curses/wincon/pdcdisp.c
-        wget -q https://github.com/okibcn/nano-editor/raw/my-github-sync/curses/wincon/pdckbd.c
+        curl -fsSL -O https://github.com/okibcn/nano-editor/raw/my-github-sync/curses/pdcurses/getch.c
+        curl -fsSL -O https://github.com/okibcn/nano-editor/raw/my-github-sync/curses/wincon/pdcdisp.c
+        curl -fsSL -O https://github.com/okibcn/nano-editor/raw/my-github-sync/curses/wincon/pdckbd.c
         mv -b --suffix=.bak getch.c curses/pdcurses
         mv -b --suffix=.bak pdc*.c curses/wincon
         _diff
@@ -480,8 +480,8 @@ jobs:
         make -j$(($(nproc)*2)) && \
         make install || exit 1
         cd ${OUTDIR}
-            wget -q https://raw.githubusercontent.com/okibcn/nano-for-windows/releases/LICENSE
-            wget -q https://raw.githubusercontent.com/okibcn/nano-for-windows/releases/README.md
+            curl -fsSL -O https://raw.githubusercontent.com/okibcn/nano-for-windows/releases/LICENSE
+            curl -fsSL -O https://raw.githubusercontent.com/okibcn/nano-for-windows/releases/README.md
             mv bin/nano.exe share/doc/nano/* $CWD/nano/doc/sample.nanorc.in .
             mv share/nano syntax
             mv sample.nanorc.in .nanorc
