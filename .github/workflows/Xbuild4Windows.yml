@@ -403,7 +403,9 @@ jobs:
         #      causing infinite recursion for lines longer than MAX_PACKET_SIZE.
         #sed -i 's/win->_nodelay/win->_flags \& _NODELAY/g' getch.c
         #sed -i 's/win->_nodelay/(win->_flags \& _NODELAY)/g' getch.c
-        sed -i 's/win->_nodelay/win->nodelay/g' getch.c
+        #sed -i 's/win->_nodelay/win->nodelay/g' getch.c
+        #sed -i 's/!win->nodelay/!is_nodelay(win)/g' getch.c
+        sed -i 's/win->_nodelay/(win->_flags \& PDC_WINDOW_FLAGS_NODELAY)/g' getch.c
         echo -e "\n\nPATCH: fix attribute masking operator and transform_line recursion in pdcdisp.c."
         sed -i 's/(A_ATTRIBUTES \^ A_ALTCHARSET)/(A_ATTRIBUTES | A_ALTCHARSET)/g' pdcdisp.c
         sed -i 's/PDC_transform_line(i, j, k - j, srcp + j)/PDC_transform_line_sliced(i, j, k - j, srcp + j)/' pdcdisp.c
