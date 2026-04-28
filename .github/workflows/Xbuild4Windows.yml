@@ -590,7 +590,7 @@ jobs:
       if: github.event.inputs.debug_enabled == 'true'
       run: |
         sudo apt install zsh zsh-syntax-highlighting
-        curl -fsSL -o /usr/local/bin/oh-my-posh https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/posh-linux-amd64
+        sudo curl -fsSL -o /usr/local/bin/oh-my-posh https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/posh-linux-amd64
         sudo chmod +x /usr/local/bin/oh-my-posh
         curl -fsSL -o ~/.nanorc https://github.com/okibcn/miniU/raw/main/Github_Linux/.nanorc
         curl -fsSL -o ~/.zshrc https://github.com/okibcn/miniU/raw/main/Github_Linux/profile.sh
