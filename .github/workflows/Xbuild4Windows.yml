@@ -146,9 +146,10 @@ jobs:
         # FIX: static key "llvm-folder" never expires; keyed on weekly
         # schedule date so it rebuilds at most once per week, matching
         # the toolchain-builder.yml cadence. Format: YYYY-WNN.
-        key: llvm-folder-${{ github.run_id }}
+        key: llvm-mingw-${{ github.run_id }}
         restore-keys: |
-          llvm-folder-
+          llvm-mingw-
+        path: llvm-mingw
 
     - name: "⏬ Download Sources"
       run: |
