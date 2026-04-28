@@ -30,6 +30,7 @@ jobs:
   checks:
     name: "✔️ Pre-build checks"
     runs-on: ubuntu-latest
+    # Use the Bash shell regardless whether the GitHub Actions runner is ubuntu-latest, macos-latest, or windows-latest
     outputs:
       body: ${{ steps.checks.outputs.body }}
       build: ${{ steps.checks.outputs.build }}
@@ -94,6 +95,7 @@ jobs:
           [ $LAST_SUBVER -gt 0 ] && LAST_VERSION="${LAST_VERSION}-${LAST_SUBVER}"
           echo "Last Nano version: ${LAST_VERSION}"
           if [ "${NANO_VERSION}" == "${LAST_VERSION}" ]; then
+            # This is a new Windows build based on the same nano build, probably because there is a new curses patch
             SUBBUILD="$(echo $LAST_BUILD | awk -F . '{print $3}')"
             ((SUBBUILD=SUBBUILD+1))
             [ -z $(echo "$LAST_BUILD" |grep '-') ] \
@@ -137,6 +139,7 @@ jobs:
         apk add bash curl jq tar xz github-cli \
           git make texinfo groff gettext-dev automake autoconf pkgconf coreutils upx p7zip python3
         echo "PATH=$(pwd)/llvm-mingw/bin:$PATH" >> $GITHUB_ENV
+        # this seems to be needed when running in a container (because of UID mismatch??)
         git config --global --add safe.directory '*'
 
     - name: "📂 Restore LLVM-MinGW Folder"
@@ -192,6 +195,7 @@ jobs:
     - name: "🪄 Apply Windows Portability Magic"
       run: |
         function _diff() {
+          # Thanks to @rasa for this function
           mapfile -t < <(find . -type f -name '*.bak')
           for bak in "${MAPFILE[@]}"; do
             src=${bak/.bak/}
@@ -271,7 +275,7 @@ jobs:
 
         # Solve window resize crashes
         echo -e "\n\nPATCH: Window resize fix."
-        sed -i.bak -e "/LINES and COLS accordingly/{n;N;d}" src/nano.c
+        sed -i.bak -e "/LINES and COLS accordingly/{n;N;d}" src/nano.c # deletes 2 next lines
         sed -i "/LINES and COLS accordingly/a\
             \\\\tresize_term(0, 0);\\n\
             erase();" src/nano.c
@@ -347,7 +351,7 @@ jobs:
         sed -i "/int attributes/ {s/int/chtype/}" src/rcfile.c
         _diff
 
-        # Desambiguation of BACKSPACE vs ^H, or ENTER vs ^M and certain CTRL+key combos             //o//
+        # Desambiguation of BACKSPACE vs ^H, or ENTER vs ^M and certain CTRL+key combos
         echo -e "\n\nPATCH: Full key modifiers detection."
         sed -i.bak "/get_kbinput(midwin, VISIBLE)/a\
             \\\\tif (\!((PDC_get_key_modifiers()) & (PDC_KEY_MODIFIER_SHIFT|PDC_KEY_MODIFIER_CONTROL|PDC_KEY_MODIFIER_ALT)) ) {\\n\
@@ -381,21 +385,35 @@ jobs:
             " src/definitions.h
         _diff
 
-        # Fix wchar_t 16 bits limitation to display emojis and all the suplemental codepoints:
+        # Fix wchar_t 16 bits limitation to display emojis and supplemental codepoints
         echo -e "\n\nPATCH: change to 32 bits wchar_t."
         sed -i.bak '1,/#/ s/#/#define wchar_t int\n&/' src/definitions.h curses/curses.h
         _diff
+
         echo -e "\n\nPATCH: fix for emojis input and output and transparent background."
         curl -fsSL -O https://github.com/okibcn/nano-editor/raw/my-github-sync/curses/pdcurses/getch.c
         curl -fsSL -O https://github.com/okibcn/nano-editor/raw/my-github-sync/curses/wincon/pdcdisp.c
         curl -fsSL -O https://github.com/okibcn/nano-editor/raw/my-github-sync/curses/wincon/pdckbd.c
+
+        # FIX: patch getch.c BEFORE moving it, so the sed target path is correct.
+        # The original code moved the file first then tried to sed ./getch.c which
+        # no longer existed at that path — the patch was silently never applied.
+        echo -e "\n\nPATCH: fix win->_nodelay struct field access for PDCursesMod compatibility."
+        sed -i 's/win->_nodelay/win->_flags \& _NODELAY/g' getch.c
+
+        # FIX: patch pdcdisp.c before moving it — fix two bugs in the attribute
+        # masking loop introduced by the upstream diff:
+        #   1. ^ (XOR) should be | (OR) — XOR clears A_ALTCHARSET from the mask,
+        #      breaking box-drawing character rendering.
+        #   2. PDC_transform_line_sliced call was replaced with PDC_transform_line
+        #      causing infinite recursion for lines longer than MAX_PACKET_SIZE.
+        echo -e "\n\nPATCH: fix attribute masking operator and transform_line recursion in pdcdisp.c."
+        sed -i 's/(A_ATTRIBUTES \^ A_ALTCHARSET)/(A_ATTRIBUTES | A_ALTCHARSET)/g' pdcdisp.c
+        sed -i 's/PDC_transform_line(i, j, k - j, srcp + j)/PDC_transform_line_sliced(i, j, k - j, srcp + j)/' pdcdisp.c
+
         mv -b --suffix=.bak getch.c curses/pdcurses
         mv -b --suffix=.bak pdc*.c curses/wincon
         _diff
-
-        # --- ADD THIS LINE TO FIX THE ERROR ---
-        sed -i 's/win->_nodelay/win->_flags \& _NODELAY/g' getch.c
-        # --------------------------------------
 
         # Fix ALT+[NUMBER|LETTER] not working with PDCursesMod
         echo -e "\n\nPATCH: ALT+[NUMBER|LETTER] not working."
@@ -413,7 +431,7 @@ jobs:
         ####   LLVM-MING SPECIFIC PATCHES  ####
         ####                               ####
 
-        # Fix folder access test:
+        # Fix folder access test
         echo -e "\n\nPATCH: Porting folder accessibility from executable to read access."
         sed -i.bak "s/X_OK/R_OK/" src/files.c
         _diff
@@ -450,8 +468,13 @@ jobs:
 
     - name: "🔧 Configure Nano Build"
       run: |
-        # FIX: capture CWD at the start; use it explicitly rather than relying
-        # on $(pwd) after subsequent cd calls which changes the working directory.
+        ##########################
+        ##                        ##
+        ##     CONFIGURE BUILD    ##
+        ##                        ##
+        ##########################
+        # FIX: capture CWD at step start and export to GITHUB_ENV so subsequent
+        # steps can reference it even after cd calls shift the working directory.
         CWD=$(pwd)
         echo "BUILD_CWD=${CWD}" >> $GITHUB_ENV
 
@@ -522,6 +545,7 @@ jobs:
         path: |
           *.zip
 
+
     - name: "🔧 Prepare debug session"
       if: github.event.inputs.debug_enabled == 'true'
       run: |
@@ -577,7 +601,7 @@ jobs:
 
     - name: "🎉 Publish Release ${{ needs.checks.outputs.build }}"
       uses: softprops/action-gh-release@v3
-      # WARNING: before useing this action go to https://github.com/OWNER/REPO/settings/actions
+      # WARNING: before using this action go to https://github.com/OWNER/REPO/settings/actions
       # and in **Workflow Permissions** section give actions **Read and Write permissions**.
       if: github.event_name != 'workflow_dispatch' || github.event.inputs.release == 'Release'
       env:
@@ -608,4 +632,3 @@ jobs:
       if: github.event.inputs.debug_enabled == 'true'
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
