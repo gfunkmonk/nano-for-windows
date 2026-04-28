@@ -398,12 +398,6 @@ jobs:
         # FIX: patch getch.c BEFORE moving it, so the sed target path is correct.
         # The original code moved the file first then tried to sed ./getch.c which
         # no longer existed at that path — the patch was silently never applied.
-        echo -e "\n\nPATCH: fix win->_nodelay struct field access for PDCursesMod compatibility."
-        sed -i 's/win->_nodelay/win->_flags \& _NODELAY/g' getch.c
-
-        # FIX: patch pdcdisp.c before moving it — fix two bugs in the attribute
-        # masking loop introduced by the upstream diff:
-        #   1. ^ (XOR) should be | (OR) — XOR clears A_ALTCHARSET from the mask,
         #      breaking box-drawing character rendering.
         #   2. PDC_transform_line_sliced call was replaced with PDC_transform_line
         #      causing infinite recursion for lines longer than MAX_PACKET_SIZE.
