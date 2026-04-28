@@ -393,6 +393,10 @@ jobs:
         mv -b --suffix=.bak pdc*.c curses/wincon
         _diff
 
+        # --- ADD THIS LINE TO FIX THE ERROR ---
+        sed -i 's/win->_nodelay/win->_flags \& _NODELAY/g' getch.c
+        # --------------------------------------
+
         # Fix ALT+[NUMBER|LETTER] not working with PDCursesMod
         echo -e "\n\nPATCH: ALT+[NUMBER|LETTER] not working."
         sed -i.bak "s/char)keystring\[2])/&\+\(\(unsigned char)keystring\[2]>\='9' \? ALT_A-\(int)'a' \: ALT_0-\(int)'0')/" src/global.c
