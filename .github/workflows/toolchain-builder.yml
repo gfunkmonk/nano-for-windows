@@ -18,13 +18,17 @@ jobs:
     container:
       image: alpine:edge
       options: --user root
-
+    env:
+      # Use all available cores and setup ccache path
+      MAKEFLAGS: "-j$(nproc)"
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+    
     steps:
     - name: "⏬ Install Base Dependencies"
       shell: sh
       run: |
         apk update && apk upgrade
-        apk add git bash curl jq tar build-base python3 cmake linux-headers coreutils perl openssh-client xz
+        apk add git bash curl jq tar build-base python3 cmake linux-headers coreutils perl openssh-client xz ccache ninja
         mkdir -p $HOME/.local/bin
         echo "PATH=$HOME/.local/bin:$PATH" >> $GITHUB_ENV
         git config --global --add safe.directory '*'
@@ -64,11 +68,21 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: "💾 Restore ccache"
+      uses: actions/cache@v5
+      with:
+        path: .ccache
+        key: ccache-llvm-${{ steps.llvm-rev.outputs.rev }}
+        restore-keys: |
+          ccache-llvm-
+
     - name: "⚙️ Build LLVM-MinGW Master"
       # FIX: skip rebuild if cache was fully restored
       if: steps.cache-toolchain.outputs.cache-hit != 'true'
       shell: bash
       run: |
+        export CC="ccache gcc"
+        export CXX="ccache g++"
         echo "Using SHELL: $SHELL"
         if [ ! -d "llvm" ]; then
           git clone --depth 1 https://github.com/mstorsjo/llvm-mingw.git llvm
@@ -87,7 +101,7 @@ jobs:
       # Make the toolchain available as a downloadable artifact in addition
       # to the cache, so other workflows can fetch it via download-artifact.
       if: steps.cache-toolchain.outputs.cache-hit != 'true' && success()
-      uses: actions/upload-artifact@v4  # FIX: was missing entirely
+      uses: actions/upload-artifact@v7  # FIX: was missing entirely
       with:
         name: llvm-mingw
         path: llvm-mingw
