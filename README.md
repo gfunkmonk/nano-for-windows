@@ -61,7 +61,7 @@ scoop update nano
 
 # Installation via direct download
 
-Visit the [releases](https://github.com/okibcn/nano-for-windows/releases) page, and download the latest release file ending in `.zip` for your architecture (Windows 32, Windows 64, or Windows on Arm). Then unzip the file to a directory in your `%PATH%`.
+Visit the [releases](https://github.com/gfunkmonk/nano-for-windows/releases) page, and download the latest release file ending in `.zip` for your architecture (Windows 32, Windows 64, or Windows on Arm). Then unzip the file to a directory in your `%PATH%`.
 
 # Usage
 
@@ -75,4 +75,4 @@ nano ~/.nanorc
 
 - When using Windows Terminal and the screen is resized within nano, after returning to the shell there could be some corruption due to the new size. To fix the issue without losing the terminal history just resize the terminal window to zero lines and return to the desired size.
 
-- Feel free to open any issue you find, or use the [Discussions](https://github.com/okibcn/nano-for-windows/discussions) section for any other issue, suggestion, question, etc...
+- Feel free to open any issue you find, or use the [Discussions](https://github.com/gfunkmonk/nano-for-windows/discussions) section for any other issue, suggestion, question, etc...
