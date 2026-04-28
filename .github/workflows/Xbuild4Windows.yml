@@ -135,7 +135,7 @@ jobs:
       run: |
         apk update && apk upgrade
         apk add bash curl jq tar xz github-cli \
-          git make texinfo groff gettext-dev automake autoconf pkgconf coreutils upx p7zip
+          git make texinfo groff gettext-dev automake autoconf pkgconf coreutils upx p7zip python3
         echo "PATH=$(pwd)/llvm-mingw/bin:$PATH" >> $GITHUB_ENV
         git config --global --add safe.directory '*'
 
