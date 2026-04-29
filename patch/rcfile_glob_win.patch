@@ -1,0 +1,12 @@
+--- a/src/rcfile.c	2026-04-29 19:00:23.647820661 -0400
++++ b/src/rcfile.c	2026-04-29 19:00:26.648074901 -0400
+@@ -27,7 +27,9 @@
+ 
+ #include <ctype.h>
+ #include <errno.h>
++#ifndef _WIN32
+ #include <glob.h>
++#endif
+ #include <string.h>
+ #include <unistd.h>
+ 

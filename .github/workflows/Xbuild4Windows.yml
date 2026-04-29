@@ -441,9 +441,12 @@ jobs:
 
         # rcfile.c includes glob.h but glob is not available on Windows.\n'
         # Wrap the include and any glob usage in a non-Windows guard.\n'
-        echo -e "\\n\\nPATCH: disable glob.h include in rcfile.c on Windows."
-        sed -i.bak 's|#include <glob.h>|#ifndef _WIN32\n#include <glob.h>\n#endif|' src/rcfile.c
-        _diff
+        #echo -e "\\n\\nPATCH: disable glob.h include in rcfile.c on Windows."
+        #sed -i.bak 's|#include <glob.h>|#ifndef _WIN32\n#include <glob.h>\n#endif|' src/rcfile.c
+        #_diff
+
+        patch -p1 --fuzz=4 < ../patch/new_colors.patch
+        patch -p1 --fuzz=4 < ../patch/rcfile_glob_win.patch
 
         ####                               ####
         ####    BRANDING and VERSIONING    ####
