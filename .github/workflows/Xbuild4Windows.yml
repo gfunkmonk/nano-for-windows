@@ -166,6 +166,7 @@ jobs:
             getdelim
             getline
             getopt-gnu
+            glob
             isblank
             iswblank
             lstat
@@ -280,7 +281,7 @@ jobs:
             erase();" src/nano.c
         sed -i -e "/recreate the subwindows with their (new) sizes/{n;d}" src/nano.c
         _diff
-        sed -i.bak 's/the_window_resized/input == KEY_RESIZE/' src/winio.c
+        sed -i.bak 's/the_window_resized/input != KEY_RESIZE/' src/winio.c
         _diff
 
         # Solve long delay after unicode
@@ -330,6 +331,11 @@ jobs:
             if \(strcmp\(argv\[optind_], \"\-\") \=\= 0){scoop_stdin\();break;}" src/nano.c
         _diff
 
+        # define_key is ncurses-only, PDCursesMod doesn't have it.
+        echo -e "\n\nPATCH: remove define_key calls not supported by PDCursesMod."
+        sed -i.bak '/define_key/d' src/nano.c
+        _diff
+
 
         ####                               ####
         #### PDCursesMod specific patches ####
@@ -337,7 +343,7 @@ jobs:
 
         # Solve duplicated definitions ALT-ARROWS already in PDCursesMod
         echo -e "\n\nPATCH: remove duplicated definitions."
-        sed -i.bak "/0x42[1234]/d" src/definitions.h
+        sed -i.bak "/0x42[1-6]/d" src/definitions.h
         _diff
 
         # PDCurses uses 64bit (chtype) for cell attributes instead of 32bit (int)
