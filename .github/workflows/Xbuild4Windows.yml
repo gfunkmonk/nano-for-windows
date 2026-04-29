@@ -394,6 +394,9 @@ jobs:
         #curl -fsSL -O https://github.com/okibcn/nano-editor/raw/my-github-sync/curses/pdcurses/getch.c
         #curl -fsSL -O https://github.com/okibcn/nano-editor/raw/my-github-sync/curses/wincon/pdcdisp.c
         #curl -fsSL -O https://github.com/okibcn/nano-editor/raw/my-github-sync/curses/wincon/pdckbd.c
+        curl -fsSL -O https://github.com/Bill-Gray/PDCursesMod/raw/refs/heads/master/wincon/pdckbd.c
+        curl -fsSL -O https://github.com/Bill-Gray/PDCursesMod/raw/refs/heads/master/wincon/pdcdisp.c
+        curl -fsSL -O https://github.com/Bill-Gray/PDCursesMod/raw/refs/heads/master/pdcurses/getch.c
 
         # FIX: patch getch.c BEFORE moving it, so the sed target path is correct.
         # The original code moved the file first then tried to sed ./getch.c which
@@ -405,9 +408,9 @@ jobs:
         sed -i 's/(A_ATTRIBUTES \^ A_ALTCHARSET)/(A_ATTRIBUTES | A_ALTCHARSET)/g' pdcdisp.c
         sed -i 's/PDC_transform_line(i, j, k - j, srcp + j)/PDC_transform_line_sliced(i, j, k - j, srcp + j)/' pdcdisp.c
 
-        #mv -b --suffix=.bak getch.c curses/pdcurses
-        #mv -b --suffix=.bak pdc*.c curses/wincon
-        #_diff
+        mv -b --suffix=.bak getch.c curses/pdcurses
+        mv -b --suffix=.bak pdc*.c curses/wincon
+        _diff
 
         # Fix ALT+[NUMBER|LETTER] not working with PDCursesMod
         echo -e "\n\nPATCH: ALT+[NUMBER|LETTER] not working."
