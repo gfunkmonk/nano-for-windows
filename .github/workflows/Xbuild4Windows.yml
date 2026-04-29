@@ -440,16 +440,14 @@ jobs:
         sed -i.bak "s/X_OK/R_OK/" src/files.c
         _diff
 
-        # rcfile.c includes glob.h but glob is not available on Windows.\n'
-        # Wrap the include and any glob usage in a non-Windows guard.\n'
-        #echo -e "\\n\\nPATCH: disable glob.h include in rcfile.c on Windows."
-        #sed -i.bak 's|#include <glob.h>|#ifndef _WIN32\n#include <glob.h>\n#endif|' src/rcfile.c
-        #_diff
+        # GNUlib glob wraps opendir with its own gl_directory type, so dir is
+        # struct gl_directory* by the time rewinddir is called. Cast it to DIR*.
+        echo -e "\n\nPATCH: fix GNUlib glob DIR* conflict in browser.c."
+        sed -i.bak 's/rewinddir(dir)/rewinddir((DIR *)dir)/' src/browser.c
+        _diff
 
         curl -fsSL -O https://github.com/gfunkmonk/nano-for-windows/raw/refs/heads/releases/patch/new_colors.patch
-        curl -fsSL -O https://github.com/gfunkmonk/nano-for-windows/raw/refs/heads/releases/patch/rcfile_glob_win.patch
         patch -p1 --fuzz=4 < new_colors.patch
-        patch -p1 --fuzz=4 < rcfile_glob_win.patch
 
         ####                               ####
         ####    BRANDING and VERSIONING    ####
