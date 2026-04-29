@@ -445,8 +445,8 @@ jobs:
         #sed -i.bak 's|#include <glob.h>|#ifndef _WIN32\n#include <glob.h>\n#endif|' src/rcfile.c
         #_diff
 
-        curl -fsSL -o https://github.com/gfunkmonk/nano-for-windows/raw/refs/heads/releases/patch/new_colors.patch
-        curl -fsSL -o https://github.com/gfunkmonk/nano-for-windows/raw/refs/heads/releases/patch/rcfile_glob_win.patch
+        curl -fsSL -O https://github.com/gfunkmonk/nano-for-windows/raw/refs/heads/releases/patch/new_colors.patch
+        curl -fsSL -O https://github.com/gfunkmonk/nano-for-windows/raw/refs/heads/releases/patch/rcfile_glob_win.patch
         patch -p1 --fuzz=4 < new_colors.patch
         patch -p1 --fuzz=4 < rcfile_glob_win.patch
 
