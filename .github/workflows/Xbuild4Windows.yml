@@ -440,12 +440,10 @@ jobs:
         sed -i.bak "s/X_OK/R_OK/" src/files.c
         _diff
 
-        # GNUlib glob module redefines opendir/readdir/closedir to use its own
-        # struct gl_directory, making it incompatible with the system DIR* that
-        # rewinddir expects. Undef the GNUlib macros in browser.c before the
-        # system dirent.h types are used.
+        # GNUlib glob wraps opendir with its own gl_directory type, so dir is
+        # struct gl_directory* by the time rewinddir is called. Cast it to DIR*.
         echo -e "\n\nPATCH: fix GNUlib glob DIR* conflict in browser.c."
-        sed -i.bak '1s|^|#ifdef __MINGW32__\n#undef opendir\n#undef readdir\n#undef closedir\n#endif\n|' src/browser.c
+        sed -i.bak 's/rewinddir(dir)/rewinddir((DIR *)dir)/' src/browser.c
         _diff
 
         ####                               ####
