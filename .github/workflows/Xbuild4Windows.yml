@@ -445,8 +445,8 @@ jobs:
         #sed -i.bak 's|#include <glob.h>|#ifndef _WIN32\n#include <glob.h>\n#endif|' src/rcfile.c
         #_diff
 
-        patch -p1 --fuzz=4 < ../patch/new_colors.patch
-        patch -p1 --fuzz=4 < ../patch/rcfile_glob_win.patch
+        patch -p1 --fuzz=4 < ${{ github.workspace }}/patch/new_colors.patch
+        patch -p1 --fuzz=4 < ${{ github.workspace }}/patch/rcfile_glob_win.patch
 
         ####                               ####
         ####    BRANDING and VERSIONING    ####
