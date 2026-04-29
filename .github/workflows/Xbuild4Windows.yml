@@ -166,6 +166,7 @@ jobs:
             getdelim
             getline
             getopt-gnu
+            glob
             isblank
             iswblank
             lstat

@@ -1,12 +1,11 @@
---- a/src/rcfile.c	2026-04-29 19:00:23.647820661 -0400
-+++ b/src/rcfile.c	2026-04-29 19:00:26.648074901 -0400
-@@ -27,7 +27,9 @@
+--- src/browser.c.orig	2026-04-29 19:35:39.138550952 -0400
++++ src/browser.c	2026-04-29 19:35:45.724838272 -0400
+@@ -72,7 +72,7 @@
+ 	if (gauge > COLS)
+ 		gauge = COLS;
  
- #include <ctype.h>
- #include <errno.h>
-+#ifndef _WIN32
- #include <glob.h>
-+#endif
- #include <string.h>
- #include <unistd.h>
+-	rewinddir(dir);
++	rewinddir((DIR *)dir);
+ 
+ 	free_chararray(filelist, list_length);
  
