@@ -391,7 +391,7 @@ jobs:
         _diff
 
         echo -e "\n\nPATCH: fix for emojis input and output and transparent background."
-        curl -fsSL -O https://github.com/okibcn/nano-editor/raw/my-github-sync/curses/pdcurses/getch.c
+        #curl -fsSL -O https://github.com/okibcn/nano-editor/raw/my-github-sync/curses/pdcurses/getch.c
         curl -fsSL -O https://github.com/okibcn/nano-editor/raw/my-github-sync/curses/wincon/pdcdisp.c
         curl -fsSL -O https://github.com/okibcn/nano-editor/raw/my-github-sync/curses/wincon/pdckbd.c
 
@@ -405,7 +405,7 @@ jobs:
         sed -i 's/(A_ATTRIBUTES \^ A_ALTCHARSET)/(A_ATTRIBUTES | A_ALTCHARSET)/g' pdcdisp.c
         sed -i 's/PDC_transform_line(i, j, k - j, srcp + j)/PDC_transform_line_sliced(i, j, k - j, srcp + j)/' pdcdisp.c
 
-        mv -b --suffix=.bak getch.c curses/pdcurses
+        #mv -b --suffix=.bak getch.c curses/pdcurses
         mv -b --suffix=.bak pdc*.c curses/wincon
         _diff
 
