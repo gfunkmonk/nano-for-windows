@@ -230,9 +230,9 @@ jobs:
 
         cd nano
 
-        curl -fsSL -O https://github.com/gfunkmonk/nano-for-windows/raw/refs/heads/releases/getch.c
+        #curl -fsSL -O https://github.com/gfunkmonk/nano-for-windows/raw/refs/heads/releases/getch.c
         #curl -fsSL -O https://github.com/gfunkmonk/nano-for-windows/raw/refs/heads/releases/pdcdisp.c
-        mv -b --suffix=.bak getch.c curses/pdcurses
+        #mv -b --suffix=.bak getch.c curses/pdcurses
         #mv -b --suffix=.bak pdc*.c curses/wincon
 
         ##########################
@@ -255,41 +255,74 @@ jobs:
         # Fix wchar_t 16 bits limitation to display emojis and supplemental codepoints
         #echo -e "\n\nPATCH: change to 32 bits wchar_t."
         #sed -i.bak 's|#define realpath(N,R) _fullpath((R),(N),0)|&#\n#define wchar_t int|' src/definitions.h
-        #sed -i.bak '1,/#/ s/#/#define wchar_t int\n&/' src/definitions.h curses/curses.h
+        sed -i.bak '1,/#/ s/#/#define wchar_t int\n&/' src/definitions.h curses/curses.h
         #printf '\n#define wchar_t int\n' >> src/definitions.h
         #printf '\n#define wchar_t int\n' >> curses/curses.h
-        #_diff
+        _diff
 
         # default open() files in binary mode as linux does
-        #echo -e "\n\nPATCH: Forcing file management in binary mode like the Linux version."
-        #sed -i.bak 's/O_..ONLY/& | _O_BINARY/g' ./src/files.c
-        #_diff
-        #sed -i.bak 's/O_..ONLY/& | _O_BINARY/g' ./src/text.c
-        #_diff
+        echo -e "\n\nPATCH: Forcing file management in binary mode like the Linux version."
+        sed -i.bak 's/O_..ONLY/& | _O_BINARY/g' ./src/files.c
+        _diff
+        sed -i.bak 's/O_..ONLY/& | _O_BINARY/g' ./src/text.c
+        _diff
+
+        # Modify temporal path from linux to windows
+        echo -e "\n\nPATCH: configuring Windows temporal folder."
+        sed -i.bak 's|TMPDIR|TEMP|g' ./src/files.c
+        echo -e "\n\nPATCH: Convert invalid filename characters to ! for backup files."
+        sed -i "s~if (thename\[i\] == '/')~if (strchr(\"<>:\\\\\"/\\\\\\\\|?*\", thename[i]))~g" ./src/files.c
+        sed -i 's|/tmp/|~/AppData/Local/Temp/|g' ./src/files.c
+        _diff
+
+        # Allow custom colors in terminals with more than 256 colors
+        echo -e "\n\nPATCH: Allow true color."
+        sed -i.bak "/COLORS == 256/ {s/==/>=/}"  src/rcfile.c
+        _diff
+
+        # Solve long delay after unicode
+        echo -e "\n\nPATCH: solved deadlock with unicode characters."
+        sed -i.bak "/halfdelay(ISSET(QUICK_BLANK)/,/disable_kb_interrupt/d"  src/winio.c
+        _diff
+
+        # Add (Y/N/^C) to Save modified buffer prompt
+        echo -e "\n\nPATCH: More info for exit message."
+        sed -i.bak "s|Save modified buffer|& (Y/N/^C)|"  src/nano.c
+        _diff
 
         # Enable UTF-8 Terminal
-        #echo -e "\n\nPATCH: Enable UTF-8 console."
-        #sed -i.bak 's|vt220||g
-        #    /x1B/d
-        #    /nl_langinfo(CODESET)/ c\\tsetlocale(LC_ALL, "");'  src/nano.c
-        #_diff
+        echo -e "\n\nPATCH: Enable UTF-8 console."
+        sed -i.bak 's|vt220||g
+            /x1B/d
+            /nl_langinfo(CODESET)/ c\\tsetlocale(LC_ALL, "");'  src/nano.c
+        _diff
 
         # Enable full UTF-8
-        #sed -i.bak 's|setlocale(LC_ALL, "");|setlocale(LC_ALL, "");\
-        #/* Force UTF-8 console on Windows */\
-        ##ifdef _WIN32\
-        #SetConsoleOutputCP(65001);\
-        #SetConsoleCP(65001);\
-        ##endif|' src/nano.c
-        #_diff
+        sed -i.bak 's|setlocale(LC_ALL, "");|setlocale(LC_ALL, "");\
+        /* Force UTF-8 console on Windows */\
+        #ifdef _WIN32\
+        SetConsoleOutputCP(65001);\
+        SetConsoleCP(65001);\
+        #endif|' src/nano.c
+        _diff
 
         # Fix for unicode char width detection using GNUlib internal function
-        #echo -e "\n\nPATCH: unicode char width detection using GNUlib internal function."
-        #sed -i.bak 's|wcwidth(wc)|uc_width(wc, "UTF-8")|g'  src/chars.c src/winio.c
-        #sed -i '/prototypes.h/a#include "uniwidth.h"'  src/chars.c
-        #_diff
+        echo -e "\n\nPATCH: unicode char width detection using GNUlib internal function."
+        sed -i.bak 's|wcwidth(wc)|uc_width(wc, "UTF-8")|g'  src/chars.c src/winio.c
+        sed -i '/prototypes.h/a#include "uniwidth.h"'  src/chars.c
+        _diff
 
         patch -p1 --fuzz=4 < ../repo/patch/curses/pdcdisp.patch
+
+        # PDCurses uses 64bit (chtype) for cell attributes instead of 32bit (int)
+        echo -e "\n\nPATCH: Improving from 256colors to true color."
+        sed -i.bak "/interface_color_pair/ {s/int/chtype/}" src/prototypes.h src/global.c
+        _diff
+        sed -i.bak "/int attributes/ {s/int/chtype/}" src/definitions.h
+        _diff
+        sed -i.bak "/bool parse_combination/ {s/int/chtype/}" src/rcfile.c
+        sed -i "/int attributes/ {s/int/chtype/}" src/rcfile.c
+        _diff
 
         ####                               ####
         ####   LLVM-MING SPECIFIC PATCHES  ####
