@@ -308,7 +308,7 @@ jobs:
         _diff
 
         echo "0016-win32-pdcursesmod-ctrlv-passthrough.patch"
-        sed -i.bak '1854i\#ifdef __PDCURSESMOD__; 1855i\    \/* When using PDCursesMod, we want to disable the default Ctrl+V behavior of; 1856i\    * pasting text from the system clipboard, so that Ctrl+V behaves as a normal; 1857i\         * keystroke that paste text from nano's cutbuffer instead. *\/; 1858i\ PDC_set_function_key(FUNCTION_KEY_PASTE, 0);; 1859i\#endif; 1860i\; 1864d' src/nano.c
+        sed -i.bak "1854i\#ifdef __PDCURSESMOD__; 1855i\    \/* When using PDCursesMod, we want to disable the default Ctrl+V behavior of; 1856i\    * pasting text from the system clipboard, so that Ctrl+V behaves as a normal; 1857i\         * keystroke that paste text from nano's cutbuffer instead. *\/; 1858i\ PDC_set_function_key(FUNCTION_KEY_PASTE, 0);; 1859i\#endif; 1860i\; 1864d" src/nano.c
         _diff
 
         echo "0017-new-colors.patch"
