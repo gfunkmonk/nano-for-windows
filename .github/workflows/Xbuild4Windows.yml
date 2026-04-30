@@ -223,14 +223,6 @@ jobs:
         ##                        ##
         ##########################
 
-        # Fix: #define wchar_t int in definitions.h fires before system headers
-        # finish loading, causing _wcreate_locale to have conflicting types between
-        # wchar.h (sees real wchar_t) and locale.h (sees int). Force-undef before
-        # the system locale.h is pulled in by GNUlib's wrapper.
-        echo -e "\n\nPATCH: guard wchar_t redefine from breaking system locale.h."
-        sed -i.bak 's|#include_next <locale.h>|#pragma push_macro("wchar_t")\n#undef wchar_t\n#include_next <locale.h>\n#pragma pop_macro("wchar_t")|' lib/locale.h
-        _diff
-
         # 1. realpath() workaround
         echo -e "\n\nPATCH: realpath() workaround applied."
         cp -p ./src/definitions.h{,.bak}
