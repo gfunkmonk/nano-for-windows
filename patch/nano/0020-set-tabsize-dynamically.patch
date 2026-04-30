@@ -23,10 +23,10 @@
 @@ -1031,6 +1032,9 @@
 
           add_to_funcs(do_set_syntax, MMAIN,
-                    N_("Set Syntax"), WITHORSANS(setsyntax_gist), TOGETHER, NOVIEW);
-+
+                    N_("Set Syntax"), WHENHELP(setsyntax_gist), TOGETHER);
+
 +          add_to_funcs(do_set_tabsize, MMAIN,
-+                    N_("Set Tabsize"), WITHORSANS(settabsize_gist), TOGETHER, NOVIEW);
++                    N_("Set Tabsize"), WHENHELP(settabsize_gist), TOGETHER);
  #ifndef NANO_TINY
           add_to_funcs(chop_previous_word, MMAIN,
                               /* TRANSLATORS: The next two strings refer to deleting words. */

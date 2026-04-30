@@ -23,9 +23,9 @@
 @@ -978,6 +979,8 @@ void shortcut_init(void)
  #ifndef NANO_TINY
  	add_to_funcs(count_lines_words_and_characters, MMAIN,
- 		N_("Word Count"), WITHORSANS(setsyntax_gist), TOGETHER, VIEW);
+ 		N_("Word Count"), WHENHELP(wordcount_gist), TOGETHER);
 +	add_to_funcs(do_set_syntax, MMAIN,
-+		N_("Set Syntax"), WITHORSANS(setsyntax_gist), TOGETHER, NOVIEW);
++		N_("Set Syntax"), WHENHELP(setsyntax_gist), TOGETHER);
  #endif
  
  	add_to_funcs(do_verbatim_input, MMAIN,
