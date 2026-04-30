@@ -125,9 +125,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { arch: i686,    name: win32, short: w32, pretty: 32 bits }
-          - { arch: x86_64,  name: win64, short: w64, pretty: 64 bits }
-          - { arch: aarch64, name: arm64, short: a64, pretty: on Arm  }
+          - { arch: i686,    name: Win32,  short: w32, pretty: 32 bits }
+          - { arch: x86_64,  name: Win64,  short: w64, pretty: 64 bits }
+          - { arch: aarch64, name: WinARM, short: a64, pretty: on Arm  }
     defaults:
       run:
         shell: bash
@@ -358,7 +358,7 @@ jobs:
           sed -i "/#define NEED_PRINTF_UNBOUNDED_PRECISION 1/d" config.h
           # sed -i "/#define __GETOPT_PREFIX rpl_/d" config.h
           #BRANDING="GNU nano for Windows ${{ matrix.pretty }}, ${{ needs.checks.outputs.build }} $(TZ=UTC date +'%Y.%m.%d')"
-          BRANDING="GNU nano for Windows ${{ matrix.pretty }}, ${{ needs.checks.outputs.build }}"
+          BRANDING="GNU nano for ${{ matrix.name }} ${{ needs.checks.outputs.build }}"
           echo "#define REVISION \"${BRANDING}\"" > src/revision.h
 
     - name: "⚙️ Build for Windows ${{ matrix.pretty }}"
