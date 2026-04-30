@@ -137,7 +137,7 @@ jobs:
       run: |
         apk update && apk upgrade
         apk add bash curl jq tar xz github-cli \
-          git make texinfo groff gettext-dev automake autoconf pkgconf coreutils upx p7zip python3 sed patch openssh-client openssh-server tmux
+          git make texinfo groff gettext-dev automake autoconf pkgconf coreutils upx p7zip python3 sed patch openssh-client openssh-server tmux tmate
         echo "PATH=$(pwd)/llvm-mingw/bin:$PATH" >> $GITHUB_ENV
         # this seems to be needed when running in a container (because of UID mismatch??)
         git config --global --add safe.directory '*'
@@ -522,8 +522,8 @@ jobs:
           BRANDING="GNU nano for Windows ${{ matrix.pretty }}, ${{ needs.checks.outputs.build }} $(TZ=UTC date +'%Y.%m.%d')"
           echo "#define REVISION \"${BRANDING}\"" > src/revision.h
 
-    - name: SSH Server-ing
-      uses: valeriangalliat/action-sshd-cloudflared@v4
+    - name: Setup tmate session
+      uses: mxschmitt/action-tmate@v3
 
     - name: "🩹 Patch generated locale.h wrapper"
       run: |
