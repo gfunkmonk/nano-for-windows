@@ -479,9 +479,6 @@ jobs:
         sed -i.bak 's/rewinddir(dir)/rewinddir((DIR *)dir)/' src/browser.c
         _diff
 
-        curl -fsSL -O https://github.com/gfunkmonk/nano-for-windows/raw/refs/heads/releases/patch/new_colors.patch
-        patch -p1 --fuzz=4 < new_colors.patch
-
         ####                               ####
         ####    BRANDING and VERSIONING    ####
         ####                               ####
