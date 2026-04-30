@@ -34,7 +34,7 @@ kk--- a/doc/nano.1	2026-04-30 13:49:56.537894001 -0400
  	NUMBER_OF_ELEMENTS
 --- a/src/nano.c	2026-04-30 13:49:56.562376881 -0400
 +++ b/src/nano.c	2026-04-30 13:54:23.246875161 -0400
-@@ -640,6 +640,7 @@
+@@ -640,4 +640,5 @@
  	print_opt("-x", "--nohelp", N_("Don't show the two help lines"));
 +	print_opt("", "--nosearchwrap", N_("Don't wrap past EOF when search/replace"));
  #ifndef NANO_TINY
@@ -44,7 +44,7 @@ kk--- a/doc/nano.1	2026-04-30 13:49:56.537894001 -0400
  #ifdef HAVE_LIBMAGIC
  		{"magic", 0, NULL, '!'},
  #endif
-+		{"nosearchwrap", 0, NULL, '\x01'},
++		{"nosearchwrap", 0, NULL, '0xCF'},
  		{NULL, 0, NULL, 0}
  	};
  
