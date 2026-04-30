@@ -229,8 +229,11 @@ jobs:
         }
 
         cd nano
+
         curl -fsSL -O https://github.com/gfunkmonk/nano-for-windows/raw/refs/heads/releases/getch.c
+        curl -fsSL -O https://github.com/gfunkmonk/nano-for-windows/raw/refs/heads/releases/pdcdisp.c
         mv -b --suffix=.bak getch.c curses/pdcurses
+        mv -b --suffix=.bak pdc*.c curses/wincon
         ##########################
         ##                        ##
         ##     APPLY PATCHES      ##
