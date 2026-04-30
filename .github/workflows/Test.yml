@@ -291,8 +291,8 @@ jobs:
         sed -i.bak '272d; 272i\chtype interface_color_pair[NUMBER_OF_ELEMENTS] = {0};; 276d; 150d; 150i\chtype *bardata = NULL;' src/global.c
         sed -i.bak '2448d; 2448i\   bardata = nrealloc(bardata, LINES * sizeof(chtype));; 2452d; 1067d; 1067i\      bardata = nrealloc(bardata, LINES * sizeof(chtype));' src/nano.c
         sed -i.bak '184d; 184i\extern chtype interface_color_pair[NUMBER_OF_ELEMENTS];; 188d; 105d; 105i\extern chtype *bardata;' src/prototypes.h
-        sed -i.bak '1165d; 1165i\   chtype attributes;; 1169d; 1103d; 1103i\bool parse_combination(char *combotext, short *fg, short *bg, chtype *attributes); 1025d; 1025i\        \/* PDCursesMod maximum possible COLORS is 768, see:; 1026i\  *  curspriv.h - PDC_MAXCOL; 1027i\      *  https:\/\/github.com\/Bill-Gray\/PDCursesMod\/blob\/master\/docs\/HISTORY.md#pdcurses-39---2019-09-04; 1028i\     *\/; 1029i\    if (COLORS < 256)' src/rcfile.c
-        sed -i.bak '2312d; 2312i\   chtype colorpair;; 2316d' src/winio.c
+        sed -i.bak "1165d; 1165i\   chtype attributes;; 1169d; 1103d; 1103i\bool parse_combination(char *combotext, short *fg, short *bg, chtype *attributes); 1025d; 1025i\        \/* PDCursesMod maximum possible COLORS is 768, see:; 1026i\  *  curspriv.h - PDC_MAXCOL; 1027i\      *  https:\/\/github.com\/Bill-Gray\/PDCursesMod\/blob\/master\/docs\/HISTORY.md#pdcurses-39---2019-09-04; 1028i\     *\/; 1029i\    if (COLORS < 256)" src/rcfile.c
+        sed -i.bak "2312d; 2312i\   chtype colorpair;; 2316d" src/winio.c
         _diff
 
         echo "0013-win32-window-resize-handling-and-screen-redraw.patch"
