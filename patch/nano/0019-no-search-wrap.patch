@@ -83,7 +83,7 @@
  			}
 --- a/syntax/nanorc.nanorc	2026-04-30 13:49:56.569663201 -0400
 +++ b/syntax/nanorc.nanorc	2026-04-30 13:54:23.245820241 -0400
-@@ -14,7 +14,7 @@
+@@ -14,9 +14,9 @@
  color lime "^[[:blank:]]*extendsyntax[[:blank:]]+[[:alpha:]]+[[:blank:]]+(i?color|header|magic|comment|formatter|linter|tabgives)[[:blank:]]+.*"
  
  # The arguments of commands
@@ -92,4 +92,3 @@
  color brightgreen "^[[:blank:]]*set[[:blank:]]+(backupdir|brackets|errorcolor|functioncolor|keycolor|matchbrackets|minicolor|numbercolor|operatingdir|promptcolor|punct|quotestr|scrollercolor|selectedcolor|speller|spotlightcolor|statuscolor|stripecolor|titlecolor|whitespace|wordchars)[[:blank:]]+"
  color brightgreen "^[[:blank:]]*set[[:blank:]]+(fill[[:blank:]]+-?[[:digit:]]+|(guidestripe|tabsize)[[:blank:]]+[1-9][0-9]*)\>"
  color brightgreen "^[[:blank:]]*bind[[:blank:]]+((\^([[:alpha:]]|[]/@\^_`-]|Space)|([Ss][Hh]-)?[Mm]-[[:alpha:]]|[Mm]-([][!"#$%&'()*+,./0-9:;<=>?@\^_`{|}~-]|Space|Left|Right|Up|Down))|F([1-9]|1[0-9]|2[0-4])|Ins|Del)[[:blank:]]+([[:lower:]]+|".*")[[:blank:]]+(main|help|search|replace(with)?|yesno|gotoline|writeout|insert|execute|browser|whereisfile|gotodir|spell|linter|all)\>"
-	
