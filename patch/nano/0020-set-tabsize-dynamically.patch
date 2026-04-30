@@ -8,8 +8,8 @@ Subject: [PATCH] Feature: change tabsize dynamically
  src/global.c     |  4 ++++
  src/prototypes.h |  1 +
  src/rcfile.c     |  2 ++
- src/text.c       | 22 ++++++++++++++++++++++
- 5 files changed, 32 insertions(+)
+ src/text.c       | 24 ++++++++++++++++++++++++
+ 5 files changed, 34 insertions(+)
 
 diff --git a/doc/nanorc.5 b/doc/nanorc.5
 index ad712e30..c0b77135 100644
@@ -71,7 +71,6 @@ index 049a2886..222bc5af 100644
 --- a/src/rcfile.c
 +++ b/src/rcfile.c
 @@ -321,6 +321,8 @@ keystruct *strtosc(const char *input)
- 		s->func = do_find_bracket;
  	else if (!strcmp(input, "wordcount"))
  		s->func = count_lines_words_and_characters;
 +	else if (!strcmp(input, "settabsize"))
@@ -83,20 +82,19 @@ diff --git a/src/text.c b/src/text.c
 index 85d1bd40..79512d45 100644
 --- a/src/text.c
 +++ b/src/text.c
-@@ -2969,6 +2969,28 @@ void count_lines_words_and_characters(void)
- 						words, P_("word", "words", words),
- 						chars, P_("character", "characters", chars));
+@@ -2969,6 +2969,30 @@ void count_lines_words_and_characters(void)
+ 				words, P_("word", "words", words),
+ 				chars, P_("character", "characters", chars));
  }
 +
-+/* Prompt user to set the new tabsize. We use the spell menu because
-+ * it has no functions. */
++/* Prompt user to set the new tabsize. */
 +void do_set_tabsize(void)
 +{
-+	ssize_t new_tabsize = -1;
++	ssize_t new_tabsize;
 +	int response = do_prompt(MSPELL, "", NULL, edit_refresh, "New tabsize");
 +
-+	/* Cancel if no answer provided. */
-+	if (response != 0) {
++	/* Cancelled with Esc, or Enter with no input. */
++	if (response < 0 || answer[0] == '\0') {
 +		statusbar(_("Cancelled"));
 +		return;
 +	}
@@ -106,11 +104,10 @@ index 85d1bd40..79512d45 100644
 +		return;
 +	}
 +
-+	tabsize = new_tabsize;
++	tabsize = (int)new_tabsize;
++	refresh_needed = TRUE;
 +	statusline(REMARK, _("Tabsize set to %d"), tabsize);
 +}
  #endif /* !NANO_TINY */
  
  /* Get verbatim input. */
--- 
-2.30.2
