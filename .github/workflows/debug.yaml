@@ -193,6 +193,9 @@ jobs:
         autoheader
         automake --add-missing
 
+    - name: Setup tmate session
+      uses: mxschmitt/action-tmate@v3
+
     - name: "🪄 Apply Windows Portability Magic"
       run: |
         function _diff() {
@@ -522,8 +525,6 @@ jobs:
           BRANDING="GNU nano for Windows ${{ matrix.pretty }}, ${{ needs.checks.outputs.build }} $(TZ=UTC date +'%Y.%m.%d')"
           echo "#define REVISION \"${BRANDING}\"" > src/revision.h
 
-    - name: Setup tmate session
-      uses: mxschmitt/action-tmate@v3
 
     - name: "🩹 Patch generated locale.h wrapper"
       run: |
