@@ -1,6 +1,6 @@
 diff -ruN a/doc/nano.1 b/doc/nano.1
---- a/doc/nano.1	2026-04-30 13:49:56.537894001 -0400
-+++ b/doc/nano.1	2026-04-30 13:54:23.245473521 -0400
+--- a/doc/nano.1
++++ b/doc/nano.1
 @@ -373,6 +373,9 @@
  (\fB\-\-breaklonglines\fR) \(em the last one given takes effect.)
  .TP
@@ -12,8 +12,8 @@ diff -ruN a/doc/nano.1 b/doc/nano.1
  .TP
  .BR \-y ", " \-\-afterends
 diff -ruN a/doc/nanorc.5 b/doc/nanorc.5
---- a/doc/nanorc.5	2026-04-30 13:49:56.537894001 -0400
-+++ b/doc/nanorc.5	2026-04-30 13:54:23.245820241 -0400
+--- a/doc/nanorc.5
++++ b/doc/nanorc.5
 @@ -260,6 +260,9 @@
  Don't automatically add a newline when a text does not end with one.
  (This can cause you to save non-POSIX text files.)
@@ -25,74 +25,74 @@ diff -ruN a/doc/nanorc.5 b/doc/nanorc.5
  Deprecated option since it has become the default setting.
  When needed, use \fBunset breaklonglines\fR instead.
 diff -ruN a/src/definitions.h b/src/definitions.h
---- a/src/definitions.h	2026-04-30 13:49:56.562376881 -0400
-+++ b/src/definitions.h	2026-04-30 13:54:23.246273961 -0400
-@@ -322,6 +322,7 @@
- 	PROMPT_BAR,
- 	STATUS_BAR,
- 	ERROR_MESSAGE,
+--- a/src/definitions.h
++++ b/src/definitions.h
+@@ -322,6 +322,7 @@ enum {
+ 	CONSTANT_SHOW,
+ 	NO_HELP,
+ 	SUSPENDABLE,
 +	NO_SEARCH_WRAP,
- 	KEY_COMBO,
- 	FUNCTION_TAG,
- 	NUMBER_OF_ELEMENTS
+ 	NO_WRAP,
+ 	AUTOINDENT,
+ 	VIEW_MODE,
 diff -ruN a/src/nano.c b/src/nano.c
---- a/src/nano.c	2026-04-30 13:49:56.562376881 -0400
-+++ b/src/nano.c	2026-04-30 13:54:23.246875161 -0400
+--- a/src/nano.c
++++ b/src/nano.c
 @@ -444,6 +444,7 @@
- 	else
- 		wrap_at = fill;
+        else
+                wrap_at = fill;
  #endif
-+	print_opt("", "--nosearchwrap", N_("Don't wrap past EOF when search/replace"));
++       print_opt("", "--nosearchwrap", N_("Don't wrap past EOF when search/replace"));
  }
- 
+
  #ifdef ENABLE_MOUSE
 @@ -1848,6 +1849,7 @@
  #ifdef HAVE_LIBMAGIC
- 		{"magic", 0, NULL, '!'},
+                {"magic", 0, NULL, '!'},
  #endif
-+		{"nosearchwrap", 0, NULL, '\x01'},
- 		{NULL, 0, NULL, 0}
- 	};
- 
++               {"nosearchwrap", 0, NULL, 0xCF},
+                {NULL, 0, NULL, 0}
+        };
+
 @@ -2139,6 +2141,9 @@
- 			case 0xCC:
- 				SET(WHITESPACE_DISPLAY);
- 				break;
-+			case '\x01':
-+				SET(NO_SEARCH_WRAP);
-+				break;
- 			case '@':
- 				SET(COLON_PARSING);
- 				break;
+                case 0xCC:
+                        SET(WHITESPACE_DISPLAY);
+                        break;
++               case 0xCF:
++                       SET(NO_SEARCH_WRAP);
++                       break;
+                case '@':
+                        SET(COLON_PARSING);
+                        break;
 diff -ruN a/src/rcfile.c b/src/rcfile.c
---- a/src/rcfile.c	2026-04-30 13:49:56.562376881 -0400
-+++ b/src/rcfile.c	2026-04-30 13:54:23.247659161 -0400
+--- a/src/rcfile.c
++++ b/src/rcfile.c
 @@ -68,6 +68,7 @@
  #endif
- 	{"nohelp", NO_HELP},
- 	{"nonewlines", NO_NEWLINES},
-+	{"nosearchwrap", NO_SEARCH_WRAP},
+        {"nohelp", NO_HELP},
+        {"nonewlines", NO_NEWLINES},
++       {"nosearchwrap", NO_SEARCH_WRAP},
  #ifdef ENABLE_WRAPPING
- 	{"nowrap", NO_WRAP},  /* Deprecated; remove in 2027. */
+        {"nowrap", NO_WRAP},  /* Deprecated; remove in 2027. */
  #endif
 diff -ruN a/src/search.c b/src/search.c
---- a/src/search.c	2026-04-30 13:49:56.562376881 -0400
-+++ b/src/search.c	2026-04-30 13:54:23.248053521 -0400
+--- a/src/search.c
++++ b/src/search.c
 @@ -248,7 +248,7 @@
- 		/* If we've reached the start or end of the buffer, wrap around;
- 		 * but stop when spell-checking or replacing in a region. */
- 		if (line == NULL) {
--			if (whole_word_only || modus == INREGION) {
-+			if (whole_word_only || modus == INREGION || ISSET(NO_SEARCH_WRAP)) {
- 				nodelay(midwin, FALSE);
- 				return 0;
- 			}
+                /* If we've reached the start or end of the buffer, wrap around;
+                 * but stop when spell-checking or replacing in a region. */
+                if (line == NULL) {
+-                       if (whole_word_only || modus == INREGION) {
++                       if (whole_word_only || modus == INREGION || ISSET(NO_SEARCH_WRAP)) {
+                                nodelay(midwin, FALSE);
+                                return 0;
+                        }
 diff -ruN a/syntax/nanorc.nanorc b/syntax/nanorc.nanorc
---- a/syntax/nanorc.nanorc	2026-04-30 13:49:56.569663201 -0400
-+++ b/syntax/nanorc.nanorc	2026-04-30 13:59:04.045448441 -0400
+--- a/syntax/nanorc.nanorc
++++ b/syntax/nanorc.nanorc
 @@ -14,7 +14,7 @@
  color lime "^[[:blank:]]*extendsyntax[[:blank:]]+[[:alpha:]]+[[:blank:]]+(i?color|header|magic|comment|formatter|linter|tabgives)[[:blank:]]+.*"
- 
+
  # The arguments of commands
 -color brightgreen "^[[:blank:]]*(set|unset)[[:blank:]]+(afterends|allow_insecure_backup|atblanks|autoindent|backup|boldtext|bookstyle|breaklonglines|casesensitive|colonparsing|constantshow|cutfromcursor|emptyline|historylog|indicator|jumpyscrolling|linenumbers|locking|magic|minibar|mouse|multibuffer|noconvert|nohelp|nonewlines|positionlog|preserve|quickblank|rawsequences|rebinddelete|regexp|saveonexit|showcursor|smarthome|softwrap|solosidescroll|stateflags|tabstospaces|trimblanks|unix|whitespacedisplay|wordbounds|zap|zero)\>"
 +color brightgreen "^[[:blank:]]*(set|unset)[[:blank:]]+(afterends|allow_insecure_backup|atblanks|autoindent|backup|boldtext|bookstyle|breaklonglines|casesensitive|colonparsing|constantshow|cutfromcursor|emptyline|historylog|indicator|jumpyscrolling|linenumbers|locking|magic|minibar|mouse|multibuffer|noconvert|nohelp|nosearchwrap|nonewlines|positionlog|preserve|quickblank|rawsequences|rebinddelete|regexp|saveonexit|showcursor|smarthome|softwrap|solosidescroll|stateflags|tabstospaces|trimblanks|unix|whitespacedisplay|wordbounds|zap|zero)\>"
