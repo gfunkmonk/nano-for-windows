@@ -312,6 +312,8 @@ jobs:
         sed -i '/prototypes.h/a#include "uniwidth.h"'  src/chars.c
         _diff
 
+        echo '#define PDC_WIDE 1' >> src/definitions.h
+
         patch -p1 --fuzz=4 < ../repo/patch/curses/pdcdisp.patch
 
         ####                               ####
@@ -383,7 +385,7 @@ jobs:
         mkdir -p nano/build
         cd nano/build
           ../configure --host="${TARGET}" --prefix="${OUTDIR}" \
-              --enable-{utf8,threads=windows} --disable-{nls,speller} \
+              --enable-{utf8,threads=windows,extra,color,nanorc} --disable-{nls} \
               --sysconfdir="C:\\ProgramData" || cat config.log
           echo "
             #define HAVE_FREXP_IN_LIBC 1
