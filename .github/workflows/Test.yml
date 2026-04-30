@@ -296,7 +296,7 @@ jobs:
         _diff
 
         echo "0013-win32-window-resize-handling-and-screen-redraw.patch"
-        sed -i.bak '226i\; 227i\            \/* SIGWINCH is not available on Windows, so we simulate the effect of; 228i\            * the `handle_sigwinch` handler by checking for PDCurses's KEY_RESIZE. *\/; 229i\           if (input == KEY_RESIZE) {; 230i\                       the_window_resized = TRUE;; 231i\                       resized_for_browser = TRUE;; 232i\              }; 233i\; 237d' src/winio.c
+        sed -i.bak "226i\; 227i\            \/* SIGWINCH is not available on Windows, so we simulate the effect of; 228i\            * the `handle_sigwinch` handler by checking for PDCurses's KEY_RESIZE. *\/; 229i\           if (input == KEY_RESIZE) {; 230i\                       the_window_resized = TRUE;; 231i\                       resized_for_browser = TRUE;; 232i\              }; 233i\; 237d" src/winio.c
         _diff
 
         echo "0014-win32-formatter-and-spell-check-support.patch"
