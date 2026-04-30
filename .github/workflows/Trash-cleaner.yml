@@ -5,6 +5,11 @@ on:
   # runs at 2 am UTC every day.
   workflow_dispatch:
     inputs:
+      dry_run:
+        description: 'Only log actions, do not perform any delete operations.'
+        type: boolean
+        default: true
+        required: false
       days:
         description: 'Number of days.'
         required: true
@@ -16,17 +21,6 @@ on:
       delete_workflow_pattern:
         description: 'The name or filename of the workflow. if not set then it will target all workflows.'
         required: false
-      delete_workflow_by_state_pattern:
-        description: 'Remove workflow by state: active, deleted, disabled_fork, disabled_inactivity, disabled_manually'
-        required: true
-        default: "All"
-        type: choice
-        options:
-          - "All"
-          - active
-          - deleted
-          - disabled_inactivity
-          - disabled_manually
       delete_run_by_conclusion_pattern:
         description: 'Remove workflow by conclusion: action_required, cancelled, failure, skipped, success'
         required: true
@@ -39,9 +33,17 @@ on:
           - failure
           - skipped
           - success
-      dry_run:
-        description: 'Only log actions, do not perform any delete operations.'
-        required: false
+      delete_workflow_by_state_pattern:
+        description: 'Remove workflow by state: active, deleted, disabled_fork, disabled_inactivity, disabled_manually'
+        required: true
+        default: "All"
+        type: choice
+        options:
+          - "All"
+          - active
+          - deleted
+          - disabled_inactivity
+          - disabled_manually
 
 jobs:
   del_runs:

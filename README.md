@@ -2,7 +2,7 @@
 
 # NANO FOR WINDOWS
 
-[![Xbuild4Windows](https://github.com/gfunkmonk/nano-for-windows/actions/workflows/Xbuild4Windows.yml/badge.svg)](https://github.com/gfunkmonk/nano-for-windows/actions/workflows/Xbuild4Windows.yml) [![SyncNano](https://github.com/gfunkmonk/nano-for-windows/actions/workflows/SyncNano.yml/badge.svg)](https://github.com/gfunkmonk/nano-for-windows/actions/workflows/SyncNano.yml)
+[![Xbuild4Windows](https://github.com/gfunkmonk/nano-for-windows/actions/workflows/Build.yml/badge.svg)](https://github.com/gfunkmonk/nano-for-windows/actions/workflows/Build.yml) [![SyncNano](https://github.com/gfunkmonk/nano-for-windows/actions/workflows/SyncNano.yml/badge.svg)](https://github.com/gfunkmonk/nano-for-windows/actions/workflows/SyncNano.yml)
 [![Version](https://img.shields.io/github/v/release/gfunkmonk/nano-for-windows)](https://github.com/gfunkmonk/nano-for-windows/releases/latest) [![GitHub All Releases](https://img.shields.io/github/downloads/gfunkmonk/nano-for-windows/total.svg)](https://github.com/gfunkmonk/nano-for-windows/blob/releases/README.md#installation)
 
 </div><br/><br/>
@@ -11,7 +11,7 @@ This is a 64-bit/32-bit and Windows on ARM port of the legendary **[GNU nano tex
 
 GNU nano is constantly being upgraded, but the original project is focused on providing support and functionality for Linux. This project is meant to bring the latest updates to both 64-bit and 32-bit Windows users.
 
-<div align="center"><img width="930" alt="image" src="https://user-images.githubusercontent.com/22417711/218406506-88cc1dc2-ee36-4440-94d2-61dd7dd84db6.png">
+<div align="center"><img width="930" alt="image" src="https://github.com/user-attachments/assets/5b437953-2355-4395-8b77-816a9ce0143f">
 </div>
 
 # Features ported to Windows
