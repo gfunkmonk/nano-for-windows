@@ -160,7 +160,7 @@ jobs:
         git clone https://git.savannah.gnu.org/git/nano.git --depth 1
         cd nano
         #git clone https://github.com/Bill-Gray/PDCursesMod.git curses
-        git clone https://github.com/Bill-Gray/PDCursesMod.git --revision 993542b44f5d3e5a13ddbd223880960aa755344e curses
+        git clone https://github.com/Bill-Gray/PDCursesMod.git  curses
         git clone https://git.savannah.gnu.org/git/gnulib.git --depth 1
         autopoint --force
         glibmodules="
@@ -198,7 +198,7 @@ jobs:
     - name: 🩹 Patches
       run: |
         cd nano
-        for p in $(ls -v ${{ github.workspace }}/patch/*.patch); do patch -p1 --fuzz=4 < "$p"; done
+        for p in $(ls -v ../patch/*.patch); do patch -p1 --fuzz=4 < "$p"; done
 
         ####                               ####
         ####    BRANDING and VERSIONING    ####
