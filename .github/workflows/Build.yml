@@ -360,7 +360,7 @@ jobs:
           #BRANDING="GNU nano for Windows ${{ matrix.pretty }}, ${{ needs.checks.outputs.build }} $(TZ=UTC date +'%Y.%m.%d')"
           curl -fsSL -o log.html "https://git.savannah.gnu.org/gitweb/?p=nano.git;a=shortlog"
           NANOVER=$(grep -m 1 "title=\"tags/" log.html | grep -Eo "v[0-9]+\.[0-9]+" | head -1)
-          BRANDING="GNU nano for ${{ matrix.name }} $NANOVER"
+          BRANDING="GNU nano $NANOVER for ${{ matrix.name }}"
           echo "#define REVISION \"${BRANDING}\"" > src/revision.h
 
     - name: "⚙️ Build for Windows ${{ matrix.pretty }}"
