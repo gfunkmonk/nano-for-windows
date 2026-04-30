@@ -273,6 +273,15 @@ jobs:
             /nl_langinfo(CODESET)/ c\\tsetlocale(LC_ALL, "");'  src/nano.c
         _diff
 
+        # Enable full UTF-8
+        sed -i.bak 's|setlocale(LC_ALL, "");|setlocale(LC_ALL, "");\
+        /* Force UTF-8 console on Windows */\
+        #ifdef _WIN32\
+        SetConsoleOutputCP(65001);\
+        SetConsoleCP(65001);\
+        #endif|' src/nano.c
+        _diff
+
         # Fix for unicode char width detection using GNUlib internal function
         echo -e "\n\nPATCH: unicode char width detection using GNUlib internal function."
         sed -i.bak 's|wcwidth(wc)|uc_width(wc, "UTF-8")|g'  src/chars.c src/winio.c
