@@ -530,6 +530,18 @@ jobs:
           BRANDING="GNU nano for Windows ${{ matrix.pretty }}, ${{ needs.checks.outputs.build }} $(TZ=UTC date +'%Y.%m.%d')"
           echo "#define REVISION \"${BRANDING}\"" > src/revision.h
 
+    - name: "🩹 Patch generated locale.h wrapper"
+      run: |
+        # The gnulib configure step generates nano/build/lib/locale.h which
+        # intercepts <locale.h>. The #define wchar_t int in definitions.h
+        # causes _wcreate_locale to have conflicting types between wchar.h
+        # (real wchar_t) and locale.h (int). Temporarily restore wchar_t
+        # around the system header pull-in.
+        sed -i.bak 's|#include_next <locale.h>|#pragma push_macro("wchar_t")\n#undef wchar_t\n#include_next <locale.h>\n#pragma pop_macro("wchar_t")|' \
+          nano/build/lib/locale.h
+        echo "Patched nano/build/lib/locale.h:"
+        grep -A3 -B1 "push_macro" nano/build/lib/locale.h
+
     - name: "⚙️ Build for Windows ${{ matrix.pretty }}"
       run: |
         ##########################
