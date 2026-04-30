@@ -252,39 +252,20 @@ jobs:
         sed -i.bak '2431i\\tnormalize_slashes(retval);' src/files.c
         sed -i.bak '415i\\t\tnormalize_slashes(phrase);' src/history.c
         sed -i.bak '/const char \*tail(const char \*path);/a void normalize_slashes(char *path);' src/prototypes.h
-        sed -i.bak '/const char \*tail(const char \*path)/,/^}/ { /^}/a \
-        \
-        /* Replace any backslashes with slashes in the given path. */\
-        void normalize_slashes(char *path)\
-        {\
-        \tif (path == NULL)\
-        \t\treturn;\
-        \
-        \tfor (; *path; ++path)\
-        \t\tif (*path == '"'\\\\'"')\
-        \t\t\t*path = '"'/'"';\
-        }' src/utils.c
-        sed -i.bak '/strcpy(joined + pathlen, name);/a \\n\tnormalize_slashes(joined);' src/utils.c
+        # Insert the normalize_slashes function implementation after the tail function
+        sed -i.bak '/return slash + 1;/a \\n\/* Replace any backslashes with slashes in the given path. *\/\nvoid normalize_slashes(char *path)\n{\n\tif (path == NULL)\n\t\treturn;\n\n\tfor (; *path; ++path)\n\t\tif (*path == '"'\\\\'"')\n\t\t\t*path = '"'/'"';\n}' src/utils.c
+        # Add normalization to the concatenate function
+        sed -i.bak '/strcpy(joined + pathlen, name);/a \\tnormalize_slashes(joined);' src/utils.c
         _diff
 
         # Change TMPDIR to TEMP
         sed -i.bak 's/getenv("TMPDIR")/getenv("TEMP")/' src/files.c
         # Change /tmp/ fallback to the Windows AppData path
         sed -i.bak 's|copy_of("/tmp/")|copy_of("~/AppData/Local/Temp/")|' src/files.c
-        sed -i.bak '/#ifdef HAVE_PWD_H/,/#endif/c \
-        \t\tif (homenv == NULL || *homenv == '"'\\\\0'"')\
-        \t\t\thomenv = getenv("USERPROFILE");\
-        \
-        \t\tif (homenv == NULL || *homenv == '"'\\\\0'"')\
-        \t\t\thomenv = getenv("ALLUSERSPROFILE");' src/utils.c
+        sed -i.bak '/#ifdef HAVE_PWD_H/,/#endif/c \\t\tif (homenv == NULL || *homenv == '"'\\\\0'"')\\t\t\thomenv = getenv("USERPROFILE");\\\t\tif (homenv == NULL || *homenv == '"'\\\\0'"')\\t\t\thomenv = getenv("ALLUSERSPROFILE");' src/utils.c
         _diff
 
-        sed -i.bak '/#ifdef __linux__/i \
-        \t/* Default file i/o operation to binary mode as linux does.\
-        \t *  https://learn.microsoft.com/en-us/cpp/c-runtime-library/text-and-binary-mode-file-i.bak-o\
-        \t */\
-        \t_set_fmode(_O_BINARY);\
-        ' src/nano.c
+        sed -i.bak '/#ifdef __linux__/i \\t/* Default file i/o operation to binary mode as linux does.\\t *  https://learn.microsoft.com/en-us/cpp/c-runtime-library/text-and-binary-mode-file-i.bak-o\\t */\\t_set_fmode(_O_BINARY);\' src/nano.c
         _diff
 
         # Add the uniwidth header after prototypes.h
@@ -319,35 +300,15 @@ jobs:
         sed -i.bak -e 's/0x427/ALT_PGUP/' -e 's/0x428/ALT_PGDN/' \
                -e 's/0x42C/ALT_INS/'  -e 's/0x42D/ALT_DEL/' src/definitions.h
         # Replace the old 'M-' handling block with the new switch-like logic
-        sed -i.bak '/if (keystring\[1\] == '"'-'"' && keystring\[3\] == '"'\\0'"') {/,/return (keystring\[2\] | 0x20);/c \
-        \t\t\tif (keystring[2] == '"','"''"') return ALT_COMMA; \
-        \t\t\telse if (keystring[2] == '"'-'"') return ALT_MINUS; \
-        \t\t\telse if (keystring[2] == '"'.'"') return ALT_STOP; \
-        \t\t\telse if (keystring[2] == '"'/'"') return ALT_FSLASH; \
-        \t\t\telse if ('"'"'0'"'"' <= keystring[2] && keystring[2] <= '"'"'9'"'"') return keystring[2] + ALT_0 - '"'"'0'"'"'; \
-        \t\t\telse if (keystring[2] == '"';'"') return ALT_SEMICOLON; \
-        \t\t\telse if (keystring[2] == '"'='") return ALT_EQUAL; \
-        \t\t\telse if ('"'"'A'"'"' <= (keystring[2] \& 0x5F) \&\& (keystring[2] \& 0x5F) <= '"'"'Z'"'"') return (keystring[2] \& 0x5F) + ALT_A - '"'"'A'"'"'; \
-        \t\t\telse if (keystring[2] == '"'['") return ALT_LBRACKET; \
-        \t\t\telse if (keystring[2] == '"'\\\\'"') return ALT_BSLASH; \
-        \t\t\telse if (keystring[2] == '"']'") return ALT_RBRACKET;' src/global.c
+        sed -i.bak '/if (keystring\[1\] == '"'-'"' && keystring\[3\] == '"'\\0'"') {/,/return (keystring\[2\] | 0x20);/c \\t\t\tif (keystring[2] == '"','"''"') return ALT_COMMA; \\t\t\telse if (keystring[2] == '"'-'"') return ALT_MINUS; \\t\t\telse if (keystring[2] == '"'.'"') return ALT_STOP; \\t\t\telse if (keystring[2] == '"'/'"') return ALT_FSLASH; \\t\t\telse if ('"'"'0'"'"' <= keystring[2] && keystring[2] <= '"'"'9'"'"') return keystring[2] + ALT_0 - '"'"'0'"'"'; \\t\t\telse if (keystring[2] == '"';'"') return ALT_SEMICOLON; \\t\t\telse if (keystring[2] == '"'='") return ALT_EQUAL; \\t\t\telse if ('"'"'A'"'"' <= (keystring[2] \& 0x5F) \&\& (keystring[2] \& 0x5F) <= '"'"'Z'"'"') return (keystring[2] \& 0x5F) + ALT_A - '"'"'A'"'"'; \\t\t\telse if (keystring[2] == '"'['") return ALT_LBRACKET; \\t\t\telse if (keystring[2] == '"'\\\\'"') return ALT_BSLASH; \\t\t\telse if (keystring[2] == '"']'") return ALT_RBRACKET;' src/global.c
         # Update the Backspace shortcut
         sed -i.bak 's/CONTROL_SHIFT_DELETE, chop_previous_word/ALT_BKSP, chop_previous_word/' src/global.c
         # 1. Update key_buffer logic to check for LMENU (Alt)
-        sed -i.bak '/key_buffer\[0\] = input;/c \
-        \twaiting_codes = 0;\
-        \tif (GetAsyncKeyState(VK_LMENU) < 0) key_buffer[waiting_codes++] = ESC_CODE;\
-        \tkey_buffer[waiting_codes++] = input;' src/winio.c
+        sed -i.bak '/key_buffer\[0\] = input;/c \\twaiting_codes = 0;\\tif (GetAsyncKeyState(VK_LMENU) < 0) key_buffer[waiting_codes++] = ESC_CODE;\\tkey_buffer[waiting_codes++] = input;' src/winio.c
         # 2. Add modifier check to parse_kbinput
         sed -i.bak '/keycode = get_input(frame);/a \tunsigned long modifiers = PDC_get_key_modifiers();' src/winio.c
         # 3. Add disambiguation for Backspace and Enter
-        sed -i.bak '/if (escapes == 0) {/a \
-        \t\tif (!(modifiers \& PDC_KEY_MODIFIER_CONTROL)) {\
-        \t\t\tswitch (keycode) {\
-        \t\t\t\tcase '"'\\b'"': return KEY_BACKSPACE;\
-        \t\t\t\tcase '"'\\r'"': return KEY_ENTER;\
-        \t\t\t}\
-        \t\t}' src/winio.c
+        sed -i.bak '/if (escapes == 0) {/a \\t\tif (!(modifiers \& PDC_KEY_MODIFIER_CONTROL)) {\\t\t\tswitch (keycode) {\\t\t\t\tcase '"'\\b'"': return KEY_BACKSPACE;\\t\t\t\tcase '"'\\r'"': return KEY_ENTER;\\t\t\t}\\t\t}' src/winio.c
         # 4. Strip Linux-specific #ifdefs and update to PDC_KEY_MODIFIER macros
         sed -i.bak 's/#ifdef __linux__//' src/winio.c
         sed -i.bak 's/if (on_a_vt && !mute_modifiers && ioctl(0, TIOCLINUX, &modifiers) >= 0) {/if (!mute_modifiers) {/' src/winio.c
@@ -372,70 +333,23 @@ jobs:
         sed -i.bak 's/int colorpair;/chtype colorpair;/' src/winio.c
         _diff
 
-        sed -i.bak '/input = wgetch(frame);/a \
-        \n\t\t/* SIGWINCH is not available on Windows, so we simulate the effect of\n\t\t * the `handle_sigwinch` handler by checking for PDCurses'"'"'s KEY_RESIZE. */\n\t\tif (input == KEY_RESIZE) {\n\t\t\tthe_window_resized = TRUE;\n\t\t\tresized_for_browser = TRUE;\n\t\t}' src/winio.c
+        sed -i.bak '/input = wgetch(frame);/a \\n\t\t/* SIGWINCH is not available on Windows, so we simulate the effect of\n\t\t * the `handle_sigwinch` handler by checking for PDCurses'"'"'s KEY_RESIZE. */\n\t\tif (input == KEY_RESIZE) {\n\t\t\tthe_window_resized = TRUE;\n\t\t\tresized_for_browser = TRUE;\n\t\t}' src/winio.c
         _diff
 
-        sed -i.bak -e '/statusline(REMARK, _("Buffer has been processed"));/{
-            r ../repo/patch/win32_spell.c
-        }' \
-        -e '/do_int_speller(temp_name);/c \
-        \t\t// do_int_speller(temp_name);\
-        \t\tstatusline(ALERT, _("Internal spell checker is not supported in this build"));\
-        \t\treturn;' \
-        src/text.c
+        sed -i.bak -e '/statusline(REMARK, _("Buffer has been processed"));/{r ../repo/patch/win32_spell.c}' \
+            -e '/do_int_speller(temp_name);/c \\t\t// do_int_speller(temp_name);\\t\tstatusline(ALERT, _("Internal spell checker is not supported in this build"));\\t\treturn;' \src/text.c
         _diff
 
         sed -i.bak '/#include <errno.h>/i #include <ctype.h>' src/history.c
-        sed -i.bak '/stanza = strchr(phrase, '"'/'"');/a \
-        \n#ifdef _WIN32\
-        \t\t/* Keep Windows drive letters by rewinding to the drive prefix\
-        \t\t * when the first slash is part of X:/ \
-        \t\t */\
-        \t\tif (stanza != NULL && stanza - phrase >= 2 && stanza[-1] == '"':'"' &&\
-        \t\t\t\tisalpha((unsigned char)stanza[-2]))\
-        \t\t\tstanza -= 2;\
-        #endif' src/history.c
+        sed -i.bak '/stanza = strchr(phrase, '"'/'"');/a \\n#ifdef _WIN32\\t\t/* Keep Windows drive letters by rewinding to the drive prefix\\t\t * when the first slash is part of X:/ \\t\t */\\t\tif (stanza != NULL && stanza - phrase >= 2 && stanza[-1] == '"':'"' &&\\t\t\t\tisalpha((unsigned char)stanza[-2]))\\t\t\tstanza -= 2;\#endif' src/history.c
         _diff
 
-        sed -i.bak '/_set_fmode(_O_BINARY);/a \
-        \
-        #ifdef __PDCURSESMOD__\
-        \t/* When using PDCursesMod, we want to disable the default Ctrl+V behavior of\
-        \t * pasting text from the system clipboard, so that Ctrl+V behaves as a normal\
-        \t * keystroke that paste text from nano'"'"'s cutbuffer instead. */\
-        \tPDC_set_function_key(FUNCTION_KEY_PASTE, 0);\
-        #endif' src/nano.c
+        sed -i.bak '/_set_fmode(_O_BINARY);/a \\#ifdef __PDCURSESMOD__\\t/* When using PDCursesMod, we want to disable the default Ctrl+V behavior of\\t * pasting text from the system clipboard, so that Ctrl+V behaves as a normal\\t * keystroke that paste text from nano'"'"'s cutbuffer instead. */\\tPDC_set_function_key(FUNCTION_KEY_PASTE, 0);\#endif' src/nano.c
         _diff
 
         sed -i.bak 's/#define COLORCOUNT  34/#define COLORCOUNT  86/' src/rcfile.c
-        sed -i.bak '/"brick", "crimson",/c\
-        \t\t\t\t\t\t\t\t\t"brick", "crimson", "steel",\
-        \t\t\t\t\t\t\t\t\t"aqua", "indigo", "olive",\
-        \t\t\t\t\t\t\t\t\t"grape", "vert", "maroon",\
-        \t\t\t\t\t\t\t\t\t"khaki", "silver", "amber",\
-        \t\t\t\t\t\t\t\t\t"tan", "hotpink", "salmon",\
-        \t\t\t\t\t\t\t\t\t"coral", "gold", "navajo",\
-        \t\t\t\t\t\t\t\t\t"lemon", "canary", "cream",\
-        \t\t\t\t\t\t\t\t\t"junebud", "camel", "violet",\
-        \t\t\t\t\t\t\t\t\t"cocoa", "royal", "lilac",\
-        \t\t\t\t\t\t\t\t\t"beige", "helio", "selago",\
-        \t\t\t\t\t\t\t\t\t"spring", "alarm", "azul",\
-        \t\t\t\t\t\t\t\t\t"banana", "scarlet", "carrot",\
-        \t\t\t\t\t\t\t\t\t"scampi", "unicorn", "piggy",\
-        \t\t\t\t\t\t\t\t\t"frog", "dodger", "frost",\
-        \t\t\t\t\t\t\t\t\t"voodoo", "tomato", "forest",\
-        \t\t\t\t\t\t\t\t\t"volt", "azure", "baby",\
-        \t\t\t\t\t\t\t\t\t"blood", "moss", "bitter",\
-        \t\t\t\t\t\t\t\t\t"boysen", "cuba", "citron",' src/rcfile.c
-        sed -i.bak '/142, 186, 136, 166, 161,/c\
-        \t\t\t\t\t\t\t\t\t\t  142, 186, 136, 166, 161, 31, 50, 54, 64,\
-        \t\t\t\t\t\t\t\t\t\t  105, 118, 125, 143, 146, 178, 180, 206, 209,\
-        \t\t\t\t\t\t\t\t\t\t  210, 220, 223, 227, 228, 230, 149, 137, 93,\
-        \t\t\t\t\t\t\t\t\t\t  52, 26, 99, 138, 171, 225, 77, 160, 27,\
-        \t\t\t\t\t\t\t\t\t\t  226, 196, 214, 60, 201, 219, 106, 69, 123,\
-        \t\t\t\t\t\t\t\t\t\t  90, 202, 22, 190, 33, 153, 88, 101, 203, 89,\
-        \t\t\t\t\t\t\t\t\t\t  42, 142,' src/rcfile.c
+        sed -i.bak '/"brick", "crimson",/c\\t\t\t\t\t\t\t\t\t"brick", "crimson", "steel",\\t\t\t\t\t\t\t\t\t"aqua", "indigo", "olive",\\t\t\t\t\t\t\t\t\t"grape", "vert", "maroon",\\t\t\t\t\t\t\t\t\t"khaki", "silver", "amber",\\t\t\t\t\t\t\t\t\t"tan", "hotpink", "salmon",\\t\t\t\t\t\t\t\t\t"coral", "gold", "navajo",\\t\t\t\t\t\t\t\t\t"lemon", "canary", "cream",\\t\t\t\t\t\t\t\t\t"junebud", "camel", "violet",\\t\t\t\t\t\t\t\t\t"cocoa", "royal", "lilac",\\t\t\t\t\t\t\t\t\t"beige", "helio", "selago",\\t\t\t\t\t\t\t\t\t"spring", "alarm", "azul",\\t\t\t\t\t\t\t\t\t"banana", "scarlet", "carrot",\\t\t\t\t\t\t\t\t\t"scampi", "unicorn", "piggy",\\t\t\t\t\t\t\t\t\t"frog", "dodger", "frost",\\t\t\t\t\t\t\t\t\t"voodoo", "tomato", "forest",\\t\t\t\t\t\t\t\t\t"volt", "azure", "baby",\\t\t\t\t\t\t\t\t\t"blood", "moss", "bitter",\\t\t\t\t\t\t\t\t\t"boysen", "cuba", "citron",' src/rcfile.c
+        sed -i.bak '/142, 186, 136, 166, 161,/c\\t\t\t\t\t\t\t\t\t\t  142, 186, 136, 166, 161, 31, 50, 54, 64,\\t\t\t\t\t\t\t\t\t\t  105, 118, 125, 143, 146, 178, 180, 206, 209,\\t\t\t\t\t\t\t\t\t\t  210, 220, 223, 227, 228, 230, 149, 137, 93,\\t\t\t\t\t\t\t\t\t\t  52, 26, 99, 138, 171, 225, 77, 160, 27,\\t\t\t\t\t\t\t\t\t\t  226, 196, 214, 60, 201, 219, 106, 69, 123,\\t\t\t\t\t\t\t\t\t\t  90, 202, 22, 190, 33, 153, 88, 101, 203, 89,\\t\t\t\t\t\t\t\t\t\t  42, 142,' src/rcfile.c
         _diff
 
         # 1. realpath() workaround
