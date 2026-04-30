@@ -223,6 +223,14 @@ jobs:
         ##                        ##
         ##########################
 
+        # Fix: #define wchar_t int in definitions.h fires before system headers
+        # finish loading, causing _wcreate_locale to have conflicting types between
+        # wchar.h (sees real wchar_t) and locale.h (sees int). Force-undef before
+        # the system locale.h is pulled in by GNUlib's wrapper.
+        echo -e "\n\nPATCH: guard wchar_t redefine from breaking system locale.h."
+        sed -i.bak 's|#include_next <locale.h>|#pragma push_macro("wchar_t")\n#undef wchar_t\n#include_next <locale.h>\n#pragma pop_macro("wchar_t")|' lib/locale.h
+        _diff
+
         # 1. realpath() workaround
         echo -e "\n\nPATCH: realpath() workaround applied."
         cp -p ./src/definitions.h{,.bak}
@@ -475,7 +483,7 @@ jobs:
 
         PDTERM="wincon"
         echo "PDTERM=${PDTERM}" >> $GITHUB_ENV
-        export CFLAGS="-Oz -fno-math-errno -flto -std=c17 -Wno-incompatible-library-redeclaration"
+        export CFLAGS="-Oz -fno-math-errno -flto -std=c17 -Wno-error"
         cd "nano/curses/${PDTERM}"
           make -j$(($(nproc)*2)) WIDE=Y UTF8=Y _${{matrix.short}}=Y
 
@@ -494,7 +502,7 @@ jobs:
         TARGET="${{ matrix.arch }}-w64-mingw32"
         OUTDIR="${CWD}/nano/pkg"
         CURSES_DIR="${CWD}/nano/curses"
-        export CFLAGS="-O3 -Oz -fno-math-errno -flto -DPDC_FORCE_UTF8 -DPDC_NCMOUSE -std=c17 -Wno-incompatible-library-redeclaration"
+        export CFLAGS="-O3 -Oz -fno-math-errno -flto -DPDC_FORCE_UTF8 -DPDC_NCMOUSE -std=c17 -Wno-error"
         export LDFLAGS="-L${CURSES_DIR}/${{ env.PDTERM }} -static -static-libgcc ${CURSES_DIR}/${{ env.PDTERM }}/pdcurses.a"
         export NCURSESW_CFLAGS="-I${CURSES_DIR} -DNCURSES_STATIC  -DENABLE_MOUSE"
         export NCURSESW_LIBS="-l:pdcurses.a -lwinmm"
