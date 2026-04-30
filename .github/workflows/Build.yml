@@ -83,6 +83,7 @@ jobs:
           curl -fsSL -o log.html "https://git.savannah.gnu.org/gitweb/?p=nano.git;a=shortlog"
           NANO_VERSION=$(grep -m 1 "title=\"tags/" log.html | grep -Eo "v[0-9]+\.[0-9]+" | head -1)
           echo "Nano main VERSION: $NANO_VERSION"
+          echo "NANOVER=$NANO_VERSION" > $GITHUB_ENV
           NANO_SUBVER=$( awk '1; /"tag indirect"/{exit}' log.html | grep -c '</tr>')
           echo "Nano SUBVERSION: $NANO_SUBVER"
           [ $NANO_SUBVER -gt 0 ] && NANO_VERSION="${NANO_VERSION}-${NANO_SUBVER}"
@@ -358,7 +359,7 @@ jobs:
           sed -i "/#define NEED_PRINTF_UNBOUNDED_PRECISION 1/d" config.h
           # sed -i "/#define __GETOPT_PREFIX rpl_/d" config.h
           #BRANDING="GNU nano for Windows ${{ matrix.pretty }}, ${{ needs.checks.outputs.build }} $(TZ=UTC date +'%Y.%m.%d')"
-          BRANDING="GNU nano for ${{ matrix.name }} ${{ needs.checks.outputs.build }}"
+          BRANDING="GNU nano for ${{ matrix.name }} ${{ env.NANOVER }}"
           echo "#define REVISION \"${BRANDING}\"" > src/revision.h
 
     - name: "⚙️ Build for Windows ${{ matrix.pretty }}"
