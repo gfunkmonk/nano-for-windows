@@ -1,4 +1,4 @@
---- a/doc/nano.1	2026-04-30 13:49:56.537894001 -0400
+kk--- a/doc/nano.1	2026-04-30 13:49:56.537894001 -0400
 +++ b/doc/nano.1	2026-04-30 13:54:23.245473521 -0400
 @@ -373,6 +373,9 @@
  (\fB\-\-breaklonglines\fR) \(em the last one given takes effect.)
@@ -34,12 +34,10 @@
  	NUMBER_OF_ELEMENTS
 --- a/src/nano.c	2026-04-30 13:49:56.562376881 -0400
 +++ b/src/nano.c	2026-04-30 13:54:23.246875161 -0400
-@@ -444,6 +444,7 @@
- 	else
- 		wrap_at = fill;
- #endif
+@@ -640,6 +640,7 @@
+ 	print_opt("-x", "--nohelp", N_("Don't show the two help lines"));
 +	print_opt("", "--nosearchwrap", N_("Don't wrap past EOF when search/replace"));
- }
+ #ifndef NANO_TINY
  
  #ifdef ENABLE_MOUSE
 @@ -1848,6 +1849,7 @@
