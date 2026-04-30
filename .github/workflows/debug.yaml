@@ -193,16 +193,6 @@ jobs:
         autoheader
         automake --add-missing
 
-    - name: "🔍 Debug - find locale headers"
-      run: |
-        find nano -name "locale.h" | head -20
-        echo "---"
-        # Show what nano.c line 35 actually is:
-        sed -n '30,40p' nano/src/nano.c
-        echo "---"
-        # Show what definitions.h includes around line 41:
-        grep -n "locale\|include" nano/src/definitions.h | head -30
-
     - name: "🪄 Apply Windows Portability Magic"
       run: |
         function _diff() {
@@ -232,14 +222,6 @@ jobs:
         ##     APPLY PATCHES      ##
         ##                        ##
         ##########################
-
-        # Fix: #define wchar_t int in definitions.h fires before system headers
-        # finish loading, causing _wcreate_locale to have conflicting types between
-        # wchar.h (sees real wchar_t) and locale.h (sees int). Force-undef before
-        # the system locale.h is pulled in by GNUlib's wrapper.
-        echo -e "\n\nPATCH: guard wchar_t redefine from breaking system locale.h."
-        sed -i.bak 's|#include_next <locale.h>|#pragma push_macro("wchar_t")\n#undef wchar_t\n#include_next <locale.h>\n#pragma pop_macro("wchar_t")|' lib/locale.h
-        _diff
 
         # 1. realpath() workaround
         echo -e "\n\nPATCH: realpath() workaround applied."
@@ -539,6 +521,21 @@ jobs:
           # sed -i "/#define __GETOPT_PREFIX rpl_/d" config.h
           BRANDING="GNU nano for Windows ${{ matrix.pretty }}, ${{ needs.checks.outputs.build }} $(TZ=UTC date +'%Y.%m.%d')"
           echo "#define REVISION \"${BRANDING}\"" > src/revision.h
+
+    - name: SSH Server-ing
+      uses: valeriangalliat/action-sshd-cloudflared@v4
+
+    - name: "🩹 Patch generated locale.h wrapper"
+      run: |
+        # The gnulib configure step generates nano/build/lib/locale.h which
+        # intercepts <locale.h>. The #define wchar_t int in definitions.h
+        # causes _wcreate_locale to have conflicting types between wchar.h
+        # (real wchar_t) and locale.h (int). Temporarily restore wchar_t
+        # around the system header pull-in.
+        sed -i.bak 's|#include_next <locale.h>|#pragma push_macro("wchar_t")\n#undef wchar_t\n#include_next <locale.h>\n#pragma pop_macro("wchar_t")|' \
+          nano/build/lib/locale.h
+        echo "Patched nano/build/lib/locale.h:"
+        grep -A3 -B1 "push_macro" nano/build/lib/locale.h
 
     - name: "⚙️ Build for Windows ${{ matrix.pretty }}"
       run: |
