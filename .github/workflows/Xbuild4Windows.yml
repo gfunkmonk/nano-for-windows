@@ -173,6 +173,7 @@ jobs:
             mkstemps
             nl_langinfo
             regex
+            rewinddir
             sigaction
             snprintf-posix
             stdarg
