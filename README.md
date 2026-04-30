@@ -2,7 +2,7 @@
 
 # NANO FOR WINDOWS
 
-[![Xbuild4Windows](https://github.com/gfunkmonk/nano-for-windows/actions/workflows/Xbuild4Windows.yml/badge.svg)](https://github.com/gfunkmonk/nano-for-windows/actions/workflows/Xbuild4Windows.yml) [![SyncNano](https://github.com/gfunkmonk/nano-for-windows/actions/workflows/SyncNano.yml/badge.svg)](https://github.com/gfunkmonk/nano-for-windows/actions/workflows/SyncNano.yml)
+[![Xbuild4Windows](https://github.com/gfunkmonk/nano-for-windows/actions/workflows/Build.yml/badge.svg)](https://github.com/gfunkmonk/nano-for-windows/actions/workflows/Build.yml) [![SyncNano](https://github.com/gfunkmonk/nano-for-windows/actions/workflows/SyncNano.yml/badge.svg)](https://github.com/gfunkmonk/nano-for-windows/actions/workflows/SyncNano.yml)
 [![Version](https://img.shields.io/github/v/release/gfunkmonk/nano-for-windows)](https://github.com/gfunkmonk/nano-for-windows/releases/latest) [![GitHub All Releases](https://img.shields.io/github/downloads/gfunkmonk/nano-for-windows/total.svg)](https://github.com/gfunkmonk/nano-for-windows/blob/releases/README.md#installation)
 
 </div><br/><br/>

@@ -253,6 +253,26 @@ jobs:
         printf '\n#define wchar_t int\n' >> src/definitions.h
         _diff
 
+        # default open() files in binary mode as linux does
+        echo -e "\n\nPATCH: Forcing file management in binary mode like the Linux version."
+        sed -i.bak 's/O_..ONLY/& | _O_BINARY/g' ./src/files.c
+        _diff
+        sed -i.bak 's/O_..ONLY/& | _O_BINARY/g' ./src/text.c
+        _diff
+
+        # Enable UTF-8 Terminal
+        echo -e "\n\nPATCH: Enable UTF-8 console."
+        sed -i.bak 's|vt220||g
+            /x1B/d
+            /nl_langinfo(CODESET)/ c\\tsetlocale(LC_ALL, "");'  src/nano.c
+        _diff
+
+        # Fix for unicode char width detection using GNUlib internal function
+        echo -e "\n\nPATCH: unicode char width detection using GNUlib internal function."
+        sed -i.bak 's|wcwidth(wc)|uc_width(wc, "UTF-8")|g'  src/chars.c src/winio.c
+        sed -i '/prototypes.h/a#include "uniwidth.h"'  src/chars.c
+        _diff
+
         ####                               ####
         ####   LLVM-MING SPECIFIC PATCHES  ####
         ####                               ####
@@ -359,12 +379,16 @@ jobs:
         CWD="${BUILD_CWD}"
         cd nano/pkg
           export UPX="--lzma --best"
-          #curl -fsSL -O https://raw.githubusercontent.com/gfunkmonk/nano-for-windows-old/releases/LICENSE
-          #curl -fsSL -O https://raw.githubusercontent.com/gfunkmonk/nano-for-windows-old/releases/README.md
+          #curl -fsSL -O https://raw.githubusercontent.com/gfunkmonk/nano-for-windows/releases/LICENSE
+          #curl -fsSL -O https://raw.githubusercontent.com/gfunkmonk/nano-for-windows/releases/README.md
           cp ${CWD}/repo/LICENSE .
           cp ${CWD}/repo/README.md .
           mv bin/nano.exe share/doc/nano/* "${CWD}/nano/doc/sample.nanorc.in" .
-          mv share/nano syntax
+          #mv share/nano syntax
+          git clone https://github.com/gfunkmonk/nanorc syntax
+          cd syntax
+          rm -fr .git/
+          cd ..
           mv sample.nanorc.in .nanorc
           rm -rf bin share rnano*
           llvm-strip -s nano.exe
