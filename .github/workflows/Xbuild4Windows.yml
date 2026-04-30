@@ -30,6 +30,7 @@ jobs:
   checks:
     name: "✔️ Pre-build checks"
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     # Use the Bash shell regardless whether the GitHub Actions runner is ubuntu-latest, macos-latest, or windows-latest
     outputs:
       body: ${{ steps.checks.outputs.body }}
@@ -391,6 +392,26 @@ jobs:
             " src/definitions.h
         _diff
 
+        # Fix: MinGW wchar.h and locale.h both declare _wcreate_locale.
+        # After #define wchar_t int, the compiler sees conflicting parameter types.
+        # Guard the declaration in locale.h so it's skipped when wchar.h already defined it.
+        echo -e "\n\nPATCH: guard duplicate _wcreate_locale in MinGW locale.h."
+        for arch in i686-w64-mingw32 x86_64-w64-mingw32 aarch64-w64-mingw32; do
+          LOCALE_H="${GITHUB_WORKSPACE}/llvm-mingw/${arch}/include/locale.h"
+          if [ -f "$LOCALE_H" ]; then
+            sed -i.bak 's/_CRTIMP _locale_t __cdecl _wcreate_locale(int _Category, const wchar_t \*_Locale);/#ifndef _WCREATE_LOCALE_DEFINED\n#define _WCREATE_LOCALE_DEFINED\n_CRTIMP _locale_t __cdecl _wcreate_locale(int _Category, const wchar_t *_Locale);\n#endif/' "$LOCALE_H"
+            echo "Patched $LOCALE_H"
+          fi
+        done
+
+        for arch in i686-w64-mingw32 x86_64-w64-mingw32 aarch64-w64-mingw32; do
+          WCHAR_H="${GITHUB_WORKSPACE}/llvm-mingw/${arch}/include/wchar.h"
+          if [ -f "$WCHAR_H" ]; then
+            sed -i.bak 's/_CRTIMP _locale_t __cdecl _wcreate_locale(int _Category, const wchar_t \*_Locale);/#ifndef _WCREATE_LOCALE_DEFINED\n#define _WCREATE_LOCALE_DEFINED\n_CRTIMP _locale_t __cdecl _wcreate_locale(int _Category, const wchar_t *_Locale);\n#endif/' "$WCHAR_H"
+            echo "Patched $WCHAR_H"
+          fi
+        done
+
         # Fix wchar_t 16 bits limitation to display emojis and supplemental codepoints
         echo -e "\n\nPATCH: change to 32 bits wchar_t."
         #sed -i.bak 's|#define realpath(N,R) _fullpath((R),(N),0)|&#\n#define wchar_t int|' src/definitions.h
@@ -521,18 +542,6 @@ jobs:
           # sed -i "/#define __GETOPT_PREFIX rpl_/d" config.h
           BRANDING="GNU nano for Windows ${{ matrix.pretty }}, ${{ needs.checks.outputs.build }} $(TZ=UTC date +'%Y.%m.%d')"
           echo "#define REVISION \"${BRANDING}\"" > src/revision.h
-
-    - name: "🩹 Patch generated locale.h wrapper"
-      run: |
-        # The gnulib configure step generates nano/build/lib/locale.h which
-        # intercepts <locale.h>. The #define wchar_t int in definitions.h
-        # causes _wcreate_locale to have conflicting types between wchar.h
-        # (real wchar_t) and locale.h (int). Temporarily restore wchar_t
-        # around the system header pull-in.
-        sed -i.bak 's|#include_next <locale.h>|#pragma push_macro("wchar_t")\n#undef wchar_t\n#include_next <locale.h>\n#pragma pop_macro("wchar_t")|' \
-          nano/lib/locale.in.h
-        echo "Patched nano/build/lib/locale.h:"
-        grep -A3 -B1 "push_macro" nano/lib/locale.in.h
 
     - name: "⚙️ Build for Windows ${{ matrix.pretty }}"
       run: |
