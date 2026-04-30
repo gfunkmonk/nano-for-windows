@@ -11,7 +11,7 @@ This is a 64-bit/32-bit and Windows on ARM port of the legendary **[GNU nano tex
 
 GNU nano is constantly being upgraded, but the original project is focused on providing support and functionality for Linux. This project is meant to bring the latest updates to both 64-bit and 32-bit Windows users.
 
-<div align="center"><img width="930" alt="image" src="https://user-images.githubusercontent.com/22417711/218406506-88cc1dc2-ee36-4440-94d2-61dd7dd84db6.png">
+<div align="center"><img width="930" alt="image" src="https://github.com/gfunkmonk/nano-for-windows/blob/releases/.github/images/nano-screenshot.png">
 </div>
 
 # Features ported to Windows
