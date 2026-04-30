@@ -229,7 +229,7 @@ static void _copy(void)
 
 #ifdef PDC_WIDE
     wtmp = (wchar_t *)malloc((len + 1) * sizeof(wchar_t));
-    len *= 4;
+    len *= 4;   /* emoji/supplemental codepoints need up to 4 UTF-8 bytes */
 #endif
     tmp = (char *)malloc(len + 1);
 
@@ -279,6 +279,7 @@ static int _paste(void)
         return -1;
 
 #ifdef PDC_WIDE
+    /* +1 for null terminator; pass len+1 to mbstowcs so it can NUL-terminate */
     wpaste = (wchar_t *)malloc((len + 1) * sizeof(wchar_t));
     len = (long)PDC_mbstowcs(wpaste, paste, len + 1);
 #endif
@@ -604,7 +605,7 @@ static int _raw_wgetch_no_surrogate_pairs( WINDOW *win)
             continue;
 
         /* filter mouse events; translate mouse clicks in the slk
-           area to function keys (especially copy + pase) */
+           area to function keys (especially copy + paste) */
 
         if( key == KEY_MOUSE)
         {
@@ -687,52 +688,20 @@ static int _raw_wgetch_no_surrogate_pairs( WINDOW *win)
     }
 }
 
-int PDC_wc_to_utf8(char *dest, const int32_t code);
-
-/* deliver a byte sequence in UTF-8 or UTF-16 encoding.*/
-/* Supports supplentary unicode planes up to 20 bits (UTF-16). */
-int wgetch(WINDOW *win)
+static int _raw_wgetch( WINDOW *win)
 {
-    PDC_LOG(("wgetch() - called\n"));
+   int rval = _raw_wgetch_no_surrogate_pairs( win);
 
 #ifdef PDC_WIDE
-    return raw_wgetch(win);
+   if( PDC_IS_HIGH_SURROGATE( rval))
+      {
+      const int c = _raw_wgetch_no_surrogate_pairs( win);
 
-    static wchar_t buff;
-    static size_t n_buff = 0;
-    int rval = 0;
-    if (!n_buff) /* Empty buffer, no pending bytes */
-    {
-        rval = raw_wgetch(win);
-        if (rval < 0)
-            rval = ERR;
-        if(  rval == ERR || (rval < 0x80) || PDC_is_function_key(rval))
-            return rval;
-        buff = rval;
-        if ( (rval & 0xF800) != 0xD800) /* single-unit UTF-16 unicode codepoint */
-            n_buff = 1;
-        else     /* Potential multiunit UTF-16 code */
-        {
-            rval = raw_wgetch(win);             /* get another UTF-16 unit from buffer*/
-            if ( (rval & 0xFC00) != 0xDC00)     /* mask check of second UTF-16 unit */
-            {
-                unget_wch((wchar_t)rval);
-                return ERR;
-            }                
-            n_buff = 1;
-            rval = (((int)(buff & 0x3FF) << 10) | (rval & 0x3FF)) + 0x10000; /* rval is the full unicode */
-        }
+      if( PDC_IS_LOW_SURROGATE( c))
+         rval = ((rval - 0xd800) << 10) + 0x10000 + c - 0xdc00;
+      }
 #endif
-        n_buff = PDC_wc_to_utf8((char *)&buff, rval);  /* rval has the raw unicode codepoint */
-#endif
-    }
-#ifdef PDC_FORCE_UTF8
-    rval = buff & 0xFF;
-#endif
-    n_buff--;
-    buff = buff >> 8;
-    return (rval);
-#endif /* PDC_WIDE */
+   return( rval);
 }
 
 int mvgetch(int y, int x)
@@ -807,6 +776,11 @@ int PDC_return_key_modifiers(bool flag)
     return PDC_modifiers_set();
 }
 
+/* wgetch(): deliver one byte at a time to the caller, converting wide
+   characters (including emoji/supplemental codepoints above U+FFFF) to
+   their UTF-8 byte sequence and buffering the remaining bytes.  This
+   relies on _raw_wgetch() assembling surrogate pairs into full Unicode
+   codepoints before we ever see them. */
 int wgetch(WINDOW *win)
 {
 #ifndef PDC_WIDE
@@ -840,7 +814,7 @@ int wgetch(WINDOW *win)
                 n_buff = 0;
                 rval = ERR;
             }
-            else     /* successfully converted to multi-byte string */
+            else     /* successfully converted to multi-byte UTF-8 sequence */
                 rval = wgetch( win);
         }
     }
