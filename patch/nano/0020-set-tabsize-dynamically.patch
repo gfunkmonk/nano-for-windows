@@ -1,6 +1,6 @@
-diff -ruN nano/doc/nanorc.5 nano-patch/doc/nanorc.5
---- nano/doc/nanorc.5	2026-04-30 13:49:56.537894001 -0400
-+++ nano-patch/doc/nanorc.5	2026-04-30 13:49:00.178085521 -0400
+diff -ruN a/doc/nanorc.5 b/doc/nanorc.5
+--- a/doc/nanorc.5	2026-04-30 13:49:56.537894001 -0400
++++ b/doc/nanorc.5	2026-04-30 13:49:00.178085521 -0400
 @@ -745,6 +745,9 @@
  Counts and reports on the status bar the number of lines, words,
  and characters in the current buffer (or in the marked region).
@@ -11,9 +11,9 @@ diff -ruN nano/doc/nanorc.5 nano-patch/doc/nanorc.5
  .B execute
  Prompts for a program to execute.  The program's output is inserted
  into the current buffer \(em or into a new buffer when \fBM\-F\fR is toggled.
-diff -ruN nano/src/global.c nano-patch/src/global.c
---- nano/src/global.c	2026-04-30 13:49:56.562376881 -0400
-+++ nano-patch/src/global.c	2026-04-30 13:45:05.394677801 -0400
+diff -ruN a/src/global.c b/src/global.c
+--- a/src/global.c	2026-04-30 13:49:56.562376881 -0400
++++ b/src/global.c	2026-04-30 13:45:05.394677801 -0400
 @@ -672,6 +672,7 @@
  	const char *wordcount_gist =
  		N_("Count the number of lines, words, and characters");
@@ -39,9 +39,9 @@ diff -ruN nano/src/global.c nano-patch/src/global.c
  #else
  	add_to_sclist(MMAIN, "M-]", 0, do_find_bracket, 0);
  	add_to_sclist(MMAIN, "M-A", 0, do_mark, 0);
-diff -ruN nano/src/prototypes.h nano-patch/src/prototypes.h
---- nano/src/prototypes.h	2026-04-30 13:49:56.562376881 -0400
-+++ nano-patch/src/prototypes.h	2026-04-30 13:46:01.533771001 -0400
+diff -ruN a/src/prototypes.h b/src/prototypes.h
+--- a/src/prototypes.h	2026-04-30 13:49:56.562376881 -0400
++++ b/src/prototypes.h	2026-04-30 13:46:01.533771001 -0400
 @@ -549,6 +549,7 @@
  #endif
  #ifndef NANO_TINY
@@ -50,9 +50,9 @@ diff -ruN nano/src/prototypes.h nano-patch/src/prototypes.h
  #endif
  void do_verbatim_input(void);
  #ifdef ENABLE_WORDCOMPLETION
-diff -ruN nano/src/rcfile.c nano-patch/src/rcfile.c
---- nano/src/rcfile.c	2026-04-30 13:49:56.562376881 -0400
-+++ nano-patch/src/rcfile.c	2026-04-30 13:46:40.649667761 -0400
+diff -ruN a/src/rcfile.c b/src/rcfile.c
+--- a/src/rcfile.c	2026-04-30 13:49:56.562376881 -0400
++++ b/src/rcfile.c	2026-04-30 13:46:40.649667761 -0400
 @@ -310,6 +310,8 @@
  		s->func = do_find_bracket;
  	else if (!strcmp(input, "wordcount"))
@@ -62,9 +62,9 @@ diff -ruN nano/src/rcfile.c nano-patch/src/rcfile.c
  	else if (!strcmp(input, "recordmacro"))
  		s->func = record_macro;
  	else if (!strcmp(input, "runmacro"))
-diff -ruN nano/src/text.c nano-patch/src/text.c
---- nano/src/text.c	2026-04-30 13:49:56.562376881 -0400
-+++ nano-patch/src/text.c	2026-04-30 13:47:44.289902161 -0400
+diff -ruN a/src/text.c b/src/text.c
+--- a/src/text.c	2026-04-30 13:49:56.562376881 -0400
++++ b/src/text.c	2026-04-30 13:47:44.289902161 -0400
 @@ -3034,6 +3034,28 @@
  						words, P_("word", "words", words),
  						chars, P_("character", "characters", chars));
