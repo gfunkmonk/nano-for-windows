@@ -1,0 +1,96 @@
+diff -ruN nano/doc/nanorc.5 nano-patch/doc/nanorc.5
+--- nano/doc/nanorc.5	2026-04-30 13:49:56.537894001 -0400
++++ nano-patch/doc/nanorc.5	2026-04-30 13:49:00.178085521 -0400
+@@ -745,6 +745,9 @@
+ Counts and reports on the status bar the number of lines, words,
+ and characters in the current buffer (or in the marked region).
+ .TP
++.B settabsize
++Prompts for a new tabsize to be set.
++.TP
+ .B execute
+ Prompts for a program to execute.  The program's output is inserted
+ into the current buffer \(em or into a new buffer when \fBM\-F\fR is toggled.
+diff -ruN nano/src/global.c nano-patch/src/global.c
+--- nano/src/global.c	2026-04-30 13:49:56.562376881 -0400
++++ nano-patch/src/global.c	2026-04-30 13:45:05.394677801 -0400
+@@ -672,6 +672,7 @@
+ 	const char *wordcount_gist =
+ 		N_("Count the number of lines, words, and characters");
+ 	const char *suspend_gist = N_("Suspend the editor (return to the shell)");
++	const char *settabsize_gist = N_("Set new tabsize");
+ #endif
+ 	const char *refresh_gist = N_("Refresh (redraw) the current screen");
+ #ifdef ENABLE_WORDCOMPLETION
+@@ -1045,6 +1046,8 @@
+ #ifndef NANO_TINY
+ 	add_to_funcs(count_lines_words_and_characters, MMAIN,
+ 			N_("Word Count"), WHENHELP(wordcount_gist), TOGETHER);
++	add_to_funcs(do_set_tabsize, MMAIN,
+++		N_("Set Tabsize"), WITHORSANS(settabsize_gist), TOGETHER, NOVIEW);
+ #else
+ 	add_to_funcs(copy_text, MMAIN,
+ 			N_("Copy"), WHENHELP(copy_gist), BLANKAFTER);
+@@ -1341,6 +1344,7 @@
+ 	add_to_sclist(MMAIN, "M-N", 0, to_next_word, 0);
+ #endif
+ 	add_to_sclist(MMAIN, "M-D", 0, to_prev_word, 0);
++	add_to_sclist(MMAIN, "M-4", 0, do_set_tabsize, 0);
+ #else
+ 	add_to_sclist(MMAIN, "M-]", 0, do_find_bracket, 0);
+ 	add_to_sclist(MMAIN, "M-A", 0, do_mark, 0);
+diff -ruN nano/src/prototypes.h nano-patch/src/prototypes.h
+--- nano/src/prototypes.h	2026-04-30 13:49:56.562376881 -0400
++++ nano-patch/src/prototypes.h	2026-04-30 13:46:01.533771001 -0400
+@@ -549,6 +549,7 @@
+ #endif
+ #ifndef NANO_TINY
+ void count_lines_words_and_characters(void);
++void do_set_tabsize(void);
+ #endif
+ void do_verbatim_input(void);
+ #ifdef ENABLE_WORDCOMPLETION
+diff -ruN nano/src/rcfile.c nano-patch/src/rcfile.c
+--- nano/src/rcfile.c	2026-04-30 13:49:56.562376881 -0400
++++ nano-patch/src/rcfile.c	2026-04-30 13:46:40.649667761 -0400
+@@ -310,6 +310,8 @@
+ 		s->func = do_find_bracket;
+ 	else if (!strcmp(input, "wordcount"))
+ 		s->func = count_lines_words_and_characters;
++	else if (!strcmp(input, "settabsize"))
++		s->func = do_set_tabsize;
+ 	else if (!strcmp(input, "recordmacro"))
+ 		s->func = record_macro;
+ 	else if (!strcmp(input, "runmacro"))
+diff -ruN nano/src/text.c nano-patch/src/text.c
+--- nano/src/text.c	2026-04-30 13:49:56.562376881 -0400
++++ nano-patch/src/text.c	2026-04-30 13:47:44.289902161 -0400
+@@ -3034,6 +3034,28 @@
+ 						words, P_("word", "words", words),
+ 						chars, P_("character", "characters", chars));
+ }
++
++/* Prompt user to set the new tabsize. We use the spell menu because
++ * it has no functions. */
++void do_set_tabsize(void)
++{
++	ssize_t new_tabsize = -1;
++	int response = do_prompt(MSPELL, "", NULL, edit_refresh, "New tabsize");
++
++	/* Cancel if no answer provided. */
++	if (response != 0) {
++		statusbar(_("Cancelled"));
++		return;
++	}
++
++	if (!parse_num(answer, &new_tabsize) || new_tabsize <= 0) {
++		statusline(AHEM, _("Requested tab size \"%s\" is invalid"), answer);
++		return;
++	}
++
++	tabsize = new_tabsize;
++	statusline(REMARK, _("Tabsize set to %d"), tabsize);
++}
+ #endif /* !NANO_TINY */
+ 
+ /* Get verbatim input. */
