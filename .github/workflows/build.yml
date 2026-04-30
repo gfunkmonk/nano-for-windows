@@ -358,8 +358,8 @@ jobs:
         CWD="${BUILD_CWD}"
         cd nano/pkg
           export UPX="--lzma --best"
-          curl -fsSL -O https://raw.githubusercontent.com/gfunkmonk/nano-for-windows/releases/LICENSE
-          curl -fsSL -O https://raw.githubusercontent.com/gfunkmonk/nano-for-windows/releases/README.md
+          curl -fsSL -O https://raw.githubusercontent.com/gfunkmonk/nano-for-windows-old/releases/LICENSE
+          curl -fsSL -O https://raw.githubusercontent.com/gfunkmonk/nano-for-windows-old/releases/README.md
           mv bin/nano.exe share/doc/nano/* "${CWD}/nano/doc/sample.nanorc.in" .
           mv share/nano syntax
           mv sample.nanorc.in .nanorc
