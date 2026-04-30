@@ -230,9 +230,9 @@ jobs:
 
         cd nano
 
-        #curl -fsSL -O https://github.com/gfunkmonk/nano-for-windows/raw/refs/heads/releases/getch.c
+        curl -fsSL -O https://github.com/gfunkmonk/nano-for-windows/raw/refs/heads/releases/getch.c
         #curl -fsSL -O https://github.com/gfunkmonk/nano-for-windows/raw/refs/heads/releases/pdcdisp.c
-        #mv -b --suffix=.bak getch.c curses/pdcurses
+        mv -b --suffix=.bak getch.c curses/pdcurses
         #mv -b --suffix=.bak pdc*.c curses/wincon
 
         ##########################
@@ -253,7 +253,7 @@ jobs:
         _diff
 
         # Fix wchar_t 16 bits limitation to display emojis and supplemental codepoints
-        echo -e "\n\nPATCH: change to 32 bits wchar_t."
+        #echo -e "\n\nPATCH: change to 32 bits wchar_t."
         #sed -i.bak 's|#define realpath(N,R) _fullpath((R),(N),0)|&#\n#define wchar_t int|' src/definitions.h
         #sed -i.bak '1,/#/ s/#/#define wchar_t int\n&/' src/definitions.h curses/curses.h
         #printf '\n#define wchar_t int\n' >> src/definitions.h
