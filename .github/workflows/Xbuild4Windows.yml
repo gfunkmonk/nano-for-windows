@@ -530,9 +530,9 @@ jobs:
         # (real wchar_t) and locale.h (int). Temporarily restore wchar_t
         # around the system header pull-in.
         sed -i.bak 's|#include_next <locale.h>|#pragma push_macro("wchar_t")\n#undef wchar_t\n#include_next <locale.h>\n#pragma pop_macro("wchar_t")|' \
-          lib/locale.in.h
+          ${{ github.workspace }}/nano/lib/locale.in.h
         echo "Patched nano/build/lib/locale.h:"
-        grep -A3 -B1 "push_macro" lib/locale.in.h
+        grep -A3 -B1 "push_macro" ${{ github.workspace }}/nano/lib/locale.in.h
 
     - name: "⚙️ Build for Windows ${{ matrix.pretty }}"
       run: |
