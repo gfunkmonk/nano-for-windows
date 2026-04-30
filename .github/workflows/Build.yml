@@ -284,7 +284,7 @@ jobs:
         sed -i.bak '1,/#/ s/#/#define wchar_t int\n&/' src/definitions.h curses/curses.h
         _diff
 
-        patch -p1 --fuzz=4 < ../repo/curses/pdcdisp.patch
+        patch -p1 --fuzz=4 < ../repo/patch/curses/pdcdisp.patch
 
         ####                               ####
         ####   LLVM-MING SPECIFIC PATCHES  ####
