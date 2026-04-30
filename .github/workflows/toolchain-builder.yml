@@ -109,12 +109,12 @@ jobs:
       if: steps.cache-toolchain.outputs.cache-hit != 'true' && success()
       uses: snnaplab/delete-branch-cache-action@v1
 
-    - name: "📦 Upload Toolchain Artifact"
+    #- name: "📦 Upload Toolchain Artifact"
       # Make the toolchain available as a downloadable artifact in addition
       # to the cache, so other workflows can fetch it via download-artifact.
-      if: steps.cache-toolchain.outputs.cache-hit != 'true' && success()
-      uses: actions/upload-artifact@v7  # FIX: was missing entirely
-      with:
-        name: llvm-mingw
-        path: llvm-mingw
-        retention-days: 7
+    #  if: steps.cache-toolchain.outputs.cache-hit != 'true' && success()
+    #  uses: actions/upload-artifact@v7  # FIX: was missing entirely
+    #  with:
+    #    name: llvm-mingw
+    #    path: llvm-mingw
+    #    retention-days: 7
