@@ -203,7 +203,7 @@ jobs:
     - name: 🩹 Patches
       run: |
         cd nano
-        for p in $(ls -v ../repo/patch/*.patch); do patch -p1 --fuzz=4 < "$p"; done
+        for p in $(ls -v ../repo/patch/nano/*.patch); do patch -p1 --fuzz=4 < "$p"; done
 
     - name: "🪄 Apply Windows Portability Magic"
       run: |
@@ -231,9 +231,10 @@ jobs:
         cd nano
 
         #curl -fsSL -O https://github.com/gfunkmonk/nano-for-windows/raw/refs/heads/releases/getch.c
-        curl -fsSL -O https://github.com/gfunkmonk/nano-for-windows/raw/refs/heads/releases/pdcdisp.c
+        #curl -fsSL -O https://github.com/gfunkmonk/nano-for-windows/raw/refs/heads/releases/pdcdisp.c
         #mv -b --suffix=.bak getch.c curses/pdcurses
-        mv -b --suffix=.bak pdc*.c curses/wincon
+        #mv -b --suffix=.bak pdc*.c curses/wincon
+
         ##########################
         ##                        ##
         ##     APPLY PATCHES      ##
@@ -277,6 +278,13 @@ jobs:
         sed -i.bak 's|wcwidth(wc)|uc_width(wc, "UTF-8")|g'  src/chars.c src/winio.c
         sed -i '/prototypes.h/a#include "uniwidth.h"'  src/chars.c
         _diff
+
+        # Fix wchar_t 16 bits limitation to display emojis and all the suplemental codepoints:
+        echo -e "\n\nPATCH: change to 32 bits wchar_t."
+        sed -i.bak '1,/#/ s/#/#define wchar_t int\n&/' src/definitions.h curses/curses.h
+        _diff
+
+        patch -p1 --fuzz=4 < ../repo/curses/pdcdisp.patch
 
         ####                               ####
         ####   LLVM-MING SPECIFIC PATCHES  ####
