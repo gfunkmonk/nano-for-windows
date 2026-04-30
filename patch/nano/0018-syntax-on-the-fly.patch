@@ -82,7 +82,7 @@ diff --git a/src/text.c b/src/text.c
 index 85d1bd40..6f0ab8a2 100644
 --- a/src/text.c
 +++ b/src/text.c
-@@ -2969,7 +2969,49 @@ void count_lines_words_and_characters(void)
+@@ -2969,7 +2969,50 @@ void count_lines_words_and_characters(void)
  				words, P_("word", "words", words),
  				chars, P_("character", "characters", chars));
  }
