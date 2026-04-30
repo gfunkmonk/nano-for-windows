@@ -30,7 +30,7 @@ jobs:
   checks:
     name: "✔️ Pre-build checks"
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 3
     # Use the Bash shell regardless whether the GitHub Actions runner is ubuntu-latest, macos-latest, or windows-latest
     outputs:
       body: ${{ steps.checks.outputs.body }}
@@ -159,7 +159,8 @@ jobs:
       run: |
         git clone https://git.savannah.gnu.org/git/nano.git --depth 1
         cd nano
-        git clone https://github.com/Bill-Gray/PDCursesMod.git curses
+        #git clone https://github.com/Bill-Gray/PDCursesMod.git curses
+        git clone https://github.com/Bill-Gray/PDCursesMod.git --revision 993542b44f5d3e5a13ddbd223880960aa755344e curses
         git clone https://git.savannah.gnu.org/git/gnulib.git --depth 1
         autopoint --force
         glibmodules="
