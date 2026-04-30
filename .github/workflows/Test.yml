@@ -385,7 +385,7 @@ jobs:
         mkdir -p nano/build
         cd nano/build
           ../configure --host="${TARGET}" --prefix="${OUTDIR}" \
-              --enable-{utf8,threads=windows,extra,color,nanorc} --disable-{nls} \
+              --enable-{utf8,threads=windows,extra,color,nanorc} --disable-nls \
               --sysconfdir="C:\\ProgramData" || cat config.log
           echo "
             #define HAVE_FREXP_IN_LIBC 1
