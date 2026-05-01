@@ -197,6 +197,7 @@ jobs:
             uniwidth/width
             unitypes
             unictype/category-all
+            unictype/base
             vsnprintf-posix
             wchar-h
             wctype-h
