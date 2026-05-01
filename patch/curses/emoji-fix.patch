@@ -1,5 +1,5 @@
 --- a/curses/wincon/pdcdisp.c	2026-05-01 07:43:13.343719678 -0400
-+++ b/curses/wincon/pdcdisp.c	2026-05-01 07:45:08.427135478 -0400
++++ b/curses/wincon/pdcdisp.c	2026-05-01 08:29:10.283779411 -0400
 @@ -155,7 +155,7 @@
  #endif
  
@@ -9,3 +9,37 @@
  #endif
  
  static void _show_run_of_ansi_characters( const attr_t attr,
+@@ -181,8 +181,6 @@
+ 
+ #ifdef PDC_WIDE
+         ch &= A_CHARTEXT;
+-        if( ch <= MAX_UNICODE)
+-        {
+             if( IS_SUPPLEMENTAL_MULTILINGUAL_PLANE( ch))
+             {
+                 buffer[n_out++] = (WCHAR)((ch - 0x10000) >> 10 | 0xD800); /* first UTF-16 unit */
+@@ -190,7 +188,6 @@
+             }
+         else
+             buffer[n_out++] = (WCHAR)ch;
+-        }
+ #else
+         buffer[n_out++] = (char)( ch & A_CHARTEXT);
+ #endif
+@@ -260,8 +257,6 @@
+             }
+         }
+ #endif
+-        if( ch <= MAX_UNICODE)
+-        {
+             if( IS_SUPPLEMENTAL_MULTILINGUAL_PLANE( ch))
+             {
+                 buffer[n_out++].Char.UnicodeChar = (WCHAR)((ch - 0x10000) >> 10 | 0xD800); /* first UTF-16 unit */
+@@ -269,7 +264,6 @@
+             }
+             else
+                 buffer[n_out++].Char.UnicodeChar = (WCHAR)ch;
+-        }
+ #else
+         buffer[n_out++].Char.UnicodeChar = (WCHAR)( ch & A_CHARTEXT);
+ #endif
