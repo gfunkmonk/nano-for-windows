@@ -486,19 +486,10 @@ jobs:
         cd "nano/curses/${PDTERM}"
           make -j$(($(nproc)*2)) WIDE=Y UTF8=Y _${{matrix.short}}=Y
 
-    - name: "🔍 Debug chtype and wchar_t sizes"
+    - name: "🔍 Check chtype"
       run: |
-        cd nano/curses/wincon
-        echo "=== Checking PDCursesMod configuration ==="
-        grep -r "typedef.*chtype\\|define.*chtype" ../*.h ./*.h 2>/dev/null | head -5
-        
-        echo ""
-        echo "=== Checking if PDC_WIDE affects chtype size ==="
-        grep -n "PDC_WIDE.*chtype\\|chtype.*PDC_WIDE\\|typedef.*chtype\\|#.*chtype is\" ../common/pdcurses.h pdcurses.h 2>/dev/null | head -10
-        
-        echo ""
-        echo "=== Looking for chtype definition ==="
-        find . -name "*.h" -exec grep -l "typedef.*chtype" {} \; 2>/dev/null | head -3
+        cd nano/curses && grep -A2 "typedef.*chtype" curses.h | head -10 && echo "Compiling test..." && printf '#include "curses.h"\n#include <stdio.h>\nint main() { printf("chtype=%zu\\n", sizeof(chtype)); return 0; }' > /tmp/t.c && ${TARGET}-gcc -Iwincon -I. /tmp/t.c -o /tmp/t 2>&1 && ${TARGET}-run /tmp/t
+        echo "=== chtype check ===" && grep "typedef.*chtype" nano/curses/curses.h && echo "chtype lines above"
 
     - name: "🧪 Test PDCursesMod emoji display directly"
       run: |
