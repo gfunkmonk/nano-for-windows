@@ -341,7 +341,7 @@ jobs:
         # don't wrap around document when searching #
         sed -i.bak -f ../repo/sed/nosearchwrap.sed doc/nano.1
         sed -i.bak -f ../repo/sed/nosearchwrap.sed doc/nanorc.5
-        sed -i.bak -f ../repo/sed/nosearchwrap.sed src/definitions.c
+        sed -i.bak -f ../repo/sed/nosearchwrap.sed src/definitions.h
         sed -i.bak -f ../repo/sed/nosearchwrap.sed src/nano.c
         sed -i.bak -f ../repo/sed/nosearchwrap.sed src/rcfile.c
         sed -i.bak -f ../repo/sed/nosearchwrap.sed src/search.c
