@@ -1,3 +1,9 @@
+# Copyright (c) 2023 okibcn
+# This is free software, licensed under the GNU General Public License v3.0
+# See /LICENSE for more information.
+# https://github.com/okibcn/nano-for-windows
+# Description: Builds nano for Windows
+
 name: Test
 on:
   # schedule:
@@ -121,7 +127,7 @@ jobs:
         include:
           - { arch: i686,    name: Win32,    short: w32, pretty: 32 bits  }
           - { arch: x86_64,  name: Win64,    short: w64, pretty: 64 bits  }
-          - { arch: armv7,   name: WinARM,   short: a32, pretty: on Arm   }
+          #- { arch: armv7,   name: WinARMv7, short: a32, pretty: on Arm   }
           - { arch: aarch64, name: WinARM64, short: a64, pretty: on Arm64 }
     defaults:
       run:
@@ -134,7 +140,7 @@ jobs:
         apk update && apk upgrade
         apk add bash curl jq tar xz github-cli \
           git make texinfo groff gettext-dev automake autoconf pkgconf coreutils upx p7zip python3 sed patch
-         echo "PATH=$(pwd)/llvm-mingw/bin:$PATH" >> $GITHUB_ENV
+        echo "PATH=$(pwd)/llvm-mingw/bin:$PATH" >> $GITHUB_ENV
         # this seems to be needed when running in a container (because of UID mismatch??)
         git config --global --add safe.directory '*'
 
@@ -164,6 +170,8 @@ jobs:
         git clone https://git.savannah.gnu.org/git/gnulib.git --depth 1
         autopoint --force
         glibmodules="
+            base32
+            base64
             futimens
             getdelim
             getline
@@ -172,19 +180,24 @@ jobs:
             isblank
             iswblank
             lstat
+            mbrlen
+            mbchar
             mkstemps
             nl_langinfo
             regex
             rewinddir
             sigaction
             snprintf-posix
-            stdarg
+            stdarg-h
             strcase
             strcasestr-simple
             strnlen
-            sys_wait
+            sys_wait-h
+            uniwidth
+            unitypes
+            unictype/property-emoji
             vsnprintf-posix
-            wchar
+            wchar-h
             wctype-h
             wcwidth
         "
@@ -197,8 +210,10 @@ jobs:
 
     - name: 🩹 Patches
       run: |
+        CWD=$(pwd)
         cd nano
-        for p in $(ls -v ../repo/patch/nano/*.patch); do patch -p1 --fuzz=4 < "$p"; done
+        for p in $(ls -v ${CWD}/repo/patch/nano/*.patch); do patch -p1 --fuzz=3 < "$p"; done
+        for p in $(ls -v ${CWD}/repo/patch/curses/*.patch); do patch -p1 --fuzz=3 < "$p"; done
 
     - name: "🪄 Apply Windows Portability Magic"
       run: |
@@ -231,9 +246,9 @@ jobs:
         #mv -b --suffix=.bak pdc*.c curses/wincon
 
         ##########################
-        ##                      ##
-        ##     APPLY PATCHES    ##
-        ##                      ##
+        ##                        ##
+        ##     APPLY PATCHES      ##
+        ##                        ##
         ##########################
 
         # 1. realpath() workaround
@@ -246,13 +261,6 @@ jobs:
         echo "#define realpath(N,R) _fullpath((R),(N),0)" >> ./src/definitions.h
         echo "#endif" >> ./src/definitions.h
         _diff
-
-        # Fix wchar_t 16 bits limitation to display emojis and supplemental codepoints
-        #echo -e "\n\nPATCH: change to 32 bits wchar_t."
-        #sed -i.bak 's|#define realpath(N,R) _fullpath((R),(N),0)|&#\n#define wchar_t int|' src/definitions.h
-        #sed -i.bak '1,/#/ s/#/#define wchar_t int\n&/' src/definitions.h curses/curses.h
-        #printf '\n#define wchar_t int\n' >> src/definitions.h
-        #_diff
 
         # default open() files in binary mode as linux does
         echo -e "\n\nPATCH: Forcing file management in binary mode like the Linux version."
@@ -269,6 +277,19 @@ jobs:
         sed -i 's|/tmp/|~/AppData/Local/Temp/|g' ./src/files.c
         _diff
 
+        # Fix homedir detection
+        echo -e "\n\nPATCH: configuring Windows home folder."
+        sed -i.bak 's|\"HOME\"|"USERPROFILE\"|g' ./src/utils.c
+        _diff
+
+        # Modify path expansion with backslashes
+        echo -e "\n\nPATCH: Configuring backslashes for folders."
+        sed -i.bak "/free(tilded)/a\
+            \\\\tfor(tilded = retval; \*tilded; ++tilded) if(\*tilded == '\\\\\\\\') \*tilded = '/';
+
+            s|path\[i\] != '/'|path[i] != '/' \&\& path[i] != '\\\\\\\\'|" src/files.c
+        _diff
+
         # Allow custom colors in terminals with more than 256 colors
         echo -e "\n\nPATCH: Allow true color."
         sed -i.bak "/COLORS == 256/ {s/==/>=/}"  src/rcfile.c
@@ -277,6 +298,52 @@ jobs:
         # Solve long delay after unicode
         echo -e "\n\nPATCH: solved deadlock with unicode characters."
         sed -i.bak "/halfdelay(ISSET(QUICK_BLANK)/,/disable_kb_interrupt/d"  src/winio.c
+        _diff
+
+       # Solve window resize crashes
+        echo -e "\n\nPATCH: Window resize fix."
+        sed -i.bak -e "/LINES and COLS accordingly/{n;N;d}" src/nano.c # delets 2 next lines
+        sed -i "/LINES and COLS accordingly/a\
+            \\\\tresize_term(0, 0);\\n\
+            erase();" src/nano.c
+        sed -i -e "/recreate the subwindows with their (new) sizes/{n;d}" src/nano.c
+        _diff
+        sed -i.bak 's/the_window_resized/input == KEY_RESIZE/' src/winio.c
+        _diff
+
+        # Change default terminal to nothing
+        sed -i 's|vt220||g' ./src/nano.c
+        _diff
+
+        # Fix pipe-in data from Windows console.
+        echo -e "\n\nPATCH: Fix pipe in data in Windows console."
+        sed -i.bak "s|/dev/tty|CON|" src/nano.c
+        sed -i "s/stream, 0/stream, fd/" src/nano.c
+        sed -i "/FILE \*stream/,/stop the reading/ c\
+            \\\\t static FILE \*stream;\\n\
+            static int fd\=0;\\n\
+            if \(fd\=\=0){\\n\
+            if \(GetConsoleWindow\() \!\= NULL)\\n\
+            fprintf\(stderr, _\(\"Reading data from keyboard; type a ^Z line to finish.\\\\n\"));\\n\
+            fd \= dup\(0);\\n\
+            stream \= fdopen\(fd, \"rb\");\\n\
+            freopen\(\"CON\", \"rb\", stdin);\\n\
+            FreeConsole\();\\n\
+            AttachConsole\(ATTACH_PARENT_PROCESS);\\n\
+            return FALSE;}\\n\
+            endwin\();\\n\
+            if \(stream \=\= NULL) {\\n\
+            \\t int errnumber \= errno;\\n\
+            \\t if\(fd \> -1) close\(fd);\\n\
+            return FALSE;}" src/nano.c
+        sed -i "/initscr/i\
+            for\(int optind_\=optind; optind_ \< argc;optind_\+\+)\\n\
+            if \(strcmp\(argv\[optind_], \"\-\") \=\= 0){scoop_stdin\();break;}" src/nano.c
+        _diff
+
+        # Fix browser folder change
+        echo -e "\n\nPATCH: Fixed browser folder change."
+        sed -i.bak 's/--selected/selected=0/' src/browser.c
         _diff
 
         # Add (Y/N/^C) to Save modified buffer prompt
@@ -302,32 +369,71 @@ jobs:
 
         # Fix for unicode char width detection using GNUlib internal function
         echo -e "\n\nPATCH: unicode char width detection using GNUlib internal function."
-        sed -i.bak 's|wcwidth(wc)|(((wc) >= 0xD800 \&\& (wc) <= 0xDFFF) ? 1 : uc_width(wc, "UTF-8"))|g'  src/chars.c src/winio.c
+        sed -i.bak 's|wcwidth(wc)|uc_width(wc, "UTF-8")|g'  src/chars.c src/winio.c
         sed -i '/prototypes.h/a#include "uniwidth.h"'  src/chars.c
         _diff
 
-        ####                               ####
-        #### PDCursesMod especific patches ####
-        ####                               ####
+        # Solve duplicated definitions ALT-ARROWS already in PDCursesMod
+        echo -e "\n\nPATCH: remove duplicated definitions."
+        sed -i.bak "/0x42[1234]/d" src/definitions.h
+        _diff
 
         # PDCurses uses 64bit (chtype) for cell attributes instead of 32bit (int)
-        #echo -e "\n\nPATCH: Improving from 256colors to true color."
-        #sed -i.bak "/interface_color_pair/ {s/int/chtype/}" src/prototypes.h src/global.c
-        #_diff
-        #sed -i.bak "/int attributes/ {s/int/chtype/}" src/definitions.h
-        #_diff
-        #sed -i.bak "/bool parse_combination/ {s/int/chtype/}" src/rcfile.c
-        #sed -i "/int attributes/ {s/int/chtype/}" src/rcfile.c
-        #_diff
+        echo -e "\n\nPATCH: Improving from 256colors to true color."
+        sed -i.bak "/interface_color_pair/ {s/int/chtype/}" src/prototypes.h src/global.c
+        _diff
+        sed -i.bak "/int attributes/ {s/int/chtype/}" src/definitions.h
+        _diff
+        sed -i.bak "/bool parse_combination/ {s/int/chtype/}" src/rcfile.c
+        sed -i "/int attributes/ {s/int/chtype/}" src/rcfile.c
+        _diff
 
-        # Fix prototype for VT driver compatibility
-        echo -e "\n\nPATCH: Fixing wine_ver_func prototype in VT driver."
-        sed -i 's/wine_ver_func)()/wine_ver_func)(void)/' curses/vt/pdcscrn.c
+        # Desambiguation of BACKSPACE vs ^H, or ENTER vs ^M and certain CTRL+key combos             //o//
+        echo -e "\n\nPATCH: Full key modifiers detection."
+        sed -i.bak "/get_kbinput(midwin, VISIBLE)/a\
+            \\\\tif (\!((PDC_get_key_modifiers()) & (PDC_KEY_MODIFIER_SHIFT|PDC_KEY_MODIFIER_CONTROL|PDC_KEY_MODIFIER_ALT)) ) {\\n\
+            \\tswitch (input) {\\n\
+            \\t\\tcase 0x08:      input = KEY_BACKSPACE; break;\\n\
+            \\t\\tcase 0x0d:      input = KEY_ENTER;\\n\
+            \\t}\\n\
+            }\\n\
+            if (PDC_get_key_modifiers() & PDC_KEY_MODIFIER_CONTROL){\\n\
+            switch (input) {\\n\
+            \\t\\tcase '/':          input = 31; break;\\n\
+            \\t\\tcase SHIFT_DELETE: input = CONTROL_SHIFT_DELETE; break;\\n\
+            \\t}\\n\
+            }"  src/nano.c
+        sed -Ei.bak '
+            s|(M-\{", )0|\1ALT_LBRACKET|
+            s|(M-}", )0|\1ALT_RBRACKET|
+            ' src/global.c
+        sed -i.bak "
+            s/0x401/CTL_LEFT/
+            s/0x402/CTL_RIGHT/
+            s/0x403/CTL_UP/
+            s/0x404/CTL_DOWN/
+            s/0x405/CTL_HOME/
+            s/0x406/CTL_END/
+            s/0x40D/CTL_DEL/
+            s/0x427/ALT_PGUP/
+            s/0x428/ALT_PGDN/
+            s/0x42C/ALT_INS/
+            s/0x42D/ALT_DEL/
+            " src/definitions.h
+        _diff
+
+        # Fix ALT+[NUMBER|LETTER] not working with PDCursesMod
+        echo -e "\n\nPATCH: ALT+[NUMBER|LETTER] not working."
+        sed -i.bak "s/char)keystring\[2])/&\+\(\(unsigned char)keystring\[2]>\='9' \? ALT_A-\(int)'a' \: ALT_0-\(int)'0')/" src/global.c
+        _diff
+
+        # Fix Shifted metas SHIFT+ALT+[LETTER] not working with PDCursesMod
+        echo -e "\n\nPATCH: Shifted metas SHIFT+ALT+[LETTER] not working."
+        sed -i.bak "/(escapes == 0)/a\
+            meta_key\=PDC_get_key_modifiers\() \& PDC_KEY_MODIFIER_ALT;" src/winio.c
         _diff
 
         echo '#define PDC_WIDE 1' >> src/definitions.h
-
-        patch -p1 --fuzz=4 < ../repo/patch/curses/pdcdisp.patch
 
         ####                               ####
         ####   LLVM-MING SPECIFIC PATCHES  ####
@@ -345,7 +451,7 @@ jobs:
         _diff
 
         ####                               ####
-        ####   BRANDING and VERSIONING     ####
+        ####    BRANDING and VERSIONING    ####
         ####                               ####
 
         cd curses
@@ -362,31 +468,24 @@ jobs:
     - name: "⚙️ Compile curses lib for ${{ matrix.name}}"
       run: |
         ##########################
-        ##                      ##
-        ##     COMPILE CURSES   ##
-        ##                      ##
+        ##                        ##
+        ##     COMPILE CURSES     ##
+        ##                        ##
         ##########################
 
-        PDTERM="vt"
+        PDTERM="wincon"
         echo "PDTERM=${PDTERM}" >> $GITHUB_ENV
-        export CFLAGS="-Oz -fno-math-errno -flto -std=c17 -Wno-error -DPDC_WIDE"
-        #unset NCURSESW_CFLAGS
+        export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DPDC_WIDE"
+        unset NCURSESW_CFLAGS
         cd "nano/curses/${PDTERM}"
           make -j$(($(nproc)*2)) WIDE=Y UTF8=Y _${{matrix.short}}=Y
-          cp libpdcurses.a pdcurses.a
-
-    #- name: "Emergency SSH Access"
-    #  uses: mxschmitt/action-tmate@v3
-    #  if: always() # This ensures it runs even if a previous step failed
-    #  with:
-    #    limit-access-to-actor: true # Only YOU can SSH in using your GitHub SSH key
 
     - name: "🔧 Configure Nano Build"
       run: |
         ##########################
-        ##                      ##
-        ##     CONFIGURE BUILD  ##
-        ##                      ##
+        ##                        ##
+        ##     CONFIGURE BUILD    ##
+        ##                        ##
         ##########################
         # FIX: capture CWD at step start and export to GITHUB_ENV so subsequent
         # steps can reference it even after cd calls shift the working directory.
@@ -396,7 +495,7 @@ jobs:
         TARGET="${{ matrix.arch }}-w64-mingw32"
         OUTDIR="${CWD}/nano/pkg"
         CURSES_DIR="${CWD}/nano/curses"
-        export CFLAGS="-O3 -Oz -fno-math-errno -flto -DPDC_FORCE_UTF8 -DPDC_NCMOUSE -DPDC_WIDE -std=c17 -Wno-error"
+        export CFLAGS="-O2 -fno-math-errno -flto -DPDC_FORCE_UTF8 -DPDC_NCMOUSE -DPDC_WIDE -std=c17"
         export LDFLAGS="-L${CURSES_DIR}/${{ env.PDTERM }} -static -static-libgcc ${CURSES_DIR}/${{ env.PDTERM }}/pdcurses.a"
         export NCURSESW_CFLAGS="-I${CURSES_DIR} -DNCURSES_STATIC  -DENABLE_MOUSE"
         export NCURSESW_LIBS="-l:pdcurses.a -lwinmm"
@@ -422,37 +521,20 @@ jobs:
           sed -i "/#define NEED_PRINTF_UNBOUNDED_PRECISION 1/d" config.h
           # sed -i "/#define __GETOPT_PREFIX rpl_/d" config.h
           #BRANDING="GNU nano for Windows ${{ matrix.pretty }}, ${{ needs.checks.outputs.build }} $(TZ=UTC date +'%Y.%m.%d')"
-          curl -fsSL -o log.html "https://git.savannah.gnu.org/gitweb/?p=nano.git;a=shortlog"
-          NANOVER=$(grep -m 1 "title=\"tags/" log.html | grep -Eo "v[0-9]+\.[0-9]+" | head -1)
+          NANOVER=$(echo "${{ needs.checks.outputs.build }}" | grep -Eo "v[0-9]+\.[0-9]+")
           BRANDING="GNU nano $NANOVER for ${{ matrix.name }}"
           echo "#define REVISION \"${BRANDING}\"" > src/revision.h
 
     - name: "⚙️ Build for Windows ${{ matrix.pretty }}"
       run: |
         ##########################
-        ##                      ##
-        ##     BUILD NANO       ##
-        ##                      ##
+        ##                        ##
+        ##     BUILD NANO         ##
+        ##                        ##
         ##########################
         cd nano/build
           make -j$(($(nproc)*2)) && \
           make install || exit 1
-
-    - name: "🔧 Prepare debug session"
-      if: github.event.inputs.debug_enabled == 'true'
-      run: |
-        apk add bash nano-syntax iproute2 util-linux-misc
-        curl -fsSL -o /usr/local/bin/oh-my-posh https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/posh-linux-amd64
-        chmod +x /usr/local/bin/oh-my-posh
-        curl -fsSL -o /etc/nanorc https://github.com/okibcn/miniU/raw/main/Github_Linux/.nanorc
-        curl -fsSL -o ~/.zshrc https://github.com/okibcn/miniU/raw/main/Github_Linux/profile.sh
-        cat ~/.zshrc >> ~/.bashrc
-
-    - name: "🐞 Debug session"
-      uses: mxschmitt/action-tmate@v3
-      if: github.event.inputs.debug_enabled == 'true'
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: "📦 Create Package"
       run: |
@@ -484,6 +566,22 @@ jobs:
         path: |
           *.zip
 
+
+    - name: "🔧 Prepare debug session"
+      if: github.event.inputs.debug_enabled == 'true'
+      run: |
+        apk add bash nano-syntax iproute2 util-linux-misc
+        curl -fsSL -o /usr/local/bin/oh-my-posh https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/posh-linux-amd64
+        chmod +x /usr/local/bin/oh-my-posh
+        curl -fsSL -o /etc/nanorc https://github.com/okibcn/miniU/raw/main/Github_Linux/.nanorc
+        curl -fsSL -o ~/.zshrc https://github.com/okibcn/miniU/raw/main/Github_Linux/profile.sh
+        cat ~/.zshrc >> ~/.bashrc
+
+    - name: "🐞 Debug session"
+      uses: mxschmitt/action-tmate@v3
+      if: github.event.inputs.debug_enabled == 'true'
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   ## PUBLISH ##############################################################################
   publish:
