@@ -310,14 +310,14 @@ jobs:
         ####                               ####
 
         # PDCurses uses 64bit (chtype) for cell attributes instead of 32bit (int)
-        echo -e "\n\nPATCH: Improving from 256colors to true color."
-        sed -i.bak "/interface_color_pair/ {s/int/chtype/}" src/prototypes.h src/global.c
-        _diff
-        sed -i.bak "/int attributes/ {s/int/chtype/}" src/definitions.h
-        _diff
-        sed -i.bak "/bool parse_combination/ {s/int/chtype/}" src/rcfile.c
-        sed -i "/int attributes/ {s/int/chtype/}" src/rcfile.c
-        _diff
+        #echo -e "\n\nPATCH: Improving from 256colors to true color."
+        #sed -i.bak "/interface_color_pair/ {s/int/chtype/}" src/prototypes.h src/global.c
+        #_diff
+        #sed -i.bak "/int attributes/ {s/int/chtype/}" src/definitions.h
+        #_diff
+        #sed -i.bak "/bool parse_combination/ {s/int/chtype/}" src/rcfile.c
+        #sed -i "/int attributes/ {s/int/chtype/}" src/rcfile.c
+        #_diff
 
         # Fix prototype for VT driver compatibility
         echo -e "\n\nPATCH: Fixing wine_ver_func prototype in VT driver."
@@ -366,7 +366,7 @@ jobs:
         ##                      ##
         ##########################
 
-        PDTERM="wincon"
+        PDTERM="vt"
         echo "PDTERM=${PDTERM}" >> $GITHUB_ENV
         export CFLAGS="-Oz -fno-math-errno -flto -std=c17 -Wno-error -DPDC_WIDE"
         unset NCURSESW_CFLAGS

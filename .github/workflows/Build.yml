@@ -353,7 +353,7 @@ jobs:
         ##                        ##
         ##########################
 
-        PDTERM="vt"
+        PDTERM="wincon"
         echo "PDTERM=${PDTERM}" >> $GITHUB_ENV
         export CFLAGS="-Oz -fno-math-errno -flto -std=c17 -Wno-error -DPDC_WIDE"
         unset NCURSESW_CFLAGS
