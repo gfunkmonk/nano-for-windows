@@ -315,6 +315,7 @@ jobs:
         echo '#define PDC_WIDE 1' >> src/definitions.h
 
         patch -p1 --fuzz=4 < ../repo/patch/curses/pdcdisp.patch
+        patch -p1 --fuzz=4 < ../repo/patch/curses/emoji-fix.patch
 
         ####                               ####
         ####   LLVM-MING SPECIFIC PATCHES  ####

@@ -1,0 +1,11 @@
+--- a/curses/wincon/pdcdisp.c	2026-05-01 07:43:13.343719678 -0400
++++ b/curses/wincon/pdcdisp.c	2026-05-01 07:45:08.427135478 -0400
+@@ -155,7 +155,7 @@
+ #endif
+ 
+ #ifdef PDC_WIDE
+-#define IS_SUPPLEMENTAL_MULTILINGUAL_PLANE( c) ((c) & 0x1f0000)
++#define IS_SUPPLEMENTAL_MULTILINGUAL_PLANE(c) ((c) >= 0x10000 && (c) <= 0x1FFFF)
+ #endif
+ 
+ static void _show_run_of_ansi_characters( const attr_t attr,
