@@ -249,7 +249,7 @@ jobs:
         # Fix wchar_t 16 bits limitation to display emojis and supplemental codepoints
         #echo -e "\n\nPATCH: change to 32 bits wchar_t."
         #sed -i.bak 's|#define realpath(N,R) _fullpath((R),(N),0)|&#\n#define wchar_t int|' src/definitions.h
-        #sed -i.bak '1,/#/ s/#/#define wchar_t int\n&/' src/definitions.h curses/curses.h
+        sed -i.bak '1,/#/ s/#/#define wchar_t int\n&/' src/definitions.h curses/curses.h
         #printf '\n#define wchar_t int\n' >> src/definitions.h
         #_diff
 
@@ -303,6 +303,20 @@ jobs:
         echo -e "\n\nPATCH: unicode char width detection using GNUlib internal function."
         sed -i.bak 's|wcwidth(wc)|(((wc) >= 0xD800 \&\& (wc) <= 0xDFFF) ? 1 : uc_width(wc, "UTF-8"))|g'  src/chars.c src/winio.c
         sed -i '/prototypes.h/a#include "uniwidth.h"'  src/chars.c
+        _diff
+
+        ####                               ####
+        #### PDCursesMod especific patches ####
+        ####                               ####
+
+        # PDCurses uses 64bit (chtype) for cell attributes instead of 32bit (int)
+        echo -e "\n\nPATCH: Improving from 256colors to true color."
+        sed -i.bak "/interface_color_pair/ {s/int/chtype/}" src/prototypes.h src/global.c
+        _diff
+        sed -i.bak "/int attributes/ {s/int/chtype/}" src/definitions.h
+        _diff
+        sed -i.bak "/bool parse_combination/ {s/int/chtype/}" src/rcfile.c
+        sed -i "/int attributes/ {s/int/chtype/}" src/rcfile.c
         _diff
 
         # Fix prototype for VT driver compatibility

@@ -255,7 +255,7 @@ jobs:
         # Fix wchar_t 16 bits limitation to display emojis and supplemental codepoints
         #echo -e "\n\nPATCH: change to 32 bits wchar_t."
         #sed -i.bak 's|#define realpath(N,R) _fullpath((R),(N),0)|&#\n#define wchar_t int|' src/definitions.h
-        sed -i.bak '1,/#/ s/#/#define wchar_t int\n&/' src/definitions.h curses/curses.h
+        #sed -i.bak '1,/#/ s/#/#define wchar_t int\n&/' src/definitions.h curses/curses.h
         #printf '\n#define wchar_t int\n' >> src/definitions.h
         #_diff
 
