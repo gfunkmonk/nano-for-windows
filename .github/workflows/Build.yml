@@ -195,8 +195,7 @@ jobs:
             sys_wait-h
             uniwidth
             unitypes
-            unictype/category-all
-            unictype/property-all
+            unictype/property-emoji
             vsnprintf-posix
             wchar-h
             wctype-h
