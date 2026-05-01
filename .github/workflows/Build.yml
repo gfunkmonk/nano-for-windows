@@ -403,8 +403,7 @@ jobs:
           sed -i "/#define NEED_PRINTF_UNBOUNDED_PRECISION 1/d" config.h
           # sed -i "/#define __GETOPT_PREFIX rpl_/d" config.h
           #BRANDING="GNU nano for Windows ${{ matrix.pretty }}, ${{ needs.checks.outputs.build }} $(TZ=UTC date +'%Y.%m.%d')"
-          curl -fsSL -o log.html "https://git.savannah.gnu.org/gitweb/?p=nano.git;a=shortlog"
-          NANOVER=$(grep -m 1 "title=\"tags/" log.html | grep -Eo "v[0-9]+\.[0-9]+" | head -1)
+          NANOVER=$(echo "${{ needs.checks.outputs.build }}" | grep -Eo "v[0-9]+\.[0-9]+")
           BRANDING="GNU nano $NANOVER for ${{ matrix.name }}"
           echo "#define REVISION \"${BRANDING}\"" > src/revision.h
 
