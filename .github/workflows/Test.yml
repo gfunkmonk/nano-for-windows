@@ -208,12 +208,27 @@ jobs:
         autoheader
         automake --add-missing
 
-    - name: 🩹 Patches
+    - name: 🩹 Nano Patches
       run: |
         CWD=$(pwd)
         cd nano
-        for p in $(ls -v ${CWD}/repo/patch/nano/*.patch); do patch -p1 --fuzz=3 < "$p"; done
-        for p in $(ls -v ${CWD}/repo/patch/curses/*.patch); do patch -p1 --fuzz=3 < "$p"; done
+        for p in $(ls -v ${CWD}/repo/patch/nano/*.patch); do
+          if [ -f "$p" ]; then
+            echo "Applying $(basename "$p")..."
+            patch -p1 --fuzz=3 < "$p"
+          fi
+        done
+
+    - name: ❤️‍🩹 PDCurses Patches
+      run: |
+        CWD=$(pwd)
+        cd nano
+        for p in $(ls -v ${CWD}/repo/patch/curses/*.patch); do
+          if [ -f "$p" ]; then
+            echo "Applying $(basename "$p")..."
+            patch -p1 --fuzz=3 < "$p"
+          fi
+        done
 
     - name: "🪄 Apply Windows Portability Magic"
       run: |
@@ -296,7 +311,8 @@ jobs:
         _diff
 
         # Change default terminal to nothing
-        sed -i 's|vt220||g' ./src/nano.c
+        echo -e "\n\nPATCH: blank out nano's default terminal"
+        sed -i.bak 's|vt220||g' ./src/nano.c
         _diff
 
         # Fix pipe-in data from Windows console.
@@ -343,6 +359,7 @@ jobs:
         _diff
 
         # Enable full UTF-8
+        echo -e "\n\nPATCH: Enable FULL UTF-8"
         sed -i.bak 's|setlocale(LC_ALL, "");|setlocale(LC_ALL, "");\
         /* Force UTF-8 console on Windows */\
         #ifdef _WIN32\
@@ -444,6 +461,7 @@ jobs:
         CURSES="${CURSES}.$( sed -nE 's/^.*PDC_VER_CHANGE\s*([0-9]+)/\1/p' curses.h )"
         CURSES_DATE=$(TZ=UTC git show --quiet --date='format-local:%Y.%m.%d' --format="%cd")
         CURSES="PDCursesMod ${CURSES} build $(git rev-list --count HEAD), ${CURSES_DATE}"
+        echo -e "\n\nBRANDING: NANO VER DISPLAY."
         cd ..
         sed -i.bak 's/ GNU nano from git,//' src/nano.c
         sed -i 's|Compiled options|Project info at https://github.com/gfunkmonk/nano-for-windows\\n Using '"${CURSES}"'\\n &|' src/nano.c
@@ -475,7 +493,6 @@ jobs:
         # steps can reference it even after cd calls shift the working directory.
         CWD=$(pwd)
         echo "BUILD_CWD=${CWD}" >> $GITHUB_ENV
-
         TARGET="${{ matrix.arch }}-w64-mingw32"
         OUTDIR="${CWD}/nano/pkg"
         CURSES_DIR="${CWD}/nano/curses"
