@@ -305,6 +305,11 @@ jobs:
         sed -i '/prototypes.h/a#include "uniwidth.h"'  src/chars.c
         _diff
 
+        # Fix prototype for VT driver compatibility
+        echo -e "\n\nPATCH: Fixing wine_ver_func prototype in VT driver."
+        sed -i 's/wine_ver_func)()/wine_ver_func)(void)/' curses/vt/pdcscrn.c
+        _diff
+
         echo '#define PDC_WIDE 1' >> src/definitions.h
 
         patch -p1 --fuzz=4 < ../repo/patch/curses/pdcdisp.patch
