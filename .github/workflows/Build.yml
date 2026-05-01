@@ -194,25 +194,18 @@ jobs:
             strnlen
             sys_wait-h
             uniwidth
-            uniwidth/width
             unitypes
-            unictype/category-all
-            unictype/base
             vsnprintf-posix
             wchar-h
             wctype-h
             wcwidth
         "
-        #rm -rf lib
-        #./gnulib/gnulib-tool --import ${glibmodules}
-        #aclocal -I m4
-        #autoconf
-        #autoheader
-        #automake --add-missing
         rm -rf lib
         ./gnulib/gnulib-tool --import ${glibmodules}
-        # Use -v to see exactly where it fails and --force to overwrite old m4 macros
-        autoreconf -vif
+        aclocal -I m4
+        autoconf
+        autoheader
+        automake --add-missing
 
     - name: 🩹 Patches
       run: |
