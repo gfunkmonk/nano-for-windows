@@ -1,45 +1,42 @@
-# 0020-set-tabsize-dynamically.sed
-# Convert 0020-set-tabsize-dynamically.patch to sed commands
-
-# doc/nanorc.5 - Add settabsize documentation after wordcount
-/\.B wordcount$/,/\.TP$/{
-    /\.TP$/a\
+# --- a/doc/nanorc.5 ---
+# Add settabsize description to the manual
+/and characters in the current buffer (or in the marked region)./ a\
+.TP\
 .B settabsize\
 Prompts for a new tabsize to be set.
-}
 
-# src/global.c - Add settabsize_gist constant
-/const char \*wordcount_gist =/a\
+# --- a/src/global.c ---
+# 1. Add the help string (gist)
+/const char \*setsyntax_gist = N_("Set new syntax highlighting");/ a\
 	const char *settabsize_gist = N_("Set new tabsize");
 
-# src/global.c - Add function registration after count_lines_words_and_characters
-/add_to_funcs(count_lines_words_and_characters, MMAIN,$/{
-    N
-    N
-    a\
+# 2. Add the function to the main menu (MMAIN)
+/N_("Set Syntax"), WHENHELP(setsyntax_gist), TOGETHER);/ a\
+\
 	add_to_funcs(do_set_tabsize, MMAIN,\
 		N_("Set Tabsize"), WHENHELP(settabsize_gist), TOGETHER);
-}
 
-# src/global.c - Add keybinding after M-D
-/add_to_sclist(MMAIN, "M-D", 0, count_lines_words_and_characters, 0);$/a\
+# 3. Add the M-4 key binding
+/add_to_sclist(MMAIN, "M-D", 0, count_lines_words_and_characters, 0);/ a\
 	add_to_sclist(MMAIN, "M-4", 0, do_set_tabsize, 0);
 
-# src/prototypes.h - Add function declaration after count_lines_words_and_characters
-/void count_lines_words_and_characters(void);$/a\
+# --- a/src/prototypes.h ---
+# Insert the function prototype
+/void count_lines_words_and_characters(void);/ a\
 void do_set_tabsize(void);
 
-# src/rcfile.c - Add strtosc mapping after wordcount
-/else if (!strcmp(input, "wordcount"))$/{
-    N
-    a\
+# --- a/src/rcfile.c ---
+# Map the nanorc string "settabsize" to the function
+/else if (!strcmp(input, "wordcount"))/ {
+	n
+	a\
 	else if (!strcmp(input, "settabsize"))\
 		s->func = do_set_tabsize;
 }
 
-# src/text.c - Add do_set_tabsize function after count_lines_words_and_characters
-/^void count_lines_words_and_characters(void)/,/^}$/{
-    /^}$/a\
+# --- a/src/text.c ---
+# Append the function implementation before do_verbatim_input
+/void do_verbatim_input(void)/ i\
 \
 /* Prompt user to set the new tabsize. We use the spell menu because\
  * it has no functions. */\
@@ -61,5 +58,4 @@ void do_set_tabsize(void)\
 \
 	tabsize = new_tabsize;\
 	statusline(REMARK, _("Tabsize set to %d"), tabsize);\
-}
-}
+}\
