@@ -5,7 +5,7 @@
  
  #ifdef PDC_WIDE
 -#define IS_SUPPLEMENTAL_MULTILINGUAL_PLANE( c) ((c) & 0x1f0000)
-+#define IS_SUPPLEMENTAL_MULTILINGUAL_PLANE(c) ((c) >= 0x10000 && (c) <= 0x1FFFF)
++#define IS_SUPPLEMENTAL_MULTILINGUAL_PLANE(c) ((c) >= 0x10000 && (c) <= 0x10FFFF)
  #endif
  
  static void _show_run_of_ansi_characters( const attr_t attr,
