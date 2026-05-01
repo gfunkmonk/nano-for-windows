@@ -311,9 +311,9 @@ jobs:
         sed -i '/prototypes.h/a#include "uniwidth.h"'  src/chars.c
         _diff
 
-        echo '#define PDC_WIDE 1' >> src/definitions.h
+        #echo '#define PDC_WIDE 1' >> src/definitions.h
 
-        patch -p1 --fuzz=4 < ../repo/patch/curses/pdcdisp.patch
+        #patch -p1 --fuzz=4 < ../repo/patch/curses/pdcdisp.patch
 
         ####                               ####
         ####   LLVM-MING SPECIFIC PATCHES  ####
@@ -353,7 +353,7 @@ jobs:
         ##                        ##
         ##########################
 
-        PDTERM="wincon"
+        PDTERM="vt"
         echo "PDTERM=${PDTERM}" >> $GITHUB_ENV
         export CFLAGS="-Oz -fno-math-errno -flto -std=c17 -Wno-error -DPDC_WIDE"
         unset NCURSESW_CFLAGS
