@@ -505,23 +505,23 @@ jobs:
         cd nano/curses/wincon
         echo "=== Compile PDCursesMod emoji test ==="
         cat > /tmp/test_emoji.c << 'EOF'
-#include <curses.h>
-#include <locale.h>
-#include <windows.h>
-int main() {
-    setlocale(LC_ALL, "");
-    SetConsoleOutputCP(65001);
-    initscr();
-    mvaddstr(0, 0, "UTF-8 Test:");
-    mvaddstr(2, 0, "Chinese: 中文");
-    mvaddstr(4, 0, "Emoji: 😀🎉");
-    mvaddstr(6, 0, "Press key...");
-    refresh();
-    getch();
-    endwin();
-    return 0;
-}
-EOF
+          #include <curses.h>
+          #include <locale.h>
+          #include <windows.h>
+          int main() {
+              setlocale(LC_ALL, "");
+              SetConsoleOutputCP(65001);
+              initscr();
+              mvaddstr(0, 0, "UTF-8 Test:");
+              mvaddstr(2, 0, "Chinese: 中文");
+              mvaddstr(4, 0, "Emoji: 😀🎉");
+              mvaddstr(6, 0, "Press key...");
+              refresh();
+              getch();
+              endwin();
+              return 0;
+          }
+          EOF
         ${TARGET}-gcc -I. -I.. /tmp/test_emoji.c pdcurses.a -o /tmp/test_emoji.exe -lwinmm 2>&1
         echo "Test compiled. Run manually: wine /tmp/test_emoji.exe (or on Windows)"
 
