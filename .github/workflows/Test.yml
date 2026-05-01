@@ -502,6 +502,7 @@ jobs:
         echo '#include <stdio.h>' >> /tmp/t.c
         echo 'int main() { printf("chtype=%zu\n", sizeof(chtype)); return 0; }' >> /tmp/t.c
         x86_64-w64-mingw32-gcc -I. -I.. /tmp/t.c -o /tmp/t 2>&1 && echo "Test compiled"
+        echo "CHTYPE_32 check:" && grep CHTYPE_32 wincon/Makefile && echo "CHTYPE_32 found"
 
     - name: "🔧 Configure Nano Build"
       run: |
