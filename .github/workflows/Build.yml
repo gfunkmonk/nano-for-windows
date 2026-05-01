@@ -170,6 +170,8 @@ jobs:
         git clone https://git.savannah.gnu.org/git/gnulib.git --depth 1
         autopoint --force
         glibmodules="
+            base32
+            base64
             futimens
             getdelim
             getline
@@ -178,19 +180,21 @@ jobs:
             isblank
             iswblank
             lstat
+            mbrlen
+            mbchar
             mkstemps
             nl_langinfo
             regex
             rewinddir
             sigaction
             snprintf-posix
-            stdarg
+            stdarg-h
             strcase
             strcasestr-simple
             strnlen
-            sys_wait
+            sys_wait-h
             vsnprintf-posix
-            wchar
+            wchar-h
             wctype-h
             wcwidth
         "
