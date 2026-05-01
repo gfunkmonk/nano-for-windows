@@ -1,0 +1,33 @@
+--- a/src/chars.c	2026-04-30 09:38:25.731369424 -0400
++++ b/src/chars.c	2026-05-01 08:51:00.000000000 -0400
+@@ -165,7 +165,7 @@
+ int mbtowide(wchar_t *wc, const char *c)
+ {
+ 	if ((signed char)*c < 0 && using_utf8) {
+ 		unsigned char v1 = c[0];
+-		unsigned char v2 = c[1] ^ 0x80;
++		unsigned char v2 = c[1] ^ 0x80;
+ 
+ 		if (v2 > 0x3F || v1 < 0xC2)
+ 			return -1;
+@@ -195,8 +195,12 @@
+ 
+ 		unsigned char v4 = c[3] ^ 0x80;
+ 
+ 		if (v4 > 0x3F || v1 > 0xF4)
+ 			return -1;
+ 
+-		if ((v1 > 0xF0 || v2 >= 0x10) && (v1 != 0xF4 || v2 < 0x10)) {
+-			*wc = (((unsigned int)(v1 & 0x07) << 18) | ((unsigned int)v2 << 12) |
+-							((unsigned int)v3 << 6) | (unsigned int)v4);
++		/* Handle 4-byte UTF-8 sequences (emojis) - store as surrogate pair */
++		if ((v1 > 0xF0 || v2 >= 0x10) && (v1 != 0xF4 || v2 < 0x10)) {
++			unsigned int codepoint = (((unsigned int)(v1 & 0x07) << 18) | ((unsigned int)v2 << 12) |
++							((unsigned int)v3 << 6) | (unsigned int)v4);
++			
++			/* Convert to UTF-16 surrogate pair */
++			codepoint -= 0x10000;
++			*wc = (wchar_t)((codepoint >> 10) | 0xD800);  /* High surrogate */
+ 			return 4;
+ 		} else
+ 			return -1;
