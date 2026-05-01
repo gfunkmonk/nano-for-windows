@@ -223,26 +223,15 @@ jobs:
           fi
         done
 
-#    - name: ❤️‍🩹 PDCurses Patches
-#      run: |
-#        CWD=$(pwd)
-#        cd nano
-#        for p in $(ls -v ${CWD}/repo/patch/curses/*.patch); do
-#          if [ -f "$p" ]; then
-#            echo -e "\033[1;33mApplying $(basename "$p")...\033[0m"
-#            patch -p1 --fuzz=3 < "$p"
-#          fi
-#        done
-
-    - name: "🩹 Patches (with verbose output)"
+    - name: ❤️‍🩹 PDCurses Patches
       run: |
         CWD=$(pwd)
         cd nano
-        echo "=== Applying curses patches with verbose output ==="
-        for p in $(ls -v ${CWD}/repo/patch/curses/*.patch); do 
-          echo ""
-          echo ">>> Applying: $(basename "$p")"
-          patch -p1 --verbose --fuzz=3 < "$p" 2>&1 || echo "PATCH FAILED/INCOMPLETE"
+        for p in $(ls -v ${CWD}/repo/patch/curses/*.patch); do
+          if [ -f "$p" ]; then
+            echo -e "\033[1;33mApplying $(basename "$p")...\033[0m"
+            patch -p1 --fuzz=3 < "$p"
+          fi
         done
 
     - name: "🪄 Apply Windows Portability Magic"
@@ -482,30 +471,6 @@ jobs:
         sed -i 's|Compiled options|Project info at https://github.com/gfunkmonk/nano-for-windows\\n Using '"${CURSES}"'\\n &|' src/nano.c
         _diff
 
-    - name: "🔍 Verify Emoji Patches"
-      run: |
-        cd nano
-        echo "=== Checking PDCursesMod pdcdisp.c after patch application ==="
-        
-        echo "1. IS_SUPPLEMENTAL_MULTILINGUAL_PLANE macro:"
-        grep -n "define IS_SUPPLEMENTAL" curses/wincon/pdcdisp.c || echo "NOT FOUND"
-        
-        echo ""
-        echo "2. Checking for old buggy pattern:"
-        grep -n "0x1f0000" curses/wincon/pdcdisp.c && echo "WARNING: Buggy pattern present!" || echo "OK"
-        
-        echo ""
-        echo "3. MAX_UNICODE guards (should be REMOVED):"
-        grep -n "MAX_UNICODE" curses/wincon/pdcdisp.c && echo "WARNING: Still present!" || echo "OK: Removed"
-        
-        echo ""
-        echo "4. Surrogate pair encoding:"
-        grep -n "0xD800\|0xDC00" curses/wincon/pdcdisp.c | head -4
-        
-        echo ""
-        echo "5. ANSI path forcing:"
-        grep -n "Force ANSI path" curses/wincon/pdcdisp.c || echo "NOT FOUND"
-
     - name: "⚙️ Compile curses lib for ${{ matrix.name}}"
       run: |
         ##########################
@@ -520,6 +485,20 @@ jobs:
         unset NCURSESW_CFLAGS
         cd "nano/curses/${PDTERM}"
           make -j$(($(nproc)*2)) WIDE=Y UTF8=Y _${{matrix.short}}=Y
+
+    - name: "🔍 Debug chtype and wchar_t sizes"
+      run: |
+        cd nano/curses/wincon
+        echo "=== Checking PDCursesMod configuration ==="
+        grep -r "typedef.*chtype\\|define.*chtype" ../*.h ./*.h 2>/dev/null | head -5
+        
+        echo ""
+        echo "=== Checking if PDC_WIDE affects chtype size ==="
+        grep -n "PDC_WIDE.*chtype\\|chtype.*PDC_WIDE\\|typedef.*chtype\\|#.*chtype is\" ../common/pdcurses.h pdcurses.h 2>/dev/null | head -10
+        
+        echo ""
+        echo "=== Looking for chtype definition ==="
+        find . -name "*.h" -exec grep -l "typedef.*chtype" {} \; 2>/dev/null | head -3
 
     - name: "🔧 Configure Nano Build"
       run: |
