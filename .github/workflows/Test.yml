@@ -25,6 +25,10 @@ on:
           - "Artifact"
           - "Release"
 
+env:
+  FORCE_COLOR: 1
+  CLICOLOR_FORCE: 1
+
 jobs:
   ## PRECHECK ##############################################################################
   checks:
@@ -214,7 +218,7 @@ jobs:
         cd nano
         for p in $(ls -v ${CWD}/repo/patch/nano/*.patch); do
           if [ -f "$p" ]; then
-            echo "Applying $(basename "$p")..."
+            echo -e "\033[1;32mApplying $(basename "$p")...\033[0m"
             patch -p1 --fuzz=3 < "$p"
           fi
         done
@@ -225,7 +229,7 @@ jobs:
         cd nano
         for p in $(ls -v ${CWD}/repo/patch/curses/*.patch); do
           if [ -f "$p" ]; then
-            echo "Applying $(basename "$p")..."
+            echo "\033[1;34mApplying $(basename "$p")...\033[0m"
             patch -p1 --fuzz=3 < "$p"
           fi
         done
