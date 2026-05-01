@@ -223,15 +223,26 @@ jobs:
           fi
         done
 
-    - name: ❤️‍🩹 PDCurses Patches
+#    - name: ❤️‍🩹 PDCurses Patches
+#      run: |
+#        CWD=$(pwd)
+#        cd nano
+#        for p in $(ls -v ${CWD}/repo/patch/curses/*.patch); do
+#          if [ -f "$p" ]; then
+#            echo -e "\033[1;33mApplying $(basename "$p")...\033[0m"
+#            patch -p1 --fuzz=3 < "$p"
+#          fi
+#        done
+
+    - name: "🩹 Patches (with verbose output)"
       run: |
         CWD=$(pwd)
         cd nano
-        for p in $(ls -v ${CWD}/repo/patch/curses/*.patch); do
-          if [ -f "$p" ]; then
-            echo -e "\033[1;33mApplying $(basename "$p")...\033[0m"
-            patch -p1 --fuzz=3 < "$p"
-          fi
+        echo "=== Applying curses patches with verbose output ==="
+        for p in $(ls -v ${CWD}/repo/patch/curses/*.patch); do 
+          echo ""
+          echo ">>> Applying: $(basename "$p")"
+          patch -p1 --verbose --fuzz=3 < "$p" 2>&1 || echo "PATCH FAILED/INCOMPLETE"
         done
 
     - name: "🪄 Apply Windows Portability Magic"
