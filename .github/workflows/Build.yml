@@ -357,7 +357,7 @@ jobs:
 
         PDTERM="wincon"
         echo "PDTERM=${PDTERM}" >> $GITHUB_ENV
-        export CFLAGS="-Oz -fno-math-errno -flto -std=c17 -Wno-error -DPDC_WIDE"
+        export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DPDC_WIDE"
         unset NCURSESW_CFLAGS
         cd "nano/curses/${PDTERM}"
           make -j$(($(nproc)*2)) WIDE=Y UTF8=Y _${{matrix.short}}=Y
@@ -377,7 +377,7 @@ jobs:
         TARGET="${{ matrix.arch }}-w64-mingw32"
         OUTDIR="${CWD}/nano/pkg"
         CURSES_DIR="${CWD}/nano/curses"
-        export CFLAGS="-O3 -Oz -fno-math-errno -flto -DPDC_FORCE_UTF8 -DPDC_NCMOUSE -DPDC_WIDE -std=c17 -Wno-error"
+        export CFLAGS="-O2 -fno-math-errno -flto -DPDC_FORCE_UTF8 -DPDC_NCMOUSE -DPDC_WIDE -std=c17"
         export LDFLAGS="-L${CURSES_DIR}/${{ env.PDTERM }} -static -static-libgcc ${CURSES_DIR}/${{ env.PDTERM }}/pdcurses.a"
         export NCURSESW_CFLAGS="-I${CURSES_DIR} -DNCURSES_STATIC  -DENABLE_MOUSE"
         export NCURSESW_LIBS="-l:pdcurses.a -lwinmm"
