@@ -133,7 +133,7 @@ jobs:
         apk update && apk upgrade
         apk add bash curl jq tar xz github-cli \
           git make texinfo groff gettext-dev automake autoconf pkgconf coreutils upx p7zip python3 sed patch
-        echo "PATH=$(pwd)/llvm-mingw/bin:$PATH" >> $GITHUB_ENV
+         echo "PATH=$(pwd)/llvm-mingw/bin:$PATH" >> $GITHUB_ENV
         # this seems to be needed when running in a container (because of UID mismatch??)
         git config --global --add safe.directory '*'
 
@@ -308,11 +308,6 @@ jobs:
         # Fix prototype for VT driver compatibility
         echo -e "\n\nPATCH: Fixing wine_ver_func prototype in VT driver."
         sed -i 's/wine_ver_func)()/wine_ver_func)(void)/' curses/vt/pdcscrn.c
-        _diff
-
-
-        # Force surrogate pairs to a width of 1 so they sit side-by-side for the VT driver to stitch
-        sed -i.bak 's|wcwidth(wc)|(((wc) >= 0xD800 \&\& (wc) <= 0xDFFF) ? 1 : uc_width(wc, "UTF-8"))|g' src/chars.c src/winio.c
         _diff
 
         echo '#define PDC_WIDE 1' >> src/definitions.h
