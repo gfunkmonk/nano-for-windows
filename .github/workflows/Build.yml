@@ -320,8 +320,8 @@ jobs:
 
         echo '#define PDC_WIDE 1' >> src/definitions.h
 
-        sed -i 's/\*wc = (((unsigned int)(v1 & 0x07) << 18).*/\*wc = 0xFFFD; \/\* Replacement \*\/;/' chars.c
-        sed -i '/((unsigned int)v3 << 6) | (unsigned int)v4);/d' chars.c
+        sed -i 's/\*wc = (((unsigned int)(v1 & 0x07) << 18).*/\*wc = 0xFFFD; \/\* Replacement \*\/;/' src/chars.c
+        sed -i '/((unsigned int)v3 << 6) | (unsigned int)v4);/d' src/chars.c
         _diff
 
         ####                               ####
