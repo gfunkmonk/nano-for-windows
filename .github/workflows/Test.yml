@@ -486,7 +486,7 @@ jobs:
         export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DPDC_WIDE -DCHTYPE_32 -DPDC_FORCE_UTF8"
         unset NCURSESW_CFLAGS
         cd "nano/curses/${PDTERM}"
-          make -j$(($(nproc)*2)) WIDE=Y UTF8=Y CHTYPE_32=Y PDC_FORCE_UTF8=Y _${{matrix.short}}=Y
+          make -j$(($(nproc)*2)) WIDE=Y UTF8=Y CHTYPE_32=Y DLL=N _${{matrix.short}}=Y
 
     - name: "🔧 Configure Nano Build"
       run: |
