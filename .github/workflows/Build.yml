@@ -25,6 +25,10 @@ on:
           - "Artifact"
           - "Release"
 
+env:
+  FORCE_COLOR: 1
+  CLICOLOR_FORCE: 1
+
 jobs:
   ## PRECHECK ##############################################################################
   checks:
@@ -208,12 +212,27 @@ jobs:
         autoheader
         automake --add-missing
 
-    - name: 🩹 Patches
+    - name: 🩹 Nano Patches
       run: |
         CWD=$(pwd)
         cd nano
-        for p in $(ls -v ${CWD}/repo/patch/nano/*.patch); do patch -p1 --fuzz=3 < "$p"; done
-        for p in $(ls -v ${CWD}/repo/patch/curses/*.patch); do patch -p1 --fuzz=3 < "$p"; done
+        for p in $(ls -v ${CWD}/repo/patch/nano/*.patch); do
+          if [ -f "$p" ]; then
+            echo -e "\033[1;35mApplying $(basename "$p")...\033[0m"
+            patch -p1 --fuzz=3 < "$p"
+          fi
+        done
+
+    - name: ❤️‍🩹 PDCurses Patches
+      run: |
+        CWD=$(pwd)
+        cd nano
+        for p in $(ls -v ${CWD}/repo/patch/curses/*.patch); do
+          if [ -f "$p" ]; then
+            echo -e "\033[1;33mApplying $(basename "$p")...\033[0m"
+            patch -p1 --fuzz=3 < "$p"
+          fi
+        done
 
     - name: "🪄 Apply Windows Portability Magic"
       run: |
@@ -239,11 +258,6 @@ jobs:
         }
 
         cd nano
-
-        #curl -fsSL -O https://github.com/gfunkmonk/nano-for-windows/raw/refs/heads/releases/getch.c
-        #curl -fsSL -O https://github.com/gfunkmonk/nano-for-windows/raw/refs/heads/releases/pdcdisp.c
-        #mv -b --suffix=.bak getch.c curses/pdcurses
-        #mv -b --suffix=.bak pdc*.c curses/wincon
 
         ##########################
         ##                        ##
@@ -277,6 +291,19 @@ jobs:
         sed -i 's|/tmp/|~/AppData/Local/Temp/|g' ./src/files.c
         _diff
 
+        # Fix homedir detection
+        echo -e "\n\nPATCH: configuring Windows home folder."
+        sed -i.bak 's|\"HOME\"|"USERPROFILE\"|g' ./src/utils.c
+        _diff
+
+        # Modify path expansion with backslashes
+        echo -e "\n\nPATCH: Configuring backslashes for folders."
+        sed -i.bak "/free(tilded)/a\
+            \\\\tfor(tilded = retval; \*tilded; ++tilded) if(\*tilded == '\\\\\\\\') \*tilded = '/';
+
+            s|path\[i\] != '/'|path[i] != '/' \&\& path[i] != '\\\\\\\\'|" src/files.c
+        _diff
+
         # Allow custom colors in terminals with more than 256 colors
         echo -e "\n\nPATCH: Allow true color."
         sed -i.bak "/COLORS == 256/ {s/==/>=/}"  src/rcfile.c
@@ -285,6 +312,42 @@ jobs:
         # Solve long delay after unicode
         echo -e "\n\nPATCH: solved deadlock with unicode characters."
         sed -i.bak "/halfdelay(ISSET(QUICK_BLANK)/,/disable_kb_interrupt/d"  src/winio.c
+        _diff
+
+        # Change default terminal to nothing
+        echo -e "\n\nPATCH: blank out nano's default terminal"
+        sed -i.bak 's|vt220||g' ./src/nano.c
+        _diff
+
+        # Fix pipe-in data from Windows console.
+        echo -e "\n\nPATCH: Fix pipe in data in Windows console."
+        sed -i.bak "s|/dev/tty|CON|" src/nano.c
+        sed -i "s/stream, 0/stream, fd/" src/nano.c
+        sed -i "/FILE \*stream/,/stop the reading/ c\
+            \\\\t static FILE \*stream;\\n\
+            static int fd\=0;\\n\
+            if \(fd\=\=0){\\n\
+            if \(GetConsoleWindow\() \!\= NULL)\\n\
+            fprintf\(stderr, _\(\"Reading data from keyboard; type a ^Z line to finish.\\\\n\"));\\n\
+            fd \= dup\(0);\\n\
+            stream \= fdopen\(fd, \"rb\");\\n\
+            freopen\(\"CON\", \"rb\", stdin);\\n\
+            FreeConsole\();\\n\
+            AttachConsole\(ATTACH_PARENT_PROCESS);\\n\
+            return FALSE;}\\n\
+            endwin\();\\n\
+            if \(stream \=\= NULL) {\\n\
+            \\t int errnumber \= errno;\\n\
+            \\t if\(fd \> -1) close\(fd);\\n\
+            return FALSE;}" src/nano.c
+        sed -i "/initscr/i\
+            for\(int optind_\=optind; optind_ \< argc;optind_\+\+)\\n\
+            if \(strcmp\(argv\[optind_], \"\-\") \=\= 0){scoop_stdin\();break;}" src/nano.c
+        _diff
+
+        # Fix browser folder change
+        echo -e "\n\nPATCH: Fixed browser folder change."
+        sed -i.bak 's/--selected/selected=0/' src/browser.c
         _diff
 
         # Add (Y/N/^C) to Save modified buffer prompt
@@ -300,6 +363,7 @@ jobs:
         _diff
 
         # Enable full UTF-8
+        echo -e "\n\nPATCH: Enable FULL UTF-8"
         sed -i.bak 's|setlocale(LC_ALL, "");|setlocale(LC_ALL, "");\
         /* Force UTF-8 console on Windows */\
         #ifdef _WIN32\
@@ -314,7 +378,73 @@ jobs:
         sed -i '/prototypes.h/a#include "uniwidth.h"'  src/chars.c
         _diff
 
+        # Solve duplicated definitions ALT-ARROWS already in PDCursesMod
+        echo -e "\n\nPATCH: remove duplicated definitions."
+        sed -i.bak "/0x42[1234]/d" src/definitions.h
+        _diff
+
+        # PDCurses uses 64bit (chtype) for cell attributes instead of 32bit (int)
+        #echo -e "\n\nPATCH: Improving from 256colors to true color."
+        #sed -i.bak "/interface_color_pair/ {s/int/chtype/}" src/prototypes.h src/global.c
+        #_diff
+        #sed -i.bak "/int attributes/ {s/int/chtype/}" src/definitions.h
+        #_diff
+        #sed -i.bak "/bool parse_combination/ {s/int/chtype/}" src/rcfile.c
+        #sed -i "/int attributes/ {s/int/chtype/}" src/rcfile.c
+        #_diff
+
+        # Desambiguation of BACKSPACE vs ^H, or ENTER vs ^M and certain CTRL+key combos             //o//
+        echo -e "\n\nPATCH: Full key modifiers detection."
+        sed -i.bak "/get_kbinput(midwin, VISIBLE)/a\
+            \\\\tif (\!((PDC_get_key_modifiers()) & (PDC_KEY_MODIFIER_SHIFT|PDC_KEY_MODIFIER_CONTROL|PDC_KEY_MODIFIER_ALT)) ) {\\n\
+            \\tswitch (input) {\\n\
+            \\t\\tcase 0x08:      input = KEY_BACKSPACE; break;\\n\
+            \\t\\tcase 0x0d:      input = KEY_ENTER;\\n\
+            \\t}\\n\
+            }\\n\
+            if (PDC_get_key_modifiers() & PDC_KEY_MODIFIER_CONTROL){\\n\
+            switch (input) {\\n\
+            \\t\\tcase '/':          input = 31; break;\\n\
+            \\t\\tcase SHIFT_DELETE: input = CONTROL_SHIFT_DELETE; break;\\n\
+            \\t}\\n\
+            }"  src/nano.c
+        sed -Ei.bak '
+            s|(M-\{", )0|\1ALT_LBRACKET|
+            s|(M-}", )0|\1ALT_RBRACKET|
+            ' src/global.c
+        sed -i.bak "
+            s/0x401/CTL_LEFT/
+            s/0x402/CTL_RIGHT/
+            s/0x403/CTL_UP/
+            s/0x404/CTL_DOWN/
+            s/0x405/CTL_HOME/
+            s/0x406/CTL_END/
+            s/0x40D/CTL_DEL/
+            s/0x427/ALT_PGUP/
+            s/0x428/ALT_PGDN/
+            s/0x42C/ALT_INS/
+            s/0x42D/ALT_DEL/
+            " src/definitions.h
+        _diff
+
+        # Fix ALT+[NUMBER|LETTER] not working with PDCursesMod
+        echo -e "\n\nPATCH: ALT+[NUMBER|LETTER] not working."
+        sed -i.bak "s/char)keystring\[2])/&\+\(\(unsigned char)keystring\[2]>\='9' \? ALT_A-\(int)'a' \: ALT_0-\(int)'0')/" src/global.c
+        _diff
+
+        # Fix Shifted metas SHIFT+ALT+[LETTER] not working with PDCursesMod
+        echo -e "\n\nPATCH: Shifted metas SHIFT+ALT+[LETTER] not working."
+        sed -i.bak "/(escapes == 0)/a\
+            meta_key\=PDC_get_key_modifiers\() \& PDC_KEY_MODIFIER_ALT;" src/winio.c
+        _diff
+
         echo '#define PDC_WIDE 1' >> src/definitions.h
+        echo '#define CHTYPE_32 1' >> src/definitions.h
+        echo '#define PDC_FORCE_UTF8 1' >> src/definitions.h
+
+        echo "PDC_display_utf8=TRUE" >> $GITHUB_ENV
+        sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wincon/*.c
+        _diff
 
         ####                               ####
         ####   LLVM-MING SPECIFIC PATCHES  ####
@@ -341,6 +471,7 @@ jobs:
         CURSES="${CURSES}.$( sed -nE 's/^.*PDC_VER_CHANGE\s*([0-9]+)/\1/p' curses.h )"
         CURSES_DATE=$(TZ=UTC git show --quiet --date='format-local:%Y.%m.%d' --format="%cd")
         CURSES="PDCursesMod ${CURSES} build $(git rev-list --count HEAD), ${CURSES_DATE}"
+        echo -e "\n\nBRANDING: NANO VER DISPLAY."
         cd ..
         sed -i.bak 's/ GNU nano from git,//' src/nano.c
         sed -i 's|Compiled options|Project info at https://github.com/gfunkmonk/nano-for-windows\\n Using '"${CURSES}"'\\n &|' src/nano.c
@@ -356,10 +487,10 @@ jobs:
 
         PDTERM="wincon"
         echo "PDTERM=${PDTERM}" >> $GITHUB_ENV
-        export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DPDC_WIDE"
+        export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DPDC_WIDE -DCHTYPE_32 -DPDC_FORCE_UTF8"
         unset NCURSESW_CFLAGS
         cd "nano/curses/${PDTERM}"
-          make -j$(($(nproc)*2)) WIDE=Y UTF8=Y _${{matrix.short}}=Y
+          make -j$(($(nproc)*2)) WIDE=Y UTF8=Y CHTYPE_32=Y DLL=N _${{matrix.short}}=Y
 
     - name: "🔧 Configure Nano Build"
       run: |
@@ -372,11 +503,10 @@ jobs:
         # steps can reference it even after cd calls shift the working directory.
         CWD=$(pwd)
         echo "BUILD_CWD=${CWD}" >> $GITHUB_ENV
-
         TARGET="${{ matrix.arch }}-w64-mingw32"
         OUTDIR="${CWD}/nano/pkg"
         CURSES_DIR="${CWD}/nano/curses"
-        export CFLAGS="-O2 -fno-math-errno -flto -DPDC_FORCE_UTF8 -DPDC_NCMOUSE -DPDC_WIDE -std=c17"
+        export CFLAGS="-O2 -fno-math-errno -flto -DPDC_FORCE_UTF8 -DPDC_NCMOUSE -DPDC_WIDE -DCHTYPE_32 -std=c17"
         export LDFLAGS="-L${CURSES_DIR}/${{ env.PDTERM }} -static -static-libgcc ${CURSES_DIR}/${{ env.PDTERM }}/pdcurses.a"
         export NCURSESW_CFLAGS="-I${CURSES_DIR} -DNCURSES_STATIC  -DENABLE_MOUSE"
         export NCURSESW_LIBS="-l:pdcurses.a -lwinmm"

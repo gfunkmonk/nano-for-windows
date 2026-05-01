@@ -565,8 +565,8 @@ jobs:
           #mv sample.nanorc.in .nanorc
           cp ${CWD}/repo/.nanorc .
           rm -rf bin share rnano*
-          llvm-strip -s nano.exe
-          upx nano.exe || true
+          #llvm-strip -s nano.exe
+          #upx nano.exe || true
           ls -als
           7z a -mx9 -mm=Deflate64 -mmt$(nproc) "${CWD}/nano-for-windows_${{matrix.name}}_${{ needs.checks.outputs.build }}.zip" * .nanorc
 
