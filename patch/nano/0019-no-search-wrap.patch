@@ -4,10 +4,10 @@ kk--- a/doc/nano.1	2026-04-30 13:49:56.537894001 -0400
  (\fB\-\-breaklonglines\fR) \(em the last one given takes effect.)
  .TP
  .BR \-x ", " \-\-nohelp
+ Don't show the two help lines at the bottom of the screen.
 +.TP
 +.BR \-\-nosearchwrap
 +Don't wrap around to the start or end of the buffer when performing search or replace.
- Don't show the two help lines at the bottom of the screen.
  .TP
  .BR \-y ", " \-\-afterends
 --- a/doc/nanorc.5	2026-04-30 13:49:56.537894001 -0400
