@@ -310,13 +310,14 @@ jobs:
         sed -i 's/wine_ver_func)()/wine_ver_func)(void)/' curses/vt/pdcscrn.c
         _diff
 
-        echo '#define PDC_WIDE 1' >> src/definitions.h
-
-        patch -p1 --fuzz=4 < ../repo/patch/curses/pdcdisp.patch
 
         # Force surrogate pairs to a width of 1 so they sit side-by-side for the VT driver to stitch
         sed -i.bak 's|wcwidth(wc)|(((wc) >= 0xD800 \&\& (wc) <= 0xDFFF) ? 1 : uc_width(wc, "UTF-8"))|g' src/chars.c src/winio.c
         _diff
+
+        echo '#define PDC_WIDE 1' >> src/definitions.h
+
+        patch -p1 --fuzz=4 < ../repo/patch/curses/pdcdisp.patch
 
         ####                               ####
         ####   LLVM-MING SPECIFIC PATCHES  ####
@@ -356,7 +357,7 @@ jobs:
         ##                      ##
         ##########################
 
-        PDTERM="vt"
+        PDTERM="wincon"
         echo "PDTERM=${PDTERM}" >> $GITHUB_ENV
         export CFLAGS="-Oz -fno-math-errno -flto -std=c17 -Wno-error -DPDC_WIDE"
         unset NCURSESW_CFLAGS
