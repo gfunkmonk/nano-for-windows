@@ -204,7 +204,9 @@ jobs:
     - name: 🩹 Patches
       run: |
         cd nano
-        for p in $(ls -v ../repo/patch/nano/*.patch); do patch -p1 --fuzz=4 < "$p"; done
+        for p in $(ls -v ../repo/patch/nano/*.patch); do patch -p1 --fuzz=3 < "$p"; done
+        cd curses
+        for p in $(ls -v ../repo/patch/curses/*.patch); do patch -p1 --fuzz=3 < "$p"; done
 
     - name: "🪄 Apply Windows Portability Magic"
       run: |
@@ -313,10 +315,6 @@ jobs:
         _diff
 
         echo '#define PDC_WIDE 1' >> src/definitions.h
-
-        patch -p1 --fuzz=4 < ../repo/patch/curses/pdcdisp.patch
-        patch -p1 --fuzz=4 < ../repo/patch/curses/emoji-fix.patch
-        patch -p1 --fuzz=4 < ../repo/patch/curses/mbtowide-emoji-fix.patch
 
         ####                               ####
         ####   LLVM-MING SPECIFIC PATCHES  ####
