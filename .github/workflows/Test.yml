@@ -240,11 +240,6 @@ jobs:
 
         cd nano
 
-        #curl -fsSL -O https://github.com/gfunkmonk/nano-for-windows/raw/refs/heads/releases/getch.c
-        #curl -fsSL -O https://github.com/gfunkmonk/nano-for-windows/raw/refs/heads/releases/pdcdisp.c
-        #mv -b --suffix=.bak getch.c curses/pdcurses
-        #mv -b --suffix=.bak pdc*.c curses/wincon
-
         ##########################
         ##                        ##
         ##     APPLY PATCHES      ##
@@ -298,17 +293,6 @@ jobs:
         # Solve long delay after unicode
         echo -e "\n\nPATCH: solved deadlock with unicode characters."
         sed -i.bak "/halfdelay(ISSET(QUICK_BLANK)/,/disable_kb_interrupt/d"  src/winio.c
-        _diff
-
-       # Solve window resize crashes
-        echo -e "\n\nPATCH: Window resize fix."
-        sed -i.bak -e "/LINES and COLS accordingly/{n;N;d}" src/nano.c # delets 2 next lines
-        sed -i "/LINES and COLS accordingly/a\
-            \\\\tresize_term(0, 0);\\n\
-            erase();" src/nano.c
-        sed -i -e "/recreate the subwindows with their (new) sizes/{n;d}" src/nano.c
-        _diff
-        sed -i.bak 's/the_window_resized/input == KEY_RESIZE/' src/winio.c
         _diff
 
         # Change default terminal to nothing
