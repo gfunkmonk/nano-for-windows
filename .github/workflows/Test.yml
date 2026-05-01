@@ -203,7 +203,7 @@ jobs:
     - name: 🩹 Patches
       run: |
         cd nano
-        for p in $(ls -v ../repo/patch/test/*.patch); do patch -p1 --fuzz=4 < "$p"; done
+        for p in $(ls -v ../repo/patch/nano/*.patch); do patch -p1 --fuzz=4 < "$p"; done
 
     - name: "🪄 Apply Windows Portability Magic"
       run: |
@@ -328,32 +328,6 @@ jobs:
         # struct gl_directory* by the time rewinddir is called. Cast it to DIR*.
         echo -e "\n\nPATCH: fix GNUlib glob DIR* conflict in browser.c."
         sed -i.bak 's/rewinddir(dir)/rewinddir((DIR *)dir)/' src/browser.c
-        _diff
-
-        # change syntax highlighting on the fly #
-        sed -i.bak -f ../repo/sed/onthefly.sed doc/nanorc.5
-        sed -i.bak -f ../repo/sed/onthefly.sed src/global.c
-        sed -i.bak -f ../repo/sed/onthefly.sed src/prototypes.h
-        sed -i.bak -f ../repo/sed/onthefly.sed src/rcfile.c
-        sed -i.bak -f ../repo/sed/onthefly.sed src/text.c
-        _diff
-
-        # don't wrap around document when searching #
-        sed -i.bak -f ../repo/sed/nosearchwrap.sed doc/nano.1
-        sed -i.bak -f ../repo/sed/nosearchwrap.sed doc/nanorc.5
-        sed -i.bak -f ../repo/sed/nosearchwrap.sed src/definitions.h
-        sed -i.bak -f ../repo/sed/nosearchwrap.sed src/nano.c
-        sed -i.bak -f ../repo/sed/nosearchwrap.sed src/rcfile.c
-        sed -i.bak -f ../repo/sed/nosearchwrap.sed src/search.c
-        sed -i.bak -f ../repo/sed/nosearchwrap.sed syntax/nanorc.nanorc
-        _diff
-
-        # customize the space size of 'tab' $
-        sed -i.bak -f ../repo/sed/tabsize.sed doc/nanorc.5
-        sed -i.bak -f ../repo/sed/tabsize.sed src/global.c
-        sed -i.bak -f ../repo/sed/tabsize.sed src/prototypes.h
-        sed -i.bak -f ../repo/sed/tabsize.sed src/rcfile.c
-        sed -i.bak -f ../repo/sed/tabsize.sed src/text.c
         _diff
 
         ####                               ####
