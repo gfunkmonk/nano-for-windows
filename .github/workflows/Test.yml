@@ -576,6 +576,18 @@ jobs:
           make -j$(($(nproc)*2)) && \
           make install || exit 1
 
+    - name: "🧪 Test emoji encoding"
+      run: |
+        cd nano
+        echo "=== Test: Check if PDCursesMod receives correct chtype values ==="
+        
+        # Look for how nano adds characters to screen
+        grep -n "waddch\\|addch\\|waddstr" src/*.c | head -20
+        
+        echo ""
+        echo "=== Check chtype size/encoding ==="
+        grep -rn "typedef.*chtype\\|#define.*chtype\\|PDC_WIDE\" curses/*.h curses/*/*.h | head -10
+
     - name: "📦 Create Package"
       run: |
         # FIX: use $BUILD_CWD env var (set in Configure step) instead of
