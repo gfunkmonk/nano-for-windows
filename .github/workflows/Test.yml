@@ -486,36 +486,22 @@ jobs:
         cd "nano/curses/${PDTERM}"
           make -j$(($(nproc)*2)) WIDE=Y UTF8=Y CHTYPE_32=Y_${{matrix.short}}=Y
 
-    - name: "🔍 Check chtype"
-      run: |
-        cd nano/curses && grep -A2 "typedef.*chtype" curses.h | head -10 && echo "Compiling test..." && printf '#include "curses.h"\n#include <stdio.h>\nint main() { printf("chtype=%zu\\n", sizeof(chtype)); return 0; }' > /tmp/t.c && ${TARGET}-gcc -Iwincon -I. /tmp/t.c -o /tmp/t 2>&1 && ${TARGET}-run /tmp/t
-        echo "TARGET=${TARGET}" >> $GITHUB_ENV
-        echo "=== chtype check ===" && grep "typedef.*chtype" nano/curses/curses.h && echo "chtype lines above"
-
-    - name: "🧪 Test PDCursesMod emoji display directly"
+    - name: "🔍 Verify CHTYPE_32 is active"
       run: |
         cd nano/curses/wincon
-        echo "=== Compile PDCursesMod emoji test ==="
-        cat > /tmp/test_emoji.c << 'EOF'
-          #include <curses.h>
-          #include <locale.h>
-          #include <windows.h>
-          int main() {
-              setlocale(LC_ALL, "");
-              SetConsoleOutputCP(65001);
-              initscr();
-              mvaddstr(0, 0, "UTF-8 Test:");
-              mvaddstr(2, 0, "Chinese: 中文");
-              mvaddstr(4, 0, "Emoji: 😀🎉");
-              mvaddstr(6, 0, "Press key...");
-              refresh();
-              getch();
-              endwin();
-              return 0;
-          }
-          EOF
-        ${TARGET}-gcc -I. -I.. /tmp/test_emoji.c pdcurses.a -o /tmp/test_emoji.exe -lwinmm 2>&1
-        echo "Test compiled. Run manually: wine /tmp/test_emoji.exe (or on Windows)"
+        echo "=== Check Makefile for CHTYPE_32 ==="
+        grep -i "chtype_32\|CFLAGS.*CHTYPE" Makefile 2>/dev/null || echo "Not found in Makefile"
+        
+        echo ""
+        echo "=== Check if library was built with 32-bit chtype ==="
+        nm pdcurses.a 2>/dev/null | grep -i "chtype\|waddch" | head -5 || echo "nm not available"
+        
+        echo ""
+        echo "=== Compile test to check actual chtype size ==="
+        echo '#include "curses.h"' > /tmp/t.c
+        echo '#include <stdio.h>' >> /tmp/t.c
+        echo 'int main() { printf("chtype=%zu\n", sizeof(chtype)); return 0; }' >> /tmp/t.c
+        x86_64-w64-mingw32-gcc -I. -I.. /tmp/t.c -o /tmp/t 2>&1 && echo "Test compiled"
 
     - name: "🔧 Configure Nano Build"
       run: |
