@@ -471,6 +471,30 @@ jobs:
         sed -i 's|Compiled options|Project info at https://github.com/gfunkmonk/nano-for-windows\\n Using '"${CURSES}"'\\n &|' src/nano.c
         _diff
 
+    - name: "🔍 Verify Emoji Patches"
+      run: |
+        cd nano
+        echo "=== Checking PDCursesMod pdcdisp.c after patch application ==="
+        
+        echo "1. IS_SUPPLEMENTAL_MULTILINGUAL_PLANE macro:"
+        grep -n "define IS_SUPPLEMENTAL" curses/wincon/pdcdisp.c || echo "NOT FOUND"
+        
+        echo ""
+        echo "2. Checking for old buggy pattern:"
+        grep -n "0x1f0000" curses/wincon/pdcdisp.c && echo "WARNING: Buggy pattern present!" || echo "OK"
+        
+        echo ""
+        echo "3. MAX_UNICODE guards (should be REMOVED):"
+        grep -n "MAX_UNICODE" curses/wincon/pdcdisp.c && echo "WARNING: Still present!" || echo "OK: Removed"
+        
+        echo ""
+        echo "4. Surrogate pair encoding:"
+        grep -n "0xD800\|0xDC00" curses/wincon/pdcdisp.c | head -4
+        
+        echo ""
+        echo "5. ANSI path forcing:"
+        grep -n "Force ANSI path" curses/wincon/pdcdisp.c || echo "NOT FOUND"
+
     - name: "⚙️ Compile curses lib for ${{ matrix.name}}"
       run: |
         ##########################
