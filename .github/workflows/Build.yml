@@ -194,6 +194,9 @@ jobs:
             strnlen
             sys_wait-h
             uniwidth
+            uniwidth/width
+            unitypes
+            unictype/category-all
             vsnprintf-posix
             wchar-h
             wctype-h
