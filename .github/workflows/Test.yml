@@ -481,14 +481,15 @@ jobs:
 
         PDTERM="wincon"
         echo "PDTERM=${PDTERM}" >> $GITHUB_ENV
-        export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DPDC_WIDE"
+        export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DPDC_WIDE -DCHTYPE_32"
         unset NCURSESW_CFLAGS
         cd "nano/curses/${PDTERM}"
-          make -j$(($(nproc)*2)) WIDE=Y UTF8=Y _${{matrix.short}}=Y
+          make -j$(($(nproc)*2)) WIDE=Y UTF8=Y CHTYPE_32=Y_${{matrix.short}}=Y
 
     - name: "🔍 Check chtype"
       run: |
         cd nano/curses && grep -A2 "typedef.*chtype" curses.h | head -10 && echo "Compiling test..." && printf '#include "curses.h"\n#include <stdio.h>\nint main() { printf("chtype=%zu\\n", sizeof(chtype)); return 0; }' > /tmp/t.c && ${TARGET}-gcc -Iwincon -I. /tmp/t.c -o /tmp/t 2>&1 && ${TARGET}-run /tmp/t
+        echo "TARGET=${TARGET}" >> $GITHUB_ENV
         echo "=== chtype check ===" && grep "typedef.*chtype" nano/curses/curses.h && echo "chtype lines above"
 
     - name: "🧪 Test PDCursesMod emoji display directly"
