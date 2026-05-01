@@ -439,6 +439,8 @@ jobs:
         _diff
 
         echo '#define PDC_WIDE 1' >> src/definitions.h
+        echo '#define CHTYPE_32 1' >> src/definitions.h
+        echo '#define PDC_FORCE_UTF8 1' >> src/definitions.h
 
         ####                               ####
         ####   LLVM-MING SPECIFIC PATCHES  ####
@@ -481,28 +483,10 @@ jobs:
 
         PDTERM="wincon"
         echo "PDTERM=${PDTERM}" >> $GITHUB_ENV
-        export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DPDC_WIDE -DCHTYPE_32"
+        export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DPDC_WIDE -DCHTYPE_32 -DPDC_FORCE_UTF8"
         unset NCURSESW_CFLAGS
         cd "nano/curses/${PDTERM}"
-          make -j$(($(nproc)*2)) WIDE=Y UTF8=Y CHTYPE_32=Y_${{matrix.short}}=Y
-
-    - name: "🔍 Verify CHTYPE_32 is active"
-      run: |
-        cd nano/curses/wincon
-        echo "=== Check Makefile for CHTYPE_32 ==="
-        grep -i "chtype_32\|CFLAGS.*CHTYPE" Makefile 2>/dev/null || echo "Not found in Makefile"
-        
-        echo ""
-        echo "=== Check if library was built with 32-bit chtype ==="
-        nm pdcurses.a 2>/dev/null | grep -i "chtype\|waddch" | head -5 || echo "nm not available"
-        
-        echo ""
-        echo "=== Compile test to check actual chtype size ==="
-        echo '#include "curses.h"' > /tmp/t.c
-        echo '#include <stdio.h>' >> /tmp/t.c
-        echo 'int main() { printf("chtype=%zu\n", sizeof(chtype)); return 0; }' >> /tmp/t.c
-        x86_64-w64-mingw32-gcc -I. -I.. /tmp/t.c -o /tmp/t 2>&1 && echo "Test compiled"
-        echo "CHTYPE_32 check:" && grep CHTYPE_32 wincon/Makefile && echo "CHTYPE_32 found"
+          make -j$(($(nproc)*2)) WIDE=Y UTF8=Y CHTYPE_32=Y PDC_FORCE_UTF8=Y _${{matrix.short}}=Y
 
     - name: "🔧 Configure Nano Build"
       run: |
@@ -558,18 +542,6 @@ jobs:
         cd nano/build
           make -j$(($(nproc)*2)) && \
           make install || exit 1
-
-    - name: "🧪 Test emoji encoding"
-      run: |
-        cd nano
-        echo "=== Test: Check if PDCursesMod receives correct chtype values ==="
-        
-        # Look for how nano adds characters to screen
-        grep -n "waddch\\|addch\\|waddstr" src/*.c | head -20
-        
-        echo ""
-        echo "=== Check chtype size/encoding ==="
-        grep -rn "typedef.*chtype\\|#define.*chtype\\|PDC_WIDE\" curses/*.h curses/*/*.h | head -10
 
     - name: "📦 Create Package"
       run: |
