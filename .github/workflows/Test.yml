@@ -373,6 +373,22 @@ jobs:
         cd "nano/curses/${PDTERM}"
           make -j$(($(nproc)*2)) WIDE=Y UTF8=Y _${{matrix.short}}=Y
 
+    - name: "🔧 Prepare debug session"
+      if: github.event.inputs.debug_enabled == 'true'
+      run: |
+        apk add bash nano-syntax iproute2 util-linux-misc
+        curl -fsSL -o /usr/local/bin/oh-my-posh https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/posh-linux-amd64
+        chmod +x /usr/local/bin/oh-my-posh
+        curl -fsSL -o /etc/nanorc https://github.com/okibcn/miniU/raw/main/Github_Linux/.nanorc
+        curl -fsSL -o ~/.zshrc https://github.com/okibcn/miniU/raw/main/Github_Linux/profile.sh
+        cat ~/.zshrc >> ~/.bashrc
+
+    - name: "🐞 Debug session"
+      uses: mxschmitt/action-tmate@v3
+      if: github.event.inputs.debug_enabled == 'true'
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
     - name: "🔧 Configure Nano Build"
       run: |
         ##########################
@@ -460,22 +476,6 @@ jobs:
         path: |
           *.zip
 
-
-    - name: "🔧 Prepare debug session"
-      if: github.event.inputs.debug_enabled == 'true'
-      run: |
-        apk add bash nano-syntax iproute2 util-linux-misc
-        curl -fsSL -o /usr/local/bin/oh-my-posh https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/posh-linux-amd64
-        chmod +x /usr/local/bin/oh-my-posh
-        curl -fsSL -o /etc/nanorc https://github.com/okibcn/miniU/raw/main/Github_Linux/.nanorc
-        curl -fsSL -o ~/.zshrc https://github.com/okibcn/miniU/raw/main/Github_Linux/profile.sh
-        cat ~/.zshrc >> ~/.bashrc
-
-    - name: "🐞 Debug session"
-      uses: mxschmitt/action-tmate@v3
-      if: github.event.inputs.debug_enabled == 'true'
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   ## PUBLISH ##############################################################################
   publish:
