@@ -533,4 +533,4 @@ jobs:
       uses: mxschmitt/action-tmate@v3
       if: github.event.inputs.debug_enabled == 'true'
       env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
