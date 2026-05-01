@@ -203,10 +203,11 @@ jobs:
 
     - name: 🩹 Patches
       run: |
+        CWD=$(pwd)
         cd nano
-        for p in $(ls -v ../repo/patch/nano/*.patch); do patch -p1 --fuzz=3 < "$p"; done
+        for p in $(ls -v ${CWD}/repo/patch/nano/*.patch); do patch -p1 --fuzz=3 < "$p"; done
         cd curses
-        for p in $(ls -v ../repo/patch/curses/*.patch); do patch -p1 --fuzz=3 < "$p"; done
+        for p in $(ls -v ${CWD}/repo/patch/curses/*.patch); do patch -p1 --fuzz=3 < "$p"; done
 
     - name: "🪄 Apply Windows Portability Magic"
       run: |
