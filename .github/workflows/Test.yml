@@ -1,9 +1,3 @@
-# Copyright (c) 2023 okibcn
-# This is free software, licensed under the GNU General Public License v3.0
-# See /LICENSE for more information.
-# https://github.com/okibcn/nano-for-windows
-# Description: Builds nano for Windows
-
 name: Test
 on:
   # schedule:
@@ -236,9 +230,9 @@ jobs:
         #mv -b --suffix=.bak pdc*.c curses/wincon
 
         ##########################
-        ##                        ##
-        ##     APPLY PATCHES      ##
-        ##                        ##
+        ##                      ##
+        ##     APPLY PATCHES    ##
+        ##                      ##
         ##########################
 
         # 1. realpath() workaround
@@ -307,13 +301,17 @@ jobs:
 
         # Fix for unicode char width detection using GNUlib internal function
         echo -e "\n\nPATCH: unicode char width detection using GNUlib internal function."
-        sed -i.bak 's|wcwidth(wc)|uc_width(wc, "UTF-8")|g'  src/chars.c src/winio.c
+        sed -i.bak 's|wcwidth(wc)|(((wc) >= 0xD800 \&\& (wc) <= 0xDFFF) ? 1 : uc_width(wc, "UTF-8"))|g'  src/chars.c src/winio.c
         sed -i '/prototypes.h/a#include "uniwidth.h"'  src/chars.c
         _diff
 
         echo '#define PDC_WIDE 1' >> src/definitions.h
 
         patch -p1 --fuzz=4 < ../repo/patch/curses/pdcdisp.patch
+
+        # Force surrogate pairs to a width of 1 so they sit side-by-side for the VT driver to stitch
+        sed -i.bak 's|wcwidth(wc)|(((wc) >= 0xD800 \&\& (wc) <= 0xDFFF) ? 1 : uc_width(wc, "UTF-8"))|g' src/chars.c src/winio.c
+        _diff
 
         ####                               ####
         ####   LLVM-MING SPECIFIC PATCHES  ####
@@ -331,7 +329,7 @@ jobs:
         _diff
 
         ####                               ####
-        ####    BRANDING and VERSIONING    ####
+        ####   BRANDING and VERSIONING     ####
         ####                               ####
 
         cd curses
@@ -348,12 +346,12 @@ jobs:
     - name: "⚙️ Compile curses lib for ${{ matrix.name}}"
       run: |
         ##########################
-        ##                        ##
-        ##     COMPILE CURSES     ##
-        ##                        ##
+        ##                      ##
+        ##     COMPILE CURSES   ##
+        ##                      ##
         ##########################
 
-        PDTERM="wincon"
+        PDTERM="vt"
         echo "PDTERM=${PDTERM}" >> $GITHUB_ENV
         export CFLAGS="-Oz -fno-math-errno -flto -std=c17 -Wno-error -DPDC_WIDE"
         unset NCURSESW_CFLAGS
@@ -363,9 +361,9 @@ jobs:
     - name: "🔧 Configure Nano Build"
       run: |
         ##########################
-        ##                        ##
-        ##     CONFIGURE BUILD    ##
-        ##                        ##
+        ##                      ##
+        ##     CONFIGURE BUILD  ##
+        ##                      ##
         ##########################
         # FIX: capture CWD at step start and export to GITHUB_ENV so subsequent
         # steps can reference it even after cd calls shift the working directory.
@@ -409,9 +407,9 @@ jobs:
     - name: "⚙️ Build for Windows ${{ matrix.pretty }}"
       run: |
         ##########################
-        ##                        ##
-        ##     BUILD NANO         ##
-        ##                        ##
+        ##                      ##
+        ##     BUILD NANO       ##
+        ##                      ##
         ##########################
         cd nano/build
           make -j$(($(nproc)*2)) && \
@@ -535,4 +533,4 @@ jobs:
       uses: mxschmitt/action-tmate@v3
       if: github.event.inputs.debug_enabled == 'true'
       env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN
