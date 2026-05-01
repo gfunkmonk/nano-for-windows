@@ -438,13 +438,18 @@ jobs:
             meta_key\=PDC_get_key_modifiers\() \& PDC_KEY_MODIFIER_ALT;" src/winio.c
         _diff
 
+        echo -e "\n\nPATCH: PDC_display_utf8 = TRUE"
+        sed -i.bak 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wincon/*.c
+        _diff
+
+        echo -e "\n\nPATCH: Make MAX_UNICODE suck less."
+        sed -i.bak 's|MAX_UNICODE 0xffff|MAX_UNICODE 0x10ffff|g' curses/curspriv.h
+        _diff
+
         echo '#define PDC_WIDE 1' >> src/definitions.h
         echo '#define CHTYPE_32 1' >> src/definitions.h
         echo '#define PDC_FORCE_UTF8 1' >> src/definitions.h
-
         echo "PDC_display_utf8=TRUE" >> $GITHUB_ENV
-        sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wincon/*.c
-        _diff
 
         ####                               ####
         ####   LLVM-MING SPECIFIC PATCHES  ####
@@ -488,7 +493,7 @@ jobs:
         PDTERM="wincon"
         echo "PDTERM=${PDTERM}" >> $GITHUB_ENV
         export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DPDC_WIDE -DCHTYPE_32 -DPDC_FORCE_UTF8"
-        export CXXFLAGS="${CFLAGS}
+        export CXXFLAGS="${CFLAGS}"
         unset NCURSESW_CFLAGS
         cd "nano/curses/${PDTERM}"
           make -j$(($(nproc)*2)) WIDE=Y UTF8=Y CHTYPE_32=Y DLL=N _${{matrix.short}}=Y
