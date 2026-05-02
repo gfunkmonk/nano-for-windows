@@ -1,0 +1,40 @@
+--- a/curses/vt/Makefile	2026-05-02 08:14:28.763836238 -0400
++++ b/curses/vt/Makefile	2026-05-02 08:17:44.222669878 -0400
+@@ -51,16 +51,19 @@
+ ifdef _w64
+ 	PREFIX  = x86_64-w64-mingw32-
+ 	IS_WIN = Y
++	CFLAGS += -DPDC_WINCON
+ endif
+ 
+ ifdef _w32
+ 	PREFIX  = i686-w64-mingw32-
+ 	IS_WIN = Y
++	CFLAGS += -DPDC_WINCON
+ endif
+ 
+ ifdef _a64
+ 	PREFIX  = aarch64-w64-mingw32-
+ 	IS_WIN = Y
++	CFLAGS += -DPDC_WINCON
+ endif
+ 
+ ifeq ($(OS),Windows_NT)
+@@ -72,7 +75,7 @@
+ 	E = .exe
+ endif
+ 
+-LIBNAME=libpdcurses
++LIBNAME=pdcurses
+ DLLNAME=pdcurses
+ 
+ LIBFLAGS = rv
+@@ -121,7 +124,7 @@
+ 	endif
+ endif
+ 
+-BUILD		= $(CC) $(CFLAGS) -I$(PDCURSES_SRCDIR)
++BUILD		= $(CC) $(CFLAGS) -DPDC_WINCON -I$(PDCURSES_SRCDIR)
+ 
+ LINK		= $(CC)
+ LDFLAGS		= $(LIBCURSES)
