@@ -1,4 +1,4 @@
-# Copyright (c) 2023 okibcn
+*# Copyright (c) 2023 okibcn
 # This is free software, licensed under the GNU General Public License v3.0
 # See /LICENSE for more information.
 # https://github.com/okibcn/nano-for-windows
@@ -8,7 +8,7 @@ on:
   # schedule:
   #   - cron: '51 */8 * * *'
   # runs at {0,8,16}h51m UTC every day
-workflow_dispatch:
+  workflow_dispatch:
   inputs:
     release:
       description: 'Delivery Channel'
@@ -31,7 +31,6 @@ workflow_dispatch:
       options:
         - 'vt'
         - 'wincron'
-
 env:
   FORCE_COLOR: "1"
   CLICOLOR_FORCE: "1"
@@ -46,7 +45,7 @@ env:
   HAVE_WCWIDTH: "TRUE"
   ENABLE_UTF8: "TRUE"
 
-obs:
+jobs:
   ## PRECHECK ##############################################################################
   checks:
     name: "✔️ Pre-build checks"
