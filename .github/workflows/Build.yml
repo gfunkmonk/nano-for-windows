@@ -1,9 +1,3 @@
-# Copyright (c) 2023 okibcn
-# This is free software, licensed under the GNU General Public License v3.0
-# See /LICENSE for more information.
-# https://github.com/okibcn/nano-for-windows
-# Description: Builds nano for Windows
-
 name: Build
 on:
   # schedule:
@@ -12,26 +6,25 @@ on:
   workflow_dispatch:
     inputs:
       release:
-        description: 'Delivery Channel'
+        description: Delivery Channel
         required: false
-        default: 'Artifact'
+        default: Artifact
         type: choice
         options:
-          - "Artifact"
-          - "Release"
+          - Artifact
+          - Release
       debugssh:
         description: SSH Server
         required: false
         default: false
         type: boolean
-      terminfo:
-        description: 'Terminal info'
+        description: Terminal info
         required: true
-        default: 'vt'
+        default: vt
         type: choice
         options:
-          - "vt"
-          - "wincron"
+          - vt
+          - wincron
 
 env:
   FORCE_COLOR: "1"
@@ -47,7 +40,7 @@ env:
   HAVE_WCWIDTH: "TRUE"
   ENABLE_UTF8: "TRUE"
 
-obs:
+jobs:
   ## PRECHECK ##############################################################################
   checks:
     name: "✔️ Pre-build checks"
@@ -527,7 +520,7 @@ obs:
         export CXXFLAGS="${CFLAGS}"
         unset NCURSESW_CFLAGS
         cd "nano/curses/${PDTERM}"
-          make -j$(($(nproc)*2)) WIDE=Y UTF8=Y DLL=N VT=Y CHTYPE_32=Y _${{matrix.short}}=Y -DPDC_SYMBOL_VERSIONING=0"
+          make -j$(($(nproc)*2)) WIDE=Y UTF8=Y DLL=N VT=Y CHTYPE_32=Y _${{matrix.short}}=Y -DPDC_SYMBOL_VERSIONING=0
 
     - name: "🐞 SSH session"
       uses: mxschmitt/action-tmate@v3
