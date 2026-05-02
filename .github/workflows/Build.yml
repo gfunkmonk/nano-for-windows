@@ -3,26 +3,26 @@ on:
   workflow_dispatch:
     inputs:
       release:
-        description: 'Delivery Channel'
+        description: Delivery Channel
         required: false
-        default: 'Artifact'
+        default: Artifact
         type: choice
         options:
-          - "Artifact"
-          - "Release"
+          - Artifact
+          - Release
       debugssh:
         description: SSH Server
         required: false
         default: false
         type: boolean
       terminfo:
-        description: 'Terminal info'
+        description: Terminal info
         required: true
-        default: 'vt'
+        default: vt
         type: choice
         options:
-          - "vt"
-          - "wincron"
+          - vt
+          - wincron
 env:
   FORCE_COLOR: "1"
   CLICOLOR_FORCE: "1"
