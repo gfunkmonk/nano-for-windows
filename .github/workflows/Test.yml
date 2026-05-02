@@ -45,7 +45,7 @@ jobs:
       id: checks
       shell: bash
       run: |
-        git clone --depth=1 -n https://git.savannah.gnu.org/git/nano.git
+        git clone --depth=1 -n https://github.com/madnight/nano.git
         cd nano
         LAST_NANO=$( TZ=UTC git show --quiet --date='format-local:%Y-%m-%dT%H:%M:%SZ' --format="%cd" )
         CHANGES_NANO="$(git log -1 --pretty=%B)"
@@ -84,10 +84,9 @@ jobs:
         fi
 
         if [ -f body.txt ]; then
-          curl -fsSL -o log.html "https://git.savannah.gnu.org/gitweb/?p=nano.git;a=shortlog"
-          NANO_VERSION=$(grep -m 1 "title=\"tags/" log.html | grep -Eo "v[0-9]+\.[0-9]+" | head -1)
+          NANO_VERSION=$(curl -s https://api.github.com/repos/gnu-mirror/nano/tags | jq -r '.[0].name')
           echo "Nano main VERSION: $NANO_VERSION"
-          NANO_SUBVER=$( awk '1; /"tag indirect"/{exit}' log.html | grep -c '</tr>')
+          NANO_SUBVER=$(curl -s "https://api.github.com/repos/gnu-mirror/nano/compare/${NANO_VERSION}...master" | jq -r '.ahead_by')
           echo "Nano SUBVERSION: $NANO_SUBVER"
           [ $NANO_SUBVER -gt 0 ] && NANO_VERSION="${NANO_VERSION}-${NANO_SUBVER}"
           echo "Current nano version: ${NANO_VERSION}"

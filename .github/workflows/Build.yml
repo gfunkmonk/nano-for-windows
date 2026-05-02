@@ -28,6 +28,10 @@ on:
 env:
   FORCE_COLOR: 1
   CLICOLOR_FORCE: 1
+  WT_SESSION: "1"        # This triggers pdc_wt = TRUE
+  ConEmuANSI: "ON"      # This is a fallback if WT_SESSION isn't found
+  PDC_display_utf8: "1"
+  PDC_ANSI: "1"
 
 jobs:
   ## PRECHECK ##############################################################################

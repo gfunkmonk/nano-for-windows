@@ -1,5 +1,5 @@
---- a/curses/wincon/pdcscrn.c	2026-05-01 22:10:59.531543939 -0400
-+++ b/curses/wincon/pdcscrn.c	2026-05-01 22:31:34.513355827 -0400
+--- a/curses/wincon/pdcscrn.c	2026-05-01 23:27:03.916218356 -0400
++++ b/curses/wincon/pdcscrn.c	2026-05-02 02:42:52.195299259 -0400
 @@ -2,6 +2,7 @@
  
  #include "pdcwin.h"
@@ -25,3 +25,20 @@
      const char *str;
      CONSOLE_SCREEN_BUFFER_INFO csbi;
      HMODULE h_kernel;
+@@ -482,8 +493,14 @@
+ 
+     SP->_preserve = (getenv("PDC_PRESERVE_SCREEN") != NULL);
+ 
+-    /* ENABLE_LVB_GRID_WORLDWIDE */
+-    result = SetConsoleMode(pdc_con_out, 0x0010);
++    DWORD requested_mode = 0x0010; // Existing Grid Mode
++
++    /* If we are in a modern terminal, add the Emoji/VT flag */
++    if (pdc_ansi) 
++        requested_mode |= 0x0004; // ENABLE_VIRTUAL_TERMINAL_PROCESSING
++
++    result = SetConsoleMode(pdc_con_out, requested_mode);
++    
+     if (result)
+         SP->termattrs |= A_UNDERLINE | A_LEFT | A_RIGHT;
+ 
