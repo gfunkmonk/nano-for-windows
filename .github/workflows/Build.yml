@@ -172,11 +172,11 @@ jobs:
 
     - name: "⏬ Download Sources"
       run: |
-        git clone https://git.savannah.gnu.org/git/nano.git --depth 1
+        #git clone https://git.savannah.gnu.org/git/nano.git --depth 1
+        git clone https://github.com/madnight/nano.git --depth=1 
         cd nano
         git clone https://github.com/Bill-Gray/PDCursesMod.git  curses
-        #git clone https://git.savannah.gnu.org/git/gnulib.git --depth 1
-        git clone https://github.com/madnight/nano.git --depth=1
+        git clone https://git.savannah.gnu.org/git/gnulib.git --depth 1
         autopoint --force
         glibmodules="
             base32
