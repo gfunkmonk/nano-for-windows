@@ -136,7 +136,7 @@ jobs:
         include:
           - { arch: i686,    name: Win32,    short: w32, pretty: 32 bits  }
           - { arch: x86_64,  name: Win64,    short: w64, pretty: 64 bits  }
-          - { arch: arm,     name: arm32,    short: a32, pretty: on Arm32 }
+          #- { arch: arm,     name: arm32,    short: a32, pretty: on Arm32 }
           - { arch: aarch64, name: WinARM64, short: a64, pretty: on Arm64 }
     defaults:
       run:
