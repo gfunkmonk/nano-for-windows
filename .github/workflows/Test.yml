@@ -9,30 +9,29 @@ on:
   # schedule:
   #   - cron: '51 */8 * * *'
   # runs at {0,8,16}h51m UTC every day
-  workflow_dispatch:
-    inputs:
-      release:
-        description: 'Delivery Channel'
-        required: false
-        default: 'Artifact'
-        type: choice
-        options:
-          - "Artifact"
-          - "Release"
-      debugssh:
-        description: SSH Server
-        required: false
-        default: false
-        type: boolean
-      terminfo:
-        description: 'Terminal info'
-        required: true
-        default: 'vt'
-        type: choice
-        options:
-          - "vt"
-          - "wincron"
-
+workflow_dispatch:
+  inputs:
+    release:
+      description: 'Delivery Channel'
+      required: false
+      default: 'Artifact'
+      type: 'choice'
+      options:
+        - 'Artifact'
+        - 'Release'
+    debugssh:
+      description: 'SSH Server'
+      required: false
+      default: false
+      type: 'boolean'
+    terminfo:
+      description: 'Terminal info'
+      required: true
+      default: 'vt'
+      type: 'choice'
+      options:
+        - 'vt'
+        - 'wincron'
 env:
   FORCE_COLOR: "1"
   CLICOLOR_FORCE: "1"
