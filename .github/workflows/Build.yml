@@ -18,6 +18,7 @@ on:
         required: false
         default: false
         type: boolean
+      terminfo:
         description: Terminal info
         required: true
         default: vt
