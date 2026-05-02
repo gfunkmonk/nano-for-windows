@@ -1,5 +1,14 @@
 --- a/curses/pdcurses/getch.c	2026-05-01 23:28:01.126777036 -0400
-+++ b/curses/pdcurses/getch.c	2026-05-01 23:42:14.196227236 -0400
++++ b/curses/pdcurses/getch.c	2026-05-02 00:11:19.325159156 -0400
+@@ -687,7 +687,7 @@
+     }
+ }
+ 
+-static int _raw_wgetch( WINDOW *win)
++static int _raw_wgetch_no_surrogate_pairs( WINDOW *win)
+ {
+    int rval = _raw_wgetch_no_surrogate_pairs( win);
+ 
 @@ -816,6 +816,40 @@
  #endif
  }
