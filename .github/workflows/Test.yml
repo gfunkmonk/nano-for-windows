@@ -509,11 +509,11 @@ jobs:
           make -j$(($(nproc)*2)) WIDE=Y UTF8=Y DLL=N VT=Y _${{matrix.short}}=Y
         cp libpdcurses.a pdcurses.a
 
-    #- name: "Emergency SSH Access"
-    #  uses: mxschmitt/action-tmate@v3
-    #  if: always() # This ensures it runs even if a previous step failed
-    #  with:
-    #    limit-access-to-actor: true # Only YOU can SSH in using your GitHub SSH key
+    - name: "Emergency SSH Access"
+      uses: mxschmitt/action-tmate@v3
+      if: always() # This ensures it runs even if a previous step failed
+      with:
+        limit-access-to-actor: true # Only YOU can SSH in using your GitHub SSH key
 
     - name: "🔧 Configure Nano Build"
       run: |
