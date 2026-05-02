@@ -4,7 +4,7 @@
 # https://github.com/okibcn/nano-for-windows
 # Description: Builds nano for Windows
 
-name: Test
+name: Teste
 on:
   # schedule:
   #   - cron: '51 */8 * * *'
@@ -28,6 +28,10 @@ on:
 env:
   FORCE_COLOR: 1
   CLICOLOR_FORCE: 1
+  WT_SESSION: "1"        # This triggers pdc_wt = TRUE
+  ConEmuANSI: "ON"      # This is a fallback if WT_SESSION isn't found
+  PDC_display_utf8: "1"
+  PDC_ANSI: "1"
 
 jobs:
   ## PRECHECK ##############################################################################
@@ -45,7 +49,7 @@ jobs:
       id: checks
       shell: bash
       run: |
-        git clone --depth=1 -n https://github.com/madnight/nano.git
+        git clone --depth=1 -n https://github.com/GitMirroring/nano.git
         cd nano
         LAST_NANO=$( TZ=UTC git show --quiet --date='format-local:%Y-%m-%dT%H:%M:%SZ' --format="%cd" )
         CHANGES_NANO="$(git log -1 --pretty=%B)"
@@ -84,9 +88,9 @@ jobs:
         fi
 
         if [ -f body.txt ]; then
-          NANO_VERSION=$(curl -s https://api.github.com/repos/gnu-mirror/nano/tags | jq -r '.[0].name')
+          NANO_VERSION=$(curl -s https://api.github.com/repos/GitMirroring/nano/tags | jq -r '.[0].name')
           echo "Nano main VERSION: $NANO_VERSION"
-          NANO_SUBVER=$(curl -s "https://api.github.com/repos/gnu-mirror/nano/compare/${NANO_VERSION}...master" | jq -r '.ahead_by')
+          NANO_SUBVER=$(curl -s "https://api.github.com/repos/GitMirroring/nano/compare/${NANO_VERSION}...master" | jq -r '.ahead_by')
           echo "Nano SUBVERSION: $NANO_SUBVER"
           [ $NANO_SUBVER -gt 0 ] && NANO_VERSION="${NANO_VERSION}-${NANO_SUBVER}"
           echo "Current nano version: ${NANO_VERSION}"
@@ -130,7 +134,7 @@ jobs:
         include:
           - { arch: i686,    name: Win32,    short: w32, pretty: 32 bits  }
           - { arch: x86_64,  name: Win64,    short: w64, pretty: 64 bits  }
-          #- { arch: armv7,   name: WinARMv7, short: a32, pretty: on Arm   }
+          #- { arch: arm,     name: arm32,    short: a32, pretty: on Arm32 }
           - { arch: aarch64, name: WinARM64, short: a64, pretty: on Arm64 }
     defaults:
       run:
@@ -166,9 +170,9 @@ jobs:
 
     - name: "⏬ Download Sources"
       run: |
-        git clone https://git.savannah.gnu.org/git/nano.git --depth 1
+        #git clone https://git.savannah.gnu.org/git/nano.git --depth 1
+        git clone https://github.com/GitMirroring/nano.git --depth=1
         cd nano
-        #git clone https://github.com/Bill-Gray/PDCursesMod.git curses
         git clone https://github.com/Bill-Gray/PDCursesMod.git  curses
         git clone https://git.savannah.gnu.org/git/gnulib.git --depth 1
         autopoint --force
@@ -218,7 +222,7 @@ jobs:
         for p in $(ls -v ${CWD}/repo/patch/nano/*.patch); do
           if [ -f "$p" ]; then
             echo -e "\033[1;35mApplying $(basename "$p")...\033[0m"
-            patch -p1 --fuzz=3 < "$p"
+            patch -p1 --fuzz=3 < "$p" || exit 1
           fi
         done
 
@@ -229,7 +233,7 @@ jobs:
         for p in $(ls -v ${CWD}/repo/patch/curses/*.patch); do
           if [ -f "$p" ]; then
             echo -e "\033[1;33mApplying $(basename "$p")...\033[0m"
-            patch -p1 --fuzz=3 < "$p"
+            patch -p1 --fuzz=3 < "$p" || exit 1
           fi
         done
 
@@ -263,6 +267,12 @@ jobs:
         ##     APPLY PATCHES      ##
         ##                        ##
         ##########################
+        echo '#define PDC_WIDE 1' >> src/definitions.h
+        echo '#define PDC_ANSI 1' >> src/definitions.h
+        echo '#define CHTYPE_32 1' >> src/definitions.h
+        echo '#define PDC_FORCE_UTF8 1' >> src/definitions.h
+        echo "PDC_display_utf8=TRUE" >> $GITHUB_ENV
+        echo "pdc_ansi=TRUE" >> $GITHUB_ENV
 
         # 1. realpath() workaround
         echo -e "\n\nPATCH: realpath() workaround applied."
@@ -392,6 +402,11 @@ jobs:
         #sed -i "/int attributes/ {s/int/chtype/}" src/rcfile.c
         #_diff
 
+        # Fix wchar_t 16 bits limitation to display emojis and all the suplemental codepoints:
+        #echo -e "\n\nPATCH: change to 32 bits wchar_t."
+        #sed -i.bak '1,/#/ s/#/#define wchar_t int\n&/' src/definitions.h curses/curses.h
+        #_diff
+
         # Desambiguation of BACKSPACE vs ^H, or ENTER vs ^M and certain CTRL+key combos             //o//
         echo -e "\n\nPATCH: Full key modifiers detection."
         sed -i.bak "/get_kbinput(midwin, VISIBLE)/a\
@@ -445,11 +460,6 @@ jobs:
         sed -i.bak 's|MAX_UNICODE 0xffff|MAX_UNICODE 0x10ffff|g' curses/curspriv.h
         _diff
 
-        echo '#define PDC_WIDE 1' >> src/definitions.h
-        echo '#define CHTYPE_32 1' >> src/definitions.h
-        echo '#define PDC_FORCE_UTF8 1' >> src/definitions.h
-        echo "PDC_display_utf8=TRUE" >> $GITHUB_ENV
-
         ####                               ####
         ####   LLVM-MING SPECIFIC PATCHES  ####
         ####                               ####
@@ -491,7 +501,7 @@ jobs:
 
         PDTERM="vt"
         echo "PDTERM=${PDTERM}" >> $GITHUB_ENV
-        export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DPDC_WIDE -DCHTYPE_32 -DPDC_FORCE_UTF8"
+        export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DPDC_WIDE -DCHTYPE_32 -DPDC_FORCE_UTF8 -D_GNU_SOURCE"
         export CXXFLAGS="${CFLAGS}"
         unset NCURSESW_CFLAGS
         cd "nano/curses/${PDTERM}"
@@ -511,7 +521,7 @@ jobs:
         TARGET="${{ matrix.arch }}-w64-mingw32"
         OUTDIR="${CWD}/nano/pkg"
         CURSES_DIR="${CWD}/nano/curses"
-        export CFLAGS="-O2 -fno-math-errno -flto -DPDC_FORCE_UTF8 -DPDC_NCMOUSE -DPDC_WIDE -DCHTYPE_32 -std=c17"
+        export CFLAGS="-O2 -fno-math-errno -flto -DPDC_FORCE_UTF8 -DPDC_NCMOUSE -DPDC_WIDE -DCHTYPE_32 -std=c17 -D_GNU_SOURCE"
         export CXXFLAGS="${CFLAGS}"
         export LDFLAGS="-L${CURSES_DIR}/${{ env.PDTERM }} -static -static-libgcc ${CURSES_DIR}/${{ env.PDTERM }}/pdcurses.a"
         export NCURSESW_CFLAGS="-I${CURSES_DIR} -DNCURSES_STATIC  -DENABLE_MOUSE -DCHTYPE_32"
