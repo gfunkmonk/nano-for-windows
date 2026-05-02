@@ -3,7 +3,6 @@
 # See /LICENSE for more information.
 # https://github.com/okibcn/nano-for-windows
 # Description: Builds nano for Windows
-
 name: Build
 on:
   # schedule:
