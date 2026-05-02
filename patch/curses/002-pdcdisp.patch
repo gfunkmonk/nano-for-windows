@@ -1,5 +1,5 @@
---- a/curses/pdcurses/pdcdisp.c	2026-05-01 07:43:13.343719678 -0400
-+++ a/curses/pdcurses/pdcdisp.c	2026-05-02 05:04:36.070736054 -0400
+--- a/curses/wincon/pdcdisp.c	2026-05-01 07:43:13.343719678 -0400
++++ a/curses/wincon/pdcdisp.c	2026-05-02 05:04:36.070736054 -0400
 @@ -155,7 +155,7 @@
  #endif
  
