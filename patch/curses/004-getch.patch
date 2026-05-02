@@ -1,5 +1,5 @@
 --- a/curses/pdcurses/getch.c	2026-05-01 23:28:01.126777036 -0400
-+++ b/curses/pdcurses/getch.c	2026-05-02 00:55:55.371559469 -0400
++++ b/curses/pdcurses/getch.c	2026-05-02 01:27:00.499151455 -0400
 @@ -3,6 +3,8 @@
  #include <curspriv.h>
  #include <assert.h>
@@ -32,7 +32,15 @@
  int mvgetch(int y, int x)
  {
      PDC_LOG(("mvgetch() - called\n"));
-@@ -816,6 +802,40 @@
+@@ -809,13 +795,47 @@
+                 rval = ERR;
+             }
+             else     /* successfully converted to multi-byte string */
+-                rval = wgetch( win);
++                rval = ERR;
+         }
+     }
+     return( rval);
  #endif
  }
  
