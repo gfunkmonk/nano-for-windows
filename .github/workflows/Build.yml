@@ -49,8 +49,7 @@ jobs:
       id: checks
       shell: bash
       run: |
-        #git clone --depth=1 -n https://git.savannah.gnu.org/git/nano.git
-        git clone --depth=1 -n https://github.com/madnight/nano.git
+        git clone --depth=1 -n https://git.savannah.gnu.org/git/nano.git
         cd nano
         LAST_NANO=$( TZ=UTC git show --quiet --date='format-local:%Y-%m-%dT%H:%M:%SZ' --format="%cd" )
         CHANGES_NANO="$(git log -1 --pretty=%B)"
