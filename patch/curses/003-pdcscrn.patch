@@ -1,0 +1,27 @@
+--- a/curses/wincon/pdcscrn.c	2026-05-01 22:10:59.531543939 -0400
++++ b/curses/wincon/pdcscrn.c	2026-05-01 22:14:18.828987219 -0400
+@@ -2,6 +2,7 @@
+ 
+ #include "pdcwin.h"
+ #include <stdlib.h>
++#include <windows.h>
+ #if !defined( __WATCOMC__) && !defined( __DMC__)
+    #include <wincon.h>
+    #define USE_GET_CONSOLE_WINDOW
+@@ -17,6 +18,16 @@
+ 
+ DWORD pdc_quick_edit;
+ 
++DWORD mode = 0;
++HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
++
++if (hOut != INVALID_HANDLE_VALUE) {
++    if (GetConsoleMode(hOut, &mode)) {
++        mode |= 0x0004; // The "Longass Word" (ENABLE_VIRTUAL_TERMINAL_PROCESSING)
++        SetConsoleMode(hOut, mode);
++    }
++}
++
+ static short realtocurs[16] =
+ {
+     COLOR_BLACK, COLOR_BLUE, COLOR_GREEN, COLOR_CYAN, COLOR_RED,
