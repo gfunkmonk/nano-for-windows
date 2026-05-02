@@ -26,14 +26,17 @@ on:
           - "Release"
 
 env:
-  FORCE_COLOR: 1
-  CLICOLOR_FORCE: 1
+  FORCE_COLOR: "1"
+  CLICOLOR_FORCE: "1"
   WT_SESSION: "1"        # This triggers pdc_wt = TRUE
   ConEmuANSI: "ON"      # This is a fallback if WT_SESSION isn't found
   PDC_VT: "TRUE"
   PDC_WINCON: "FALSE"
   CHTYPE_32: "1"
   PDC_ANSI: "TRUE"
+  PDC_FORCE_UTF8: "1"
+  UNICODE: "1"
+  HAVE_WCWIDTH: "TRUE"
 
 jobs:
   ## PRECHECK ##############################################################################
@@ -275,6 +278,8 @@ jobs:
         echo '#define PDC_WINCON 0' >> src/definitions.h
         echo '#define CHTYPE_32 1' >> src/definitions.h
         echo '#define PDC_ANSI 1' >> src/definitions.h
+        echo '#define PDC_FORCE_UTF8 1' >> src/definitions.h
+        echo '#define UNICODE 1' >> src/definitions.h
 
         # 1. realpath() workaround
         echo -e "\n\nPATCH: realpath() workaround applied."
