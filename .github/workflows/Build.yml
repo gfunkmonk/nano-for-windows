@@ -9,31 +9,45 @@ on:
   # schedule:
   #   - cron: '51 */8 * * *'
   # runs at {0,8,16}h51m UTC every day
-  workflow_dispatch:
-    inputs:
-      debug_enabled:
-        description: 'Debug session enabled'
-        required: false
-        default: false
-        type: boolean
-      release:
-        description: 'Delivery Channel'
-        required: false
-        default: 'Artifact'
-        type: choice
-        options:
-          - "Artifact"
-          - "Release"
+workflow_dispatch:
+  inputs:
+    release:
+      description: 'Delivery Channel'
+      required: false
+      default: 'Artifact'
+      type: 'choice'
+      options:
+        - 'Artifact'
+        - 'Release'
+    debugssh:
+      description: 'SSH Server'
+      required: false
+      default: false
+      type: 'boolean'
+    terminfo:
+      description: 'Terminal info'
+      required: true
+      default: 'vt'
+      type: 'choice'
+      options:
+        - 'vt'
+        - 'wincron'
 
 env:
-  FORCE_COLOR: 1
-  CLICOLOR_FORCE: 1
+  FORCE_COLOR: "1"
+  CLICOLOR_FORCE: "1"
   WT_SESSION: "1"        # This triggers pdc_wt = TRUE
   ConEmuANSI: "ON"      # This is a fallback if WT_SESSION isn't found
-  PDC_display_utf8: "1"
-  PDC_ANSI: "1"
+  PDC_VT: "RGB"
+  PDC_WINCON: "FALSE"
+  CHTYPE_32: "1"
+  PDC_ANSI: "TRUE"
+  PDC_FORCE_UTF8: "1"
+  UNICODE: "1"
+  HAVE_WCWIDTH: "TRUE"
+  ENABLE_UTF8: "TRUE"
 
-jobs:
+obs:
   ## PRECHECK ##############################################################################
   checks:
     name: "✔️ Pre-build checks"
@@ -267,10 +281,14 @@ jobs:
         ##     APPLY PATCHES      ##
         ##                        ##
         ##########################
+        echo -e "\n" >> src/definitions.h
         echo '#define PDC_WIDE 1' >> src/definitions.h
-        echo '#define PDC_ANSI 1' >> src/definitions.h
+        echo '#define PDC_VT RGB' >> src/definitions.h
+        echo '#define PDC_WINCON 0' >> src/definitions.h
         echo '#define CHTYPE_32 1' >> src/definitions.h
+        echo '#define PDC_ANSI 1' >> src/definitions.h
         echo '#define PDC_FORCE_UTF8 1' >> src/definitions.h
+        echo '#define UNICODE 1' >> src/definitions.h
         echo "PDC_display_utf8=TRUE" >> $GITHUB_ENV
         echo "pdc_ansi=TRUE" >> $GITHUB_ENV
 
@@ -460,6 +478,11 @@ jobs:
         sed -i.bak 's|MAX_UNICODE 0xffff|MAX_UNICODE 0x10ffff|g' curses/curspriv.h
         _diff
 
+        # Fix prototype for VT driver compatibility
+        echo -e "\n\nPATCH: Fixing wine_ver_func prototype in VT driver."
+        sed -i 's/wine_ver_func)()/wine_ver_func)(void)/' curses/vt/pdcscrn.c
+        _diff
+
         ####                               ####
         ####   LLVM-MING SPECIFIC PATCHES  ####
         ####                               ####
@@ -498,14 +521,19 @@ jobs:
         ##     COMPILE CURSES     ##
         ##                        ##
         ##########################
-
-        PDTERM="wincon"
+        PDTERM=${{ inputs.terminfo }}
         echo "PDTERM=${PDTERM}" >> $GITHUB_ENV
-        export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DPDC_WIDE -DCHTYPE_32 -DPDC_FORCE_UTF8 -D_GNU_SOURCE"
+        export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DPDC_WIDE -DPDC_VT=RGB -DCHTYPE_32 -DPDC_FORCE_UTF8 -DPDC_SYMBOL_VERSIONING=0 -D_GNU_SOURCE"
         export CXXFLAGS="${CFLAGS}"
         unset NCURSESW_CFLAGS
         cd "nano/curses/${PDTERM}"
-          make -j$(($(nproc)*2)) WIDE=Y UTF8=Y CHTYPE_32=Y DLL=N _${{matrix.short}}=Y
+          make -j$(($(nproc)*2)) WIDE=Y UTF8=Y DLL=N VT=Y CHTYPE_32=Y _${{matrix.short}}=Y -DPDC_SYMBOL_VERSIONING=0"
+
+    - name: "🐞 SSH session"
+      uses: mxschmitt/action-tmate@v3
+      if: github.event.inputs.debugssh == 'true'
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: "🔧 Configure Nano Build"
       run: |
@@ -521,10 +549,10 @@ jobs:
         TARGET="${{ matrix.arch }}-w64-mingw32"
         OUTDIR="${CWD}/nano/pkg"
         CURSES_DIR="${CWD}/nano/curses"
-        export CFLAGS="-O2 -fno-math-errno -flto -DPDC_FORCE_UTF8 -DPDC_NCMOUSE -DPDC_WIDE -DCHTYPE_32 -std=c17 -D_GNU_SOURCE"
+        export CFLAGS="-O2 -fno-math-errno -flto -DPDC_NCMOUSE -DPDC_WIDE -DPDC_VT=RGB -DCHTYPE_32 -DPDC_FORCE_UTF8 -std=c17 -DPDC_SYMBOL_VERSIONING=0 -D_GNU_SOURCE -DPDC_FORCE_UTF8"
         export CXXFLAGS="${CFLAGS}"
         export LDFLAGS="-L${CURSES_DIR}/${{ env.PDTERM }} -static -static-libgcc ${CURSES_DIR}/${{ env.PDTERM }}/pdcurses.a"
-        export NCURSESW_CFLAGS="-I${CURSES_DIR} -DNCURSES_STATIC  -DENABLE_MOUSE -DCHTYPE_32"
+        export NCURSESW_CFLAGS="-I${CURSES_DIR} -DNCURSES_STATIC  -DENABLE_MOUSE"
         export NCURSESW_LIBS="-l:pdcurses.a -lwinmm -lbcrypt"
         export LIBS="-lbcrypt"
         # Configure nano
@@ -593,23 +621,6 @@ jobs:
         path: |
           *.zip
 
-
-    - name: "🔧 Prepare debug session"
-      if: github.event.inputs.debug_enabled == 'true'
-      run: |
-        apk add bash nano-syntax iproute2 util-linux-misc
-        curl -fsSL -o /usr/local/bin/oh-my-posh https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/posh-linux-amd64
-        chmod +x /usr/local/bin/oh-my-posh
-        curl -fsSL -o /etc/nanorc https://github.com/okibcn/miniU/raw/main/Github_Linux/.nanorc
-        curl -fsSL -o ~/.zshrc https://github.com/okibcn/miniU/raw/main/Github_Linux/profile.sh
-        cat ~/.zshrc >> ~/.bashrc
-
-    - name: "🐞 Debug session"
-      uses: mxschmitt/action-tmate@v3
-      if: github.event.inputs.debug_enabled == 'true'
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   ## PUBLISH ##############################################################################
   publish:
     if: needs.checks.outputs.cancel != 'true'
@@ -664,21 +675,3 @@ jobs:
           ./*.zip
           ./hashes.txt
 
-
-    - name: "🔧 Prepare debug session"
-      if: github.event.inputs.debug_enabled == 'true'
-      run: |
-        sudo apt install zsh zsh-syntax-highlighting
-        sudo curl -fsSL -o /usr/local/bin/oh-my-posh https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/posh-linux-amd64
-        sudo chmod +x /usr/local/bin/oh-my-posh
-        curl -fsSL -o ~/.nanorc https://github.com/okibcn/miniU/raw/main/Github_Linux/.nanorc
-        curl -fsSL -o ~/.zshrc https://github.com/okibcn/miniU/raw/main/Github_Linux/profile.sh
-        cp /etc/bash.bashrc ~
-        cat ~/.zshrc >> ~/bash.bashrc
-        sudo cp ~/bash.bashrc /etc/bash.bashrc -f
-
-    - name: "🐞 Debug session"
-      uses: mxschmitt/action-tmate@v3
-      if: github.event.inputs.debug_enabled == 'true'
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
