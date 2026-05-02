@@ -506,7 +506,7 @@ jobs:
         export CXXFLAGS="${CFLAGS}"
         unset NCURSESW_CFLAGS
         cd "nano/curses/${PDTERM}"
-          make -j$(($(nproc)*2)) WIDE=Y UTF8=Y DLL=N VT=Y _${{matrix.short}}=Y "EXTRA_CFLAGS=-DPDC_SYMBOL_VERSIONING=0"
+          make -j$(($(nproc)*2)) WIDE=Y UTF8=Y DLL=N VT=Y _${{matrix.short}}=Y EXTRA_CFLAGS="-DPDC_SYMBOL_VERSIONING=0"
 
     #- name: "Emergency SSH Access"
     #  uses: mxschmitt/action-tmate@v3
