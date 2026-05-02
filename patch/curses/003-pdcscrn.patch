@@ -1,5 +1,5 @@
 --- a/curses/wincon/pdcscrn.c	2026-05-01 23:27:03.916218356 -0400
-+++ b/curses/wincon/pdcscrn.c	2026-05-02 02:42:52.195299259 -0400
++++ b/curses/wincon/pdcscrn.c	2026-05-02 03:28:17.532758389 -0400
 @@ -2,6 +2,7 @@
  
  #include "pdcwin.h"
@@ -8,7 +8,7 @@
  #if !defined( __WATCOMC__) && !defined( __DMC__)
     #include <wincon.h>
     #define USE_GET_CONSOLE_WINDOW
-@@ -389,6 +390,16 @@
+@@ -389,12 +390,25 @@
  
  int PDC_scr_open(void)
  {
@@ -25,7 +25,16 @@
      const char *str;
      CONSOLE_SCREEN_BUFFER_INFO csbi;
      HMODULE h_kernel;
-@@ -482,8 +493,14 @@
+     BOOL result;
+     int i;
+ 
++    SetConsoleOutputCP(65001); // Set output to UTF-8
++    SetConsoleCP(65001);       // Set input to UTF-8
++    
+     PDC_LOG(("PDC_scr_open() - called\n"));
+ 
+     for (i = 0; i < 16; i++)
+@@ -482,8 +496,14 @@
  
      SP->_preserve = (getenv("PDC_PRESERVE_SCREEN") != NULL);
  
