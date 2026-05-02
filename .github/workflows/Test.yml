@@ -514,20 +514,20 @@ jobs:
         #  make -j$(($(nproc)*2)) WIDE=Y UTF8=Y DLL=N VT=Y CHTYPE_32=Y _${{matrix.short}}=Y EXTRA_CFLAGS="-DPDC_SYMBOL_VERSIONING=0"
 
     - name: Rambo Build (Heredoc Strategy)
-        run: |
-          cat >> $GITHUB_ENV << 'EOF'
-          cd "nano/curses/vt"
-          make clean
-          make -j$(nproc) \
-            WIDE=Y \
-            UTF8=Y \
-            DLL=N \
-            VT=Y \
-            CHTYPE_32=Y \
-            _${{ matrix.short }}=Y \
-            CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DPDC_WIDE -DPDC_VT -DCHTYPE_32 -DPDC_FORCE_UTF8 -DPDC_SYMBOL_VERSIONING=0" \
-            LDFLAGS="-flto"
-          EOF
+      run: |
+        cat >> $GITHUB_ENV << 'EOF'
+        cd "nano/curses/vt"
+        make clean
+        make -j$(nproc) \
+        WIDE=Y \
+        UTF8=Y \
+        DLL=N \
+        VT=Y \
+        CHTYPE_32=Y \
+        _${{ matrix.short }}=Y \
+        CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DPDC_WIDE -DPDC_VT -DCHTYPE_32 -DPDC_FORCE_UTF8 -DPDC_SYMBOL_VERSIONING=0" \
+        LDFLAGS="-flto"
+        EOF
 
     #- name: "Emergency SSH Access"
     #  uses: mxschmitt/action-tmate@v3
