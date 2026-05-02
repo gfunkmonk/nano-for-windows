@@ -1,0 +1,34 @@
+--- a/curses/wincon/pdcdisp.c   2026-05-01 19:56:54.114523945 -0400
++++ b/curses/wincon/pdcdisp.c   2026-05-01 20:11:01.162629945 -0400
+@@ -163,7 +163,7 @@
+                            const int lineno, const int x, const chtype *srcp, const int len)
+ {
+ #ifdef PDC_WIDE
+-    WCHAR buffer[MAX_PACKET_LEN];
++    WCHAR buffer[MAX_PACKET_LEN * 2];
+ #else
+     char buffer[MAX_PACKET_LEN];
+ #endif
+@@ -181,17 +181,17 @@
+
+ #ifdef PDC_WIDE
+         ch &= A_CHARTEXT;
+-        if( ch <= MAX_UNICODE)
++    if (ch > 0xFFFF && ch <= 0x10FFFF)
+         {
+-            if( IS_SUPPLEMENTAL_MULTILINGUAL_PLANE( ch))
+-            {
+-                buffer[n_out++] = (WCHAR)((ch - 0x10000) >> 10 | 0xD800); /* first UTF-16 unit */
+-                buffer[n_out++] = (WCHAR)(ch & 0x3FF) | 0xDC00;   /* second UTF-16 unit */
++        buffer[n_out++] = (WCHAR)(((ch - 0x10000) >> 10) + 0xD800);
++        buffer[n_out++] = (WCHAR)(((ch - 0x10000) & 0x3FF) + 0xDC00);
+             }
+         else
++    {
+             buffer[n_out++] = (WCHAR)ch;
+         }
+ #else
++    /* This ensures non-wide builds (like some legacy m68k targets) still work */
+         buffer[n_out++] = (char)( ch & A_CHARTEXT);
+ #endif
+     }
