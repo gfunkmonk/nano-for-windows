@@ -1,0 +1,43 @@
+--- a/curses/pdcurses/getch.c	2026-05-01 23:28:01.126777036 -0400
++++ b/curses/pdcurses/getch.c	2026-05-01 23:42:14.196227236 -0400
+@@ -816,6 +816,40 @@
+ #endif
+ }
+ 
++static int _raw_wgetch(WINDOW *win)
++{
++    /* 
++     * Step 1: Call your existing massive function.
++     * All your original logic and comments are safe inside here.
++     */
++    int ch = _raw_wgetch_no_surrogate_pairs(win);
++
++#ifdef PDC_WIDE
++    /* 
++     * Step 2: Check if the character is the start of an emoji (High Surrogate).
++     * This only compiles for your Windows-wide builds.
++     */
++    if (ch >= 0xD800 && ch <= 0xDBFF)
++    {
++        /* Grab the second half of the pair */
++        int low = _raw_wgetch_no_surrogate_pairs(win);
++        
++        if (low >= 0xDC00 && low <= 0xDFFF)
++        {
++            /* Combine them into a single 32-bit Unicode point */
++            ch = ((ch - 0xD800) << 10) + (low - 0xDC00) + 0x10000;
++        }
++        else
++        {
++            /* If the second part is invalid, just return it as-is */
++            return low; 
++        }
++    }
++#endif
++
++    return ch;
++}
++
+ #ifdef PDC_WIDE
+ int wget_wch(WINDOW *win, wint_t *wch)
+ {

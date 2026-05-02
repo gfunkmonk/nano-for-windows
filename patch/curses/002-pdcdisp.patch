@@ -1,0 +1,25 @@
+--- a/curses/wincon/pdcdisp.c	2026-04-30 09:38:25.731369424 -0400
++++ b/curses/wincon/pdcdisp.c	2026-04-30 09:16:24.396149957 -0400
+@@ -312,6 +312,22 @@
+     ansi = pdc_ansi || (fore >= 16 || back >= 16);
+     blink = (SP->termattrs & A_BLINK) && (attr & A_BLINK);
+ 
++#ifdef PDC_WIDE
++    /* Force ANSI path for runs containing SMP characters (emoji/supplemental
++       plane), because WriteConsoleOutput does not handle surrogate pairs.
++       WriteConsoleW (used by the ANSI path) handles them correctly. */
++    if (!ansi)
++    {
++        int k;
++        for (k = 0; k < len; k++)
++            if (IS_SUPPLEMENTAL_MULTILINGUAL_PLANE(srcp[k] & A_CHARTEXT))
++            {
++                ansi = TRUE;
++                break;
++            }
++    }
++#endif
++
+     if (blink)
+     {
+         attr &= ~A_BLINK;

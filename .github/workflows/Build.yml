@@ -219,7 +219,7 @@ jobs:
         for p in $(ls -v ${CWD}/repo/patch/nano/*.patch); do
           if [ -f "$p" ]; then
             echo -e "\033[1;35mApplying $(basename "$p")...\033[0m"
-            patch -p1 --fuzz=3 < "$p"
+            patch -p1 --fuzz=3 < "$p" || exit 1
           fi
         done
 
@@ -230,7 +230,7 @@ jobs:
         for p in $(ls -v ${CWD}/repo/patch/curses/*.patch); do
           if [ -f "$p" ]; then
             echo -e "\033[1;33mApplying $(basename "$p")...\033[0m"
-            patch -p1 --fuzz=3 < "$p"
+            patch -p1 --fuzz=3 < "$p" || exit 1
           fi
         done
 
