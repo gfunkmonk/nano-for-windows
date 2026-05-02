@@ -504,7 +504,7 @@ jobs:
         ##     COMPILE CURSES     ##
         ##                        ##
         ##########################
-        DTERM="vt"
+        PDTERM="vt"
         echo "PDTERM=${PDTERM}" >> $GITHUB_ENV
         export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DPDC_WIDE -DPDC_VT -DCHTYPE_32 -DPDC_FORCE_UTF8 -DPDC_SYMBOL_VERSIONING=0"
         export CXXFLAGS="${CFLAGS}"
