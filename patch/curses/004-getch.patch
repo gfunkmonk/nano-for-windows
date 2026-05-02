@@ -1,15 +1,182 @@
 --- a/curses/pdcurses/getch.c	2026-05-01 23:28:01.126777036 -0400
-+++ b/curses/pdcurses/getch.c	2026-05-02 00:11:19.325159156 -0400
-@@ -687,7 +687,7 @@
-     }
- }
++++ b/curses/pdcurses/getch.c	2026-05-02 00:22:14.961381547 -0400
+@@ -3,6 +3,8 @@
+ #include <curspriv.h>
+ #include <assert.h>
  
--static int _raw_wgetch( WINDOW *win)
-+static int _raw_wgetch_no_surrogate_pairs( WINDOW *win)
++static int _raw_wgetch(WINDOW *win);
++
+ /*man-start**************************************************************
+ 
+ getch
+@@ -529,166 +531,6 @@
+ 
+ static int _raw_wgetch_no_surrogate_pairs( WINDOW *win)
  {
+-    int key = ERR, remaining_millisecs;
+-
+-    PDC_LOG(("_raw_wgetch_no_surrogate_pairs() - called\n"));
+-
+-    assert( SP);
+-    assert( win);
+-    if (!win || !SP)
+-        return ERR;
+-
+-    if (SP->delaytenths)
+-        remaining_millisecs = 100 * SP->delaytenths;
+-    else
+-        remaining_millisecs = win->_delayms;
+-
+-    /* refresh window when wgetch is called if there have been changes
+-       to it and it is not a pad */
+-
+-    if (!(win->_flags & _PAD) && ((!win->_leaveit &&
+-         (win->_begx + win->_curx != SP->curscol ||
+-          win->_begy + win->_cury != SP->cursrow)) || is_wintouched(win)))
+-        wrefresh(win);
+-
+-    /* if ungotten char exists, remove and return it */
+-
+-    if (SP->c_ungind)
+-        key = SP->c_ungch[--(SP->c_ungind)];
+-
+-    /* if normal and data in buffer */
+-
+-    else if ( !SP->cbreak && (SP->c_gindex < SP->c_pindex))
+-        key = SP->c_buffer[SP->c_gindex++];
+-
+-    if( key != ERR)
+-    {
+-        if( key == KEY_RESIZE)
+-            resize_term( 0, 0);
+-        return( key);
+-    }
+-    /* prepare to buffer data */
+-
+-    SP->c_pindex = 0;
+-    SP->c_gindex = 0;
+-
+-    /* to get here, no keys are buffered. go and get one. */
+-
+-    for (;;)            /* loop for any buffering */
+-    {
+-        /* is there a keystroke ready? */
+-
+-        while( !_fast_check_key())
+-        {
+-            /* if not, handle timeout() and halfdelay() */
+-            int nap_time = 50;
+-
+-            if (remaining_millisecs != BLOCKING_INPUT)
+-            {
+-                if (!remaining_millisecs)
+-                    return ERR;
+-                if( nap_time > remaining_millisecs)
+-                    nap_time = remaining_millisecs;
+-                remaining_millisecs -= nap_time;
+-            }
+-            napms( nap_time);
+-        }
+-
+-        /* if there is, fetch it */
+-
+-        key = PDC_get_key();
+-
+-        /* loop back if we did not get a key yet */
+-
+-        if (key == -1)
+-            continue;
+-
+-        /* filter mouse events; translate mouse clicks in the slk
+-           area to function keys (especially copy + pase) */
+-
+-        if( key == KEY_MOUSE)
+-        {
+-            key = _mouse_key();
+-        }
+-        else
+-        {
+-
+-            /* copy or paste? */
+-#ifndef _WIN32
+-            if (SP->key_modifiers & PDC_KEY_MODIFIER_SHIFT)
+-#endif
+-            {
+-                if (PDC_function_key[FUNCTION_KEY_COPY] == key)
+-                {
+-                    _copy();
+-                    continue;
+-                }
+-                else if (PDC_function_key[FUNCTION_KEY_PASTE] == key)
+-                    key = _paste();
+-            }
+-
+-        }
+-
+-        /* filter special keys if not in keypad mode */
+-
+-        if( key != KEY_RESIZE && PDC_is_function_key( key) && !win->_use_keypad)
+-            key = -1;
+-
+-        /* unwanted key? loop back */
+-
+-        if (key == -1)
+-            continue;
+-
+-        if( _highlight())
+-            wrefresh(curscr);
+-        SP->sel_start = SP->sel_end = -1;
+-
+-        /* translate CR */
+-
+-        if (key == '\r' && SP->autocr && !SP->raw_inp)
+-            key = '\n';
+-
+-        /* if echo is enabled */
+-
+-        if (SP->echo && !PDC_is_function_key( key))
+-        {
+-            waddch(win, key);
+-            wrefresh(win);
+-        }
+-
+-        /* if no buffering */
+-
+-        if( SP->cbreak)
+-        {
+-            if( key == KEY_RESIZE)
+-                resize_term( 0, 0);
+-            return key;
+-        }
+-
+-        /* if no overflow, put data in buffer */
+-
+-        if (key == '\b')
+-        {
+-            if (SP->c_pindex > SP->c_gindex)
+-                SP->c_pindex--;
+-        }
+-        else
+-            if (SP->c_pindex < _INBUFSIZ - 2)
+-                SP->c_buffer[SP->c_pindex++] = key;
+-
+-        /* if we got a line */
+-
+-        if (key == '\n' || key == '\r')
+-        {
+-            if( SP->c_buffer[SP->c_gindex] == KEY_RESIZE)
+-                resize_term( 0, 0);
+-            return SP->c_buffer[SP->c_gindex++];
+-        }
+-    }
+-}
+-
+-static int _raw_wgetch( WINDOW *win)
+-{
     int rval = _raw_wgetch_no_surrogate_pairs( win);
  
-@@ -816,6 +816,40 @@
+ #ifdef PDC_WIDE
+@@ -816,6 +658,40 @@
  #endif
  }
  
