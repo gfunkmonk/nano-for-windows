@@ -3,8 +3,7 @@ on:
   # schedule:
   #   - cron: '51 */8 * * *'
   # runs at {0,8,16}h51m UTC every day
-  workflow_dispatch:
-  workflow_dispatch:
+  workflow_dispatch::
     inputs:
       release:
         description: 'Delivery Channel'
