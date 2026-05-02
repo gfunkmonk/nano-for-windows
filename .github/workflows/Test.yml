@@ -507,7 +507,6 @@ jobs:
         unset NCURSESW_CFLAGS
         cd "nano/curses/${PDTERM}"
           make -j$(($(nproc)*2)) WIDE=Y UTF8=Y DLL=N VT=Y _${{matrix.short}}=Y
-        cp libpdcurses.a pdcurses.a
 
     #- name: "Emergency SSH Access"
     #  uses: mxschmitt/action-tmate@v3
