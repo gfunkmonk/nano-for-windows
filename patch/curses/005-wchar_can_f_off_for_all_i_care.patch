@@ -29,8 +29,8 @@
 -            {
 -                buffer[n_out++] = (WCHAR)((ch - 0x10000) >> 10 | 0xD800); /* first UTF-16 unit */
 -                buffer[n_out++] = (WCHAR)(ch & 0x3FF) | 0xDC00;   /* second UTF-16 unit */
-+        buffer[n_out++] = (WCHAR)(((ch - 0x10000) >> 10) + 0xD800);
-+        buffer[n_out++] = (WCHAR)(((ch - 0x10000) & 0x3FF) + 0xDC00);
++        buffer[n_out++] = (WCHAR)(((ch - 0x10000) >> 10) | 0xD800);
++        buffer[n_out++] = (WCHAR)(((ch - 0x10000) & 0x3FF) | 0xDC00);
              }
          else
 +    {
