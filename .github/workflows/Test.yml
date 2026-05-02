@@ -515,7 +515,7 @@ jobs:
 
     - name: Rambo Build (Heredoc Strategy)
         run: |
-          bash << 'EOF'
+          cat >> $GITHUB_ENV << 'EOF'
           cd "nano/curses/vt"
           make clean
           make -j$(nproc) \
