@@ -506,7 +506,7 @@ jobs:
 
         PDTERM="vt"
         echo "PDTERM=${PDTERM}" >> $GITHUB_ENV
-        export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DPDC_WIDE -DCHTYPE_32 -DPDC_FORCE_UTF8 -D_GNU_SOURCE -Wno-strict-prototypes"
+        export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DPDC_WIDE -DCHTYPE_32 -DPDC_FORCE_UTF8 -D_GNU_SOURCE"
         export CXXFLAGS="${CFLAGS}"
         unset NCURSESW_CFLAGS
         cd "nano/curses/${PDTERM}"
