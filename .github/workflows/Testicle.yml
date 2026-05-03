@@ -171,11 +171,21 @@ jobs:
 #          llvm-mingw-
 #        path: llvm-mingw
 
-    - name: "📂 Restore LLVM-MinGW Folder"
-      uses: actions/download-artifact@v8
-      with:
-        name: llvm-mingw
-        path: llvm-mingw
+    - name: "⏬ Download LLVM-MinGW from Toolchain Workflow"
+      shell: bash
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Fetch the artifact from the latest successful 'Builds toolchain' run
+        gh run download --name llvm-mingw --repo ${{ github.repository }}
+        # Verify it downloaded to the right spot
+        if [ -d "llvm-mingw" ]; then
+          echo "Toolchain restored successfully."
+          #echo "$(pwd)/llvm-mingw/bin" >> $GITHUB_PATH
+        else
+          echo "::error::Failed to download toolchain artifact!"
+          exit 1
+        fi
 
     - name: 🛒 Checkout
       uses: actions/checkout@v6
