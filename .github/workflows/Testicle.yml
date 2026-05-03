@@ -18,6 +18,11 @@ on:
         required: false
         default: false
         type: boolean
+      magic:
+        description: Magic?
+        required: true
+        default: false
+        type: boolean
       terminfo:
         description: Terminal info
         required: true
@@ -272,6 +277,7 @@ jobs:
         done
 
     - name: "🪄 Apply Windows Portability Magic"
+      if: github.event.inputs.magic == 'true'
       run: |
         function _diff() {
           # Thanks to @rasa for this function
