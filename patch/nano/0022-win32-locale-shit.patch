@@ -1,0 +1,14 @@
+--- a/src/nano.c	2026-05-03 17:45:02.259749718 -0400
++++ b/src/nano.c	2026-05-03 18:09:41.068230398 -0400
+@@ -1872,6 +1872,11 @@
+ 	/* If setting the locale is successful and it uses UTF-8, we will
+ 	 * need to use the multibyte functions for text processing. */
+ 	if (setlocale(LC_ALL, "") && strcmp(nl_langinfo(CODESET), "UTF-8") == 0)
++#ifdef _WIN32
++    /* Force the C runtime's multibyte functions to use UTF-8 regardless of
++     * the Windows system locale (which may be GBK, Shift-JIS, etc.). */
++    setlocale(LC_CTYPE, ".UTF-8");
++#endif
+ 		using_utf8 = TRUE;
+ #else
+ 	setlocale(LC_ALL, "");
