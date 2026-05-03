@@ -175,24 +175,24 @@ jobs:
 #          llvm-mingw-
 #        path: llvm-mingw
 
-    - name: "⏬ Download LLVM-MinGW from Toolchain Workflow"
+- name: "⏬ Download LLVM-MinGW from Toolchain Workflow"
       shell: bash
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        RUN_ID=$(gh run list --workflow toolchain-builder.yml --status success --limit 1 --json databaseId --jq '.[0].databaseId')
+        # 1. Get the ID of the latest successful toolchain run
+        RUN_ID=$(gh run list --workflow toolchain-builder.yml --status success --limit 1 --repo ${{ github.repository }} --json databaseId --jq '.[0].databaseId')
+        
         if [ -z "$RUN_ID" ]; then
           echo "::error::No successful toolchain build found!"
           exit 1
         fi
-        echo "Found successful run: $RUN_ID. Downloading..."
-        gh run download $RUN_ID --name llvm-mingw
-        if [ -d "llvm-mingw" ]; then
-          echo "Toolchain restored successfully."
-        else
-          echo "::error::Failed to download toolchain artifact!"
-          exit 1
-        fi
+
+        # 2. Download directly into the llvm-mingw directory
+        gh run download $RUN_ID --name llvm-mingw --repo ${{ github.repository }} --dir llvm-mingw
+        
+        # 3. Update the PATH for the rest of the workflow
+        echo "$(pwd)/llvm-mingw/bin" >> $GITHUB_PATH
 
     - name: "⏬ Download Sources"
       run: |
