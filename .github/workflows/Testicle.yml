@@ -159,17 +159,22 @@ jobs:
         # this seems to be needed when running in a container (because of UID mismatch??)
         git config --global --add safe.directory '*'
 
-    - name: "📂 Restore LLVM-MinGW Folder"
-      uses: actions/cache@v5
-      id: cache-folder
-      with:
+#    - name: "📂 Restore LLVM-MinGW Folder"
+#      uses: actions/cache@v5
+#      id: cache-folder
+#      with:
         # FIX: static key "llvm-folder" never expires; keyed on weekly
         # schedule date so it rebuilds at most once per week, matching
         # the toolchain-builder.yml cadence. Format: YYYY-WNN.
-        key: llvm-mingw-${{ github.run_id }}
-        restore-keys: |
-          llvm-mingw-
-        path: llvm-mingw
+#        key: llvm-mingw-${{ github.run_id }}
+#        restore-keys: |
+#          llvm-mingw-
+#        path: llvm-mingw
+
+    - name: "📂 Restore LLVM-MinGW Folder"
+      uses: actions/download-artifact@v8
+      with:
+        name: llvm-mingw
 
     - name: 🛒 Checkout
       uses: actions/checkout@v6
@@ -178,7 +183,6 @@ jobs:
 
     - name: "⏬ Download Sources"
       run: |
-        #git clone https://git.savannah.gnu.org/git/nano.git --depth 1
         git clone https://github.com/GitMirroring/nano.git --depth=1
         cd nano
         git clone https://github.com/Bill-Gray/PDCursesMod.git  curses
@@ -278,8 +282,8 @@ jobs:
         ##########################
         echo -e "\n" >> src/definitions.h
         echo '#define PDC_WIDE 1' >> src/definitions.h
-        echo '#define PDC_VT RGB' >> src/definitions.h
-        echo '#define PDC_WINCON 0' >> src/definitions.h
+        #echo '#define PDC_VT RGB' >> src/definitions.h
+        #echo '#define PDC_WINCON 0' >> src/definitions.h
         echo '#define PDC_ANSI 1' >> src/definitions.h
         echo '#define PDC_FORCE_UTF8 1' >> src/definitions.h
         echo '#define UNICODE 1' >> src/definitions.h
