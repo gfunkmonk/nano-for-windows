@@ -525,8 +525,8 @@ jobs:
         _diff
 
         # Update the function signature in pdcurses/util.c
-        sed -i.bak 's/int PDC_mbtowc(wchar_t \*pwc/int PDC_mbtowc(int32_t \*pwc/g' pdcurses/util.c
-        sed -i.bak 's/\*pwc = (wchar_t)key;/\*pwc = (int32_t)key;/g' pdcurses/util.c
+        sed -i.bak 's/int PDC_mbtowc(wchar_t \*pwc/int PDC_mbtowc(int32_t \*pwc/g' curses/pdcurses/util.c
+        sed -i.bak 's/\*pwc = (wchar_t)key;/\*pwc = (int32_t)key;/g' curses/pdcurses/util.c
         _diff
 
         ####                               ####
