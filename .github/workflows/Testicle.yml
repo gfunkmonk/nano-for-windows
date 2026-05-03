@@ -529,6 +529,13 @@ jobs:
         sed -i.bak 's/\*pwc = (wchar_t)key;/\*pwc = (int32_t)key;/g' curses/pdcurses/util.c
         _diff
 
+        # Update curspriv.h to use int32_t for the wide-character pointer
+        sed -i 's/PDC_mbtowc(wchar_t \*,/PDC_mbtowc(int32_t \*,/g' curses/curspriv.h
+        # Update PDC_mbstowcs and PDC_wcstombs to use int32_t pointers
+        sed -i 's/PDC_mbstowcs(wchar_t \*,/PDC_mbstowcs(int32_t \*,/g' curses/curspriv.h
+        sed -i 's/PDC_wcstombs(char \*, const wchar_t \*,/PDC_wcstombs(char \*, const int32_t \*,/g' curses/curspriv.h
+        _diff
+
         ####                               ####
         ####   LLVM-MING SPECIFIC PATCHES  ####
         ####                               ####
