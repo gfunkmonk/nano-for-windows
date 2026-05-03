@@ -339,8 +339,8 @@ jobs:
         echo -e "\n\nPATCH: configuring Windows temporal folder."
         sed -i.bak 's|TMPDIR|TEMP|g' ./src/files.c
         echo -e "\n\nPATCH: Convert invalid filename characters to ! for backup files."
-        sed -i "s~if (thename\[i\] == '/')~if (strchr(\"<>:\\\\\"/\\\\\\\\|?*\", thename[i]))~g" ./src/files.c
-        sed -i 's|/tmp/|~/AppData/Local/Temp/|g' ./src/files.c
+        sed -i.bak "s~if (thename\[i\] == '/')~if (strchr(\"<>:\\\\\"/\\\\\\\\|?*\", thename[i]))~g" ./src/files.c
+        sed -i.bak 's|/tmp/|~/AppData/Local/Temp/|g' ./src/files.c
         _diff
 
         # Fix homedir detection
@@ -374,8 +374,8 @@ jobs:
         # Fix pipe-in data from Windows console.
         echo -e "\n\nPATCH: Fix pipe in data in Windows console."
         sed -i.bak "s|/dev/tty|CON|" src/nano.c
-        sed -i "s/stream, 0/stream, fd/" src/nano.c
-        sed -i "/FILE \*stream/,/stop the reading/ c\
+        sed -i.bak "s/stream, 0/stream, fd/" src/nano.c
+        sed -i.bak "/FILE \*stream/,/stop the reading/ c\
             \\\\t static FILE \*stream;\\n\
             static int fd\=0;\\n\
             if \(fd\=\=0){\\n\
@@ -392,7 +392,7 @@ jobs:
             \\t int errnumber \= errno;\\n\
             \\t if\(fd \> -1) close\(fd);\\n\
             return FALSE;}" src/nano.c
-        sed -i "/initscr/i\
+        sed -i.bak "/initscr/i\
             for\(int optind_\=optind; optind_ \< argc;optind_\+\+)\\n\
             if \(strcmp\(argv\[optind_], \"\-\") \=\= 0){scoop_stdin\();break;}" src/nano.c
         _diff
@@ -427,7 +427,7 @@ jobs:
         # Fix for unicode char width detection using GNUlib internal function
         echo -e "\n\nPATCH: unicode char width detection using GNUlib internal function."
         sed -i.bak 's|wcwidth(wc)|uc_width(wc, "UTF-8")|g'  src/chars.c src/winio.c
-        sed -i '/prototypes.h/a#include "uniwidth.h"'  src/chars.c
+        sed -i.bak '/prototypes.h/a#include "uniwidth.h"'  src/chars.c
         _diff
 
         # Solve duplicated definitions ALT-ARROWS already in PDCursesMod
@@ -448,11 +448,11 @@ jobs:
         # Fix wchar_t 16 bits limitation to display emojis and all the suplemental codepoints:
         #echo -e "\n\nPATCH: change to 32 bits wchar_t."
         #sed -i.bak '1,/#/ s/#/#define wchar_t int\n&/' src/definitions.h curses/curses.h
-        #sed -i 's|(wchar_t \*)handle|(const wchar_t *)handle|g' curses/common/winclip.c
-        #sed -i 's|(const wchar_t \*)handle|(const wchar_t *)(void *)handle|g' curses/common/winclip.c
-        #sed -i 's|(const wchar_t \*)handle|(const wchar_t *)(uintptr_t)handle|g' curses/common/winclip.c
-        #sed -i 's/-Werror//g' curses/vt/Makefile
-        #sed -i 's/-pedantic//g' curses/vt/Makefile
+        #sed -i.bak 's|(wchar_t \*)handle|(const wchar_t *)handle|g' curses/common/winclip.c
+        #sed -i.bak 's|(const wchar_t \*)handle|(const wchar_t *)(void *)handle|g' curses/common/winclip.c
+        #sed -i.bak 's|(const wchar_t \*)handle|(const wchar_t *)(uintptr_t)handle|g' curses/common/winclip.c
+        #sed -i.bak 's/-Werror//g' curses/vt/Makefile
+        #sed -i.bak 's/-pedantic//g' curses/vt/Makefile
         #_diff
 
         # Desambiguation of BACKSPACE vs ^H, or ENTER vs ^M and certain CTRL+key combos             //o//
@@ -502,7 +502,7 @@ jobs:
 
         echo -e "\n\nPATCH: PDC_display_utf8 = TRUE"
         sed -i.bak 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wincon/*.c
-        sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/vt/*.c
+        sed -i.bak 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/vt/*.c
         _diff
 
         echo -e "\n\nPATCH: Make MAX_UNICODE suck less."
@@ -511,17 +511,23 @@ jobs:
 
         # Fix prototype for VT driver compatibility
         echo -e "\n\nPATCH: Fixing wine_ver_func prototype in VT driver."
-        sed -i 's/wine_ver_func)()/wine_ver_func)(void)/' curses/vt/pdcscrn.c
+        sed -i.bak 's/wine_ver_func)()/wine_ver_func)(void)/' curses/vt/pdcscrn.c
         _diff
 
         # Force the UTF-8 decoder to process 4-byte sequences (emojis) 
         # even if the system defines a small WCHAR_MAX
-        sed -i 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/vt/pdckbd.c
+        sed -i.bak 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/vt/pdckbd.c
         _diff
 
         # Force PDCurses to use 32-bit Unicode logic regardless of Windows defaults
-        sed -i 's/#ifdef WCHAR_T_IS_16_BITS/#if 0 \/\/ Forced 32-bit/g' curses/pdcurses/util.c
-        sed -i 's/#ifdef PDC_WIDE/#if 1/g' curses/pdcurses/util.c
+        sed -i.bak 's/#ifdef WCHAR_T_IS_16_BITS/#if 0 \/\/ Forced 32-bit/g' curses/pdcurses/util.c
+        sed -i.bak 's/#ifdef PDC_WIDE/#if 1/g' curses/pdcurses/util.c
+        _diff
+
+        # Update the function signature in pdcurses/util.c
+        sed -i.bak 's/int PDC_mbtowc(wchar_t \*pwc/int PDC_mbtowc(int32_t \*pwc/g' pdcurses/util.c
+        sed -i.bak 's/\*pwc = (wchar_t)key;/\*pwc = (int32_t)key;/g' pdcurses/util.c
+        _diff
 
         ####                               ####
         ####   LLVM-MING SPECIFIC PATCHES  ####
