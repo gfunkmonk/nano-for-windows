@@ -592,23 +592,6 @@ jobs:
         CWD="${BUILD_CWD}"
         cd nano/pkg
           export UPX="--lzma --best"
-          export UPX="--lzma --best"
-          cp ${CWD}/repo/LICENSE .
-          cp ${CWD}/repo/README.md .
-          mv bin/nano.exe share/doc/nano/* "${CWD}/nano/doc/sample.nanorc.in" .
-          #mv share/nano syntax
-          git clone https://github.com/gfunkmonk/nanorc syntax
-          cd syntax
-          rm -fr .git/
-          cd ..
-          #mv sample.nanorc.in .nanorc
-          cp ${CWD}/repo/.nanorc .
-          rm -rf bin share rnano*
-          llvm-strip -s nano.exe
-          upx nano.exe || true
-          ls -als
-          7z a -mx9 -mm=Deflate64 -mmt$(nproc) "${CWD}/nano-for-windows_${{matrix.name}}_${{ needs.checks.outputs.build }}.zip" * .nanorc
-
           cp ${CWD}/repo/LICENSE .
           cp ${CWD}/repo/README.md .
           mv bin/nano.exe share/doc/nano/* "${CWD}/nano/doc/sample.nanorc.in" .
