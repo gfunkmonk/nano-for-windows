@@ -520,8 +520,8 @@ jobs:
         _diff
 
         # Force PDCurses to use 32-bit Unicode logic regardless of Windows defaults
-        sed -i 's/#ifdef WCHAR_T_IS_16_BITS/#if 0 \/\/ Forced 32-bit/g' curses/common/util.c
-        sed -i 's/#ifdef PDC_WIDE/#if 1/g' curses/common/util.c
+        sed -i 's/#ifdef WCHAR_T_IS_16_BITS/#if 0 \/\/ Forced 32-bit/g' curse/pdcurses/util.c
+        sed -i 's/#ifdef PDC_WIDE/#if 1/g' curses/pdcurses/util.c
 
         ####                               ####
         ####   LLVM-MING SPECIFIC PATCHES  ####
