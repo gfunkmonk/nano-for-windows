@@ -37,7 +37,7 @@
              }
              else     /* successfully converted to multi-byte string */
 -                rval = wgetch( win);
-+                rval = ERR;
++                rval = wgetch(win);
          }
      }
      return( rval);
@@ -55,7 +55,6 @@
 +#ifdef PDC_WIDE
 +    /* 
 +     * Step 2: Check if the character is the start of an emoji (High Surrogate).
-+     * This only compiles for your Windows-wide builds.
 +     */
 +    if (ch >= 0xD800 && ch <= 0xDBFF)
 +    {
@@ -70,7 +69,8 @@
 +        else
 +        {
 +            /* If the second part is invalid, just return it as-is */
-+            return low; 
++            PDC_ungetch(low);
++            return ch; 
 +        }
 +    }
 +#endif

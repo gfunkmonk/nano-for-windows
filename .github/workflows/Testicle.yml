@@ -34,7 +34,6 @@ env:
   ConEmuANSI: "ON"      # This is a fallback if WT_SESSION isn't found
   PDC_VT: "RGB"
   PDC_WINCON: "FALSE"
-  CHTYPE_32: "1"
   PDC_ANSI: "TRUE"
   PDC_FORCE_UTF8: "1"
   UNICODE: "1"
@@ -234,16 +233,16 @@ jobs:
           fi
         done
 
-#    - name: ❤️‍🩹 PDCurses Patches
-#      run: |
-#        CWD=$(pwd)
-#        cd nano
-#        for p in $(ls -v ${CWD}/repo/patch/curses/*.patch); do
-#          if [ -f "$p" ]; then
-#            echo -e "\033[1;33mApplying $(basename "$p")...\033[0m"
-#            patch -p1 --fuzz=3 < "$p" || exit 1
-#          fi
-#        done
+    - name: ❤️‍🩹 PDCurses Patches
+      run: |
+        CWD=$(pwd)
+        cd nano
+        for p in $(ls -v ${CWD}/repo/patch/curses/*.patch); do
+          if [ -f "$p" ]; then
+            echo -e "\033[1;33mApplying $(basename "$p")...\033[0m"
+            patch -p1 --fuzz=3 < "$p" || exit 1
+          fi
+        done
 
     - name: "🪄 Apply Windows Portability Magic"
       run: |
@@ -279,7 +278,6 @@ jobs:
         echo '#define PDC_WIDE 1' >> src/definitions.h
         echo '#define PDC_VT RGB' >> src/definitions.h
         echo '#define PDC_WINCON 0' >> src/definitions.h
-        echo '#define CHTYPE_32 1' >> src/definitions.h
         echo '#define PDC_ANSI 1' >> src/definitions.h
         echo '#define PDC_FORCE_UTF8 1' >> src/definitions.h
         echo '#define UNICODE 1' >> src/definitions.h
@@ -517,11 +515,11 @@ jobs:
         ##########################
         PDTERM=${{ inputs.terminfo }}
         echo "PDTERM=${PDTERM}" >> $GITHUB_ENV
-        export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DPDC_WIDE -DPDC_VT=RGB -DCHTYPE_32 -DPDC_FORCE_UTF8 -D_GNU_SOURCE -DPDC_SYMBOL_VERSIONING=0"
+        export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DPDC_WIDE -DPDC_VT=RGB -DPDC_FORCE_UTF8 -D_GNU_SOURCE -DPDC_SYMBOL_VERSIONING=0"
         export CXXFLAGS="${CFLAGS}"
         unset NCURSESW_CFLAGS
         cd "nano/curses/${PDTERM}"
-          make -j$(($(nproc)*2)) WIDE=Y UTF8=Y DLL=N VT=Y CHTYPE_32=Y _${{matrix.short}}=Y PDC_SYMBOL_VERSIONING=0
+          make -j$(($(nproc)*2)) WIDE=Y UTF8=Y DLL=N VT=Y _${{matrix.short}}=Y PDC_SYMBOL_VERSIONING=0
 
     - name: "🐞 SSH session"
       uses: mxschmitt/action-tmate@v3
@@ -543,7 +541,7 @@ jobs:
         TARGET="${{ matrix.arch }}-w64-mingw32"
         OUTDIR="${CWD}/nano/pkg"
         CURSES_DIR="${CWD}/nano/curses"
-        export CFLAGS="-O2 -fno-math-errno -flto -DPDC_NCMOUSE -DPDC_WIDE -DPDC_VT=RGB -DCHTYPE_32 -DPDC_FORCE_UTF8 -std=c17 -DPDC_SYMBOL_VERSIONING=0 -D_GNU_SOURCE -DPDC_FORCE_UTF8"
+        export CFLAGS="-O2 -fno-math-errno -flto -DPDC_NCMOUSE -DPDC_WIDE -DPDC_VT=RGB -DPDC_FORCE_UTF8 -std=c17 -DPDC_SYMBOL_VERSIONING=0 -D_GNU_SOURCE -DPDC_FORCE_UTF8"
         export CXXFLAGS="${CFLAGS}"
         export LDFLAGS="-L${CURSES_DIR}/${{ env.PDTERM }} -static -static-libgcc ${CURSES_DIR}/${{ env.PDTERM }}/pdcurses.a"
         export NCURSESW_CFLAGS="-I${CURSES_DIR} -DNCURSES_STATIC  -DENABLE_MOUSE"
