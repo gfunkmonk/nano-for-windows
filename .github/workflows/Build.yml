@@ -1,4 +1,4 @@
-yname: Build
+name: Build
 on:
   # schedule:
   #   - cron: '51 */8 * * *'

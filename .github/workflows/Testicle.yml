@@ -236,8 +236,9 @@ jobs:
     - name: ❤️‍🩹 PDCurses Patches
       run: |
         CWD=$(pwd)
+        PTERM=${{ inputs.terminfo }}
         cd nano
-        for p in $(ls -v ${CWD}/repo/patch/curses/*.patch); do
+        for p in $(ls -v ${CWD}/repo/patch/curses/${PTERM}/*.patch); do
           if [ -f "$p" ]; then
             echo -e "\033[1;33mApplying $(basename "$p")...\033[0m"
             patch -p1 --fuzz=3 < "$p" || exit 1
