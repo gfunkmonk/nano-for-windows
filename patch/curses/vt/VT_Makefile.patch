@@ -1,22 +1,31 @@
---- a/curses/vt/Makefile	2026-05-02 08:14:28.763836238 -0400
-+++ b/curses/vt/Makefile	2026-05-02 09:22:55.640534267 -0400
+--- Makefile	2026-05-03 12:40:26.649456789 -0400
++++ Makefile.p	2026-05-03 16:21:18.820348493 -0400
+@@ -19,7 +19,7 @@
+ 
+ RM		= rm -f
+ 
+-CFLAGS  = -Wall -Wextra -pedantic -Werror
++CFLAGS  = -Wall -Wextra -Wno-error
+ ifeq ($(DEBUG),Y)
+ 	CFLAGS  += -g -DPDCDEBUG
+ else
 @@ -51,16 +51,19 @@
  ifdef _w64
  	PREFIX  = x86_64-w64-mingw32-
  	IS_WIN = Y
-+	CFLAGS += -DPDC_VT
++          CFLAGS += -DPDC_VT
  endif
  
  ifdef _w32
  	PREFIX  = i686-w64-mingw32-
  	IS_WIN = Y
-+	CFLAGS += -DPDC_VT
++          CFLAGS += -DPDC_VT
  endif
  
  ifdef _a64
  	PREFIX  = aarch64-w64-mingw32-
  	IS_WIN = Y
-+	CFLAGS += -DPDC_VT
++          CFLAGS += -DPDC_VT
  endif
  
  ifeq ($(OS),Windows_NT)
@@ -34,7 +43,7 @@
  	CFLAGS += -DDOS
  	E = .exe
 -else
-+else ifneq ($(IS_WIN),Y)
+++else ifneq ($(IS_WIN),Y)
  	CFLAGS += -fPIC
  endif
  
