@@ -538,8 +538,8 @@ jobs:
 
         # Change local wchar_t to int32_t in addstr.c
         # Proactively update addch.c to use 32-bit wide chars
-        sed -i.bak 's/wchar_t wch;/int32_t wch;/g' pdcurses/addch.c
-        sed -i.bak 's/wchar_t wch;/int32_t wch;/g' pdcurses/addstr.c
+        sed -i.bak 's/wchar_t wch;/int32_t wch;/g' curses/pdcurses/addch.c
+        sed -i.bak 's/wchar_t wch;/int32_t wch;/g' curses/pdcurses/addstr.c
         _diff
 
         ####                               ####
