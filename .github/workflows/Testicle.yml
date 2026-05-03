@@ -530,10 +530,16 @@ jobs:
         _diff
 
         # Update curspriv.h to use int32_t for the wide-character pointer
-        sed -i 's/PDC_mbtowc(wchar_t \*,/PDC_mbtowc(int32_t \*,/g' curses/curspriv.h
+        sed -i.bak 's/PDC_mbtowc(wchar_t \*,/PDC_mbtowc(int32_t \*,/g' curses/curspriv.h
         # Update PDC_mbstowcs and PDC_wcstombs to use int32_t pointers
-        sed -i 's/PDC_mbstowcs(wchar_t \*,/PDC_mbstowcs(int32_t \*,/g' curses/curspriv.h
-        sed -i 's/PDC_wcstombs(char \*, const wchar_t \*,/PDC_wcstombs(char \*, const int32_t \*,/g' curses/curspriv.h
+        sed -i.bak 's/PDC_mbstowcs(wchar_t \*,/PDC_mbstowcs(int32_t \*,/g' curses/curspriv.h
+        sed -i.bak 's/PDC_wcstombs(char \*, const wchar_t \*,/PDC_wcstombs(char \*, const int32_t \*,/g' curses/curspriv.h
+        _diff
+
+        # Change local wchar_t to int32_t in addstr.c
+        # Proactively update addch.c to use 32-bit wide chars
+        sed -i.bak 's/wchar_t wch;/int32_t wch;/g' pdcurses/addch.c
+        sed -i.bak 's/wchar_t wch;/int32_t wch;/g' pdcurses/addstr.c
         _diff
 
         ####                               ####
