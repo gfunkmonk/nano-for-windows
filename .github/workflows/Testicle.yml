@@ -542,6 +542,20 @@ jobs:
         sed -i.bak 's/wchar_t wch;/int32_t wch;/g' curses/pdcurses/addstr.c
         _diff
 
+        # Fix getstr.c: Change the wstr buffer to 32-bit
+        sed -i.bak 's/wchar_t wstr\[256\];/int32_t wstr[256];/g' curses/pdcurses/getstr.c
+        _diff
+
+        # Fix insstr.c: Change the temporary p pointer/variable to 32-bit 
+        # Note: Check if it's 'wchar_t wch' or 'wchar_t *p' in your specific version
+        sed -i.bak 's/wchar_t wch;/int32_t wch;/g' curses/pdcurses/insstr.c
+        sed -i.bak 's/wchar_t \*p/int32_t *p/g' curses/pdcurses/insstr.c
+        _diff
+
+        # Fix getch.c: Change the local 'c' buffer used for UTF-8 conversion
+        sed -i.bak 's/wchar_t c\[2\];/int32_t c[2];/g' curses/pdcurses/getch.c
+        _diff
+
         ####                               ####
         ####   LLVM-MING SPECIFIC PATCHES  ####
         ####                               ####
