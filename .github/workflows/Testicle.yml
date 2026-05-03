@@ -446,7 +446,8 @@ jobs:
         # Fix wchar_t 16 bits limitation to display emojis and all the suplemental codepoints:
         echo -e "\n\nPATCH: change to 32 bits wchar_t."
         sed -i.bak '1,/#/ s/#/#define wchar_t int\n&/' src/definitions.h curses/curses.h
-        sed -i 's|(wchar_t \*)handle|(const wchar_t *)handle|g' curses/common/winclip.c
+        #sed -i 's|(wchar_t \*)handle|(const wchar_t *)handle|g' curses/common/winclip.c
+        sed -i 's|(const wchar_t \*)handle|(const wchar_t *)(void *)handle|g' curses/common/winclip.c
         _diff
 
         # Desambiguation of BACKSPACE vs ^H, or ENTER vs ^M and certain CTRL+key combos             //o//
