@@ -556,12 +556,12 @@ jobs:
         sed -i.bak 's/wchar_t c\[2\];/int32_t c[2];/g' curses/pdcurses/getch.c
         _diff
 
-        # Update the temporary wide buffers used for pasting and character handling
-        sed -i.bak 's/wchar_t \*wtmp, \*wpaste;/int32_t *wtmp, *wpaste;/g' curses/pdcurses/getch.c
-        sed -i.bak 's/wchar_t c\[2\];/int32_t c[2];/g' curses/pdcurses/getch.c
-        sed -i.bak 's/wchar_t \*p;/int32_t *p;/g' curses/pdcurses/insstr.c
-        sed -i.bak 's/wchar_t wch;/int32_t wch;/g' curses/pdcurses/insstr.c
-        sed -i.bak 's/wchar_t wstr\[256\];/int32_t wstr[256];/g' curses/pdcurses/getstr.c
+        # Fix getch.c: Target wtmp and wpaste specifically, regardless of spacing
+        sed -i.bak -E 's/wchar_t\s*\*wtmp,\s*\*wpaste/int32_t *wtmp, *wpaste/g' curses/pdcurses/getch.c
+        sed -i.bak -E 's/wchar_t\s+c\[2\]/int32_t c[2]/g' curses/pdcurses/getch.c
+        sed -i.bak -E 's/wchar_t\s+wstr\[256\]/int32_t wstr[256]/g' curses/pdcurses/getstr.c
+        sed -i.bak -E 's/wchar_t\s+\*p/int32_t *p/g' curses/pdcurses/insstr.c
+        sed -i.bak -E 's/wchar_t\s+wch/int32_t wch/g' curses/pdcurses/insstr.c
         _diff
 
         ####                               ####
