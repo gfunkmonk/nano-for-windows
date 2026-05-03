@@ -148,6 +148,10 @@ jobs:
       run:
         shell: bash
     steps:
+    - name: 🛒 Checkout
+      uses: actions/checkout@v6
+      with:
+         fetch-depth: 1
     - name: "⏬ Download OS tools"
       if: ${{ job.container }}
       shell: sh
@@ -189,11 +193,6 @@ jobs:
           echo "::error::Failed to download toolchain artifact!"
           exit 1
         fi
-
-    - name: 🛒 Checkout
-      uses: actions/checkout@v6
-      with:
-        path: repo
 
     - name: "⏬ Download Sources"
       run: |
@@ -245,7 +244,7 @@ jobs:
       run: |
         CWD=$(pwd)
         cd nano
-        for p in $(ls -v ${CWD}/repo/patch/nano/*.patch); do
+        for p in $(ls -v ${CWD}/patch/nano/*.patch); do
           if [ -f "$p" ]; then
             echo -e "\033[1;35mApplying $(basename "$p")...\033[0m"
             patch -p1 --fuzz=3 < "$p" || exit 1
@@ -257,7 +256,7 @@ jobs:
         CWD=$(pwd)
         PTERM=${{ inputs.terminfo }}
         cd nano
-        for p in $(ls -v ${CWD}/repo/patch/curses/${PTERM}/*.patch); do
+        for p in $(ls -v ${CWD}/patch/curses/${PTERM}/*.patch); do
           if [ -f "$p" ]; then
             echo -e "\033[1;33mApplying $(basename "$p")...\033[0m"
             patch -p1 --fuzz=3 < "$p" || exit 1
@@ -610,8 +609,8 @@ jobs:
         CWD="${BUILD_CWD}"
         cd nano/pkg
           export UPX="--lzma --best"
-          cp ${CWD}/repo/LICENSE .
-          cp ${CWD}/repo/README.md .
+          cp ${CWD}/LICENSE .
+          cp ${CWD}/README.md .
           mv bin/nano.exe share/doc/nano/* "${CWD}/nano/doc/sample.nanorc.in" .
           #mv share/nano syntax
           git clone https://github.com/gfunkmonk/nanorc syntax
@@ -619,7 +618,7 @@ jobs:
           rm -fr .git/
           cd ..
           #mv sample.nanorc.in .nanorc
-          cp ${CWD}/repo/.nanorc .
+          cp ${CWD}/.nanorc .
           rm -rf bin share rnano*
           llvm-strip -s nano.exe
           upx nano.exe || true
