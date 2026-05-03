@@ -44,7 +44,7 @@ env:
   UNICODE: "1"
   HAVE_WCWIDTH: "TRUE"
   ENABLE_UTF8: "TRUE"
-  CFLAGS: "-O2 -fno-math-errno -flto -std=c17 -Wno-error -DCHTYPE_32 -DPDC_NCMOUSE -DPDC_WIDE -DPDC_VT=RGB -DPDC_FORCE_UTF8 -DPDC_SYMBOL_VERSIONING=0 -D_GNU_SOURCE"
+  CFLAGS: "-O2 -fno-math-errno -flto -std=c17 -Wno-error -DCHTYPE_64 -DPDC_NCMOUSE -DPDC_WIDE -DPDC_VT=RGB -DPDC_FORCE_UTF8 -DPDC_SYMBOL_VERSIONING=0 -D_GNU_SOURCE"
 
 jobs:
   ## PRECHECK ##############################################################################
@@ -502,6 +502,7 @@ jobs:
 
         echo -e "\n\nPATCH: PDC_display_utf8 = TRUE"
         sed -i.bak 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wincon/*.c
+        sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/vt/*.c
         _diff
 
         echo -e "\n\nPATCH: Make MAX_UNICODE suck less."
@@ -512,6 +513,15 @@ jobs:
         echo -e "\n\nPATCH: Fixing wine_ver_func prototype in VT driver."
         sed -i 's/wine_ver_func)()/wine_ver_func)(void)/' curses/vt/pdcscrn.c
         _diff
+
+        # Force the UTF-8 decoder to process 4-byte sequences (emojis) 
+        # even if the system defines a small WCHAR_MAX
+        sed -i 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/vt/pdckbd.c
+        _diff
+
+        # Force PDCurses to use 32-bit Unicode logic regardless of Windows defaults
+        sed -i 's/#ifdef WCHAR_T_IS_16_BITS/#if 0 \/\/ Forced 32-bit/g' curses/common/util.c
+        sed -i 's/#ifdef PDC_WIDE/#if 1/g' curses/common/util.c
 
         ####                               ####
         ####   LLVM-MING SPECIFIC PATCHES  ####
@@ -557,7 +567,7 @@ jobs:
         export CXXFLAGS="${CFLAGS}"
         unset NCURSESW_CFLAGS
         cd "nano/curses/${PDTERM}"
-          make -j$(($(nproc)*2)) WIDE=Y UTF8=Y CHTYPE_32=Y DLL=N VT=Y _${{matrix.short}}=Y PDC_SYMBOL_VERSIONING=0
+          make -j$(($(nproc)*2)) WIDE=Y UTF8=Y CHTYPE_64=Y DLL=N VT=Y _${{matrix.short}}=Y PDC_SYMBOL_VERSIONING=0
 
     - name: "🐞 SSH session"
       uses: mxschmitt/action-tmate@v3
