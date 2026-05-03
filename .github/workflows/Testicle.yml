@@ -39,7 +39,7 @@ env:
   UNICODE: "1"
   HAVE_WCWIDTH: "TRUE"
   ENABLE_UTF8: "TRUE"
-  CFLAGS: "-O2 -fno-math-errno -flto -std=c17 -Wno-error -DCHTYPE_64 -DPDC_NCMOUSE -DPDC_WIDE -DPDC_VT=RGB -DPDC_FORCE_UTF8 -DPDC_SYMBOL_VERSIONING=0 -D_GNU_SOURCE -D'wcslen(x)=wcslen((const wchar_t*)(uintptr_t)(x))'"
+  CFLAGS: "-O2 -fno-math-errno -flto -std=c17 -Wno-error -DCHTYPE_32 -DPDC_NCMOUSE -DPDC_WIDE -DPDC_VT=RGB -DPDC_FORCE_UTF8 -DPDC_SYMBOL_VERSIONING=0 -D_GNU_SOURCE -D'wcslen(x)=wcslen((const wchar_t*)(uintptr_t)(x))'"
 
 jobs:
   ## PRECHECK ##############################################################################
@@ -444,14 +444,14 @@ jobs:
         _diff
 
         # Fix wchar_t 16 bits limitation to display emojis and all the suplemental codepoints:
-        echo -e "\n\nPATCH: change to 32 bits wchar_t."
-        sed -i.bak '1,/#/ s/#/#define wchar_t int\n&/' src/definitions.h curses/curses.h
-        sed -i 's|(wchar_t \*)handle|(const wchar_t *)handle|g' curses/common/winclip.c
-        sed -i 's|(const wchar_t \*)handle|(const wchar_t *)(void *)handle|g' curses/common/winclip.c
-        sed -i 's|(const wchar_t \*)handle|(const wchar_t *)(uintptr_t)handle|g' curses/common/winclip.c
-        sed -i 's/-Werror//g' curses/vt/Makefile
-        sed -i 's/-pedantic//g' curses/vt/Makefile
-        _diff
+        #echo -e "\n\nPATCH: change to 32 bits wchar_t."
+        #sed -i.bak '1,/#/ s/#/#define wchar_t int\n&/' src/definitions.h curses/curses.h
+        #sed -i 's|(wchar_t \*)handle|(const wchar_t *)handle|g' curses/common/winclip.c
+        #sed -i 's|(const wchar_t \*)handle|(const wchar_t *)(void *)handle|g' curses/common/winclip.c
+        #sed -i 's|(const wchar_t \*)handle|(const wchar_t *)(uintptr_t)handle|g' curses/common/winclip.c
+        #sed -i 's/-Werror//g' curses/vt/Makefile
+        #sed -i 's/-pedantic//g' curses/vt/Makefile
+        #_diff
 
         # Desambiguation of BACKSPACE vs ^H, or ENTER vs ^M and certain CTRL+key combos             //o//
         echo -e "\n\nPATCH: Full key modifiers detection."
@@ -555,7 +555,7 @@ jobs:
         export CXXFLAGS="${CFLAGS}"
         unset NCURSESW_CFLAGS
         cd "nano/curses/${PDTERM}"
-          make -j$(($(nproc)*2)) WIDE=Y UTF8=Y CHTYPE_64=Y DLL=N VT=Y _${{matrix.short}}=Y PDC_SYMBOL_VERSIONING=0
+          make -j$(($(nproc)*2)) WIDE=Y UTF8=Y CHTYPE_32=Y DLL=N VT=Y _${{matrix.short}}=Y PDC_SYMBOL_VERSIONING=0
 
     - name: "🐞 SSH session"
       uses: mxschmitt/action-tmate@v3
