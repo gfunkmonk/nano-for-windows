@@ -176,12 +176,20 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        # Fetch the artifact from the latest successful 'Builds toolchain' run
-        gh run download --name llvm-mingw --repo ${{ github.repository }}
-        # Verify it downloaded to the right spot
+        RUN_ID=$(gh run list --workflow toolchain-builder.yml --status success --limit 1 --json databaseId --jq '.[0].databaseId')
+        if [ -z "$RUN_ID" ]; then
+          echo "::error::No successful toolchain build found!"
+          exit 1
+        fi
+        echo "Found successful run: $RUN_ID. Downloading..."
+        gh run download $RUN_ID --name llvm-mingw
         if [ -d "llvm-mingw" ]; then
           echo "Toolchain restored successfully."
-          #echo "$(pwd)/llvm-mingw/bin" >> $GITHUB_PATH
+          # Use the HEREDOC syntax for GITHUB_PATH as required
+          cat >> $GITHUB_ENV << 'EOF'
+          PATH=$(pwd)/llvm-mingw/bin:$PATH
+EOF
+          echo "$(pwd)/llvm-mingw/bin" >> $GITHUB_PATH
         else
           echo "::error::Failed to download toolchain artifact!"
           exit 1
