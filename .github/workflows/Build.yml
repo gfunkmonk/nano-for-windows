@@ -18,19 +18,6 @@ on:
         required: false
         default: false
         type: boolean
-      magic:
-        description: Magic?
-        required: true
-        default: true
-        type: boolean
-      terminfo:
-        description: Terminal info
-        required: true
-        default: vt
-        type: choice
-        options:
-          - vt
-          - wincon
 
 env:
   FORCE_COLOR: "1"
@@ -267,9 +254,8 @@ jobs:
     - name: ❤️‍🩹 PDCurses Patches
       run: |
         CWD=$(pwd)
-        PTERM=${{ inputs.terminfo }}
         cd nano
-        for p in $(ls -v ${CWD}/patch/curses/${PTERM}/*.patch); do
+        for p in $(ls -v ${CWD}/patch/curses/*.patch); do
           if [ -f "$p" ]; then
             echo -e "\033[1;33mApplying $(basename "$p")...\033[0m"
             patch -p1 --fuzz=3 < "$p" || exit 1
@@ -277,7 +263,6 @@ jobs:
         done
 
     - name: "🪄 Apply Windows Portability Magic"
-      if: github.event.inputs.magic == 'true'
       run: |
         function _diff() {
           # Thanks to @rasa for this function
@@ -499,11 +484,6 @@ jobs:
         sed -i.bak 's|MAX_UNICODE 0xffff|MAX_UNICODE 0x10ffff|g' curses/curspriv.h
         _diff
 
-        # Fix prototype for VT driver compatibility
-        echo -e "\n\nPATCH: Fixing wine_ver_func prototype in VT driver."
-        sed -i.bak 's/wine_ver_func)()/wine_ver_func)(void)/' curses/vt/pdcscrn.c
-        _diff
-
         # Force the UTF-8 decoder to process 4-byte sequences (emojis)
         # even if the system defines a small WCHAR_MAX
         echo -e "\n\nPATCH: Force 4-byte UTF-8 emoji input in VT keyboard driver."
@@ -548,7 +528,7 @@ jobs:
         ##     COMPILE CURSES     ##
         ##                        ##
         ##########################
-        PDTERM=${{ inputs.terminfo }}
+        PDTERM=wincon
         echo "PDTERM=${PDTERM}" >> $GITHUB_ENV
         export CFLAGS="${{ env.CFLAGS }}"
         export CXXFLAGS="${CFLAGS}"
