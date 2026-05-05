@@ -401,12 +401,13 @@ jobs:
 
         # 1. Force nano to treat the character range for Emojis as double-width (2 columns)
         # This patches the wide-character width detection logic.
-        sed -i 's/return wcwidth(wc);/if (wc >= 0x1F300 \&\& wc <= 0x1F9FF) return 2; return wcwidth(wc);/' src/chars.c
+        echo -e "\n\nPATCH: fix wcwidth"
+        sed -i.bak 's/return wcwidth(wc);/if (wc >= 0x1F300 \&\& wc <= 0x1F9FF) return 2; return wcwidth(wc);/' src/chars.c
         # 2. Adjust winio.c to prevent PDCurses from truncating high-plane characters
         # This ensures that characters outside the BMP (Basic Multilingual Plane) aren't filtered.
-        sed -i '/if (is_extended_char(wc))/i \    if (wc > 0xFFFF) return true;' src/winio.c
+        sed -i.bak '/if (is_extended_char(wc))/i \    if (wc > 0xFFFF) return true;' src/winio.c
         # 3. Ensure the title bar and status bar allow for multi-column character spacing
-        sed -i 's/waddnwstr(window, \&widechar, 1);/waddnwstr(window, \&widechar, wcwidth(widechar));/' src/winio.c
+        sed -i.bak 's/waddnwstr(window, \&widechar, 1);/waddnwstr(window, \&widechar, wcwidth(widechar));/' src/winio.c
         _diff
 
         ####                               ####

@@ -307,17 +307,7 @@ jobs:
         ##     APPLY PATCHES      ##
         ##                        ##
         ##########################
-        echo -e "\n" >> src/definitions.h
-        echo '#define PDC_WIDE 1' >> src/definitions.h
-        #echo '#define PDC_VT RGB' >> src/definitions.h
-        #echo '#define PDC_WINCON 0' >> src/definitions.h
-        echo '#define PDC_ANSI 1' >> src/definitions.h
-        echo '#define PDC_FORCE_UTF8 1' >> src/definitions.h
-        echo '#define UNICODE 1' >> src/definitions.h
-        echo "PDC_display_utf8=TRUE" >> $GITHUB_ENV
-        echo "pdc_ansi=TRUE" >> $GITHUB_ENV
-
-        # 1. realpath() workaround
+        # 1. >realpath< function doesn't exist on Windows, which isn't fully POSIX compliant.
         echo -e "\n\nPATCH: realpath() workaround applied."
         cp -p ./src/definitions.h{,.bak}
         echo " " >> ./src/definitions.h
@@ -341,11 +331,6 @@ jobs:
         echo -e "\n\nPATCH: Convert invalid filename characters to ! for backup files."
         sed -i.bak "s~if (thename\[i\] == '/')~if (strchr(\"<>:\\\\\"/\\\\\\\\|?*\", thename[i]))~g" ./src/files.c
         sed -i.bak 's|/tmp/|~/AppData/Local/Temp/|g' ./src/files.c
-        _diff
-
-        # Fix homedir detection
-        echo -e "\n\nPATCH: configuring Windows home folder."
-        sed -i.bak 's|\"HOME\"|"USERPROFILE\"|g' ./src/utils.c
         _diff
 
         # Modify path expansion with backslashes
@@ -430,6 +415,21 @@ jobs:
         sed -i.bak '/prototypes.h/a#include "uniwidth.h"'  src/chars.c
         _diff
 
+        # 1. Force nano to treat the character range for Emojis as double-width (2 columns)
+        # This patches the wide-character width detection logic.
+        echo -e "\n\nPATCH: fix wcwidth"
+        sed -i.bak 's/return wcwidth(wc);/if (wc >= 0x1F300 \&\& wc <= 0x1F9FF) return 2; return wcwidth(wc);/' src/chars.c
+        # 2. Adjust winio.c to prevent PDCurses from truncating high-plane characters
+        # This ensures that characters outside the BMP (Basic Multilingual Plane) aren't filtered.
+        sed -i.bak '/if (is_extended_char(wc))/i \    if (wc > 0xFFFF) return true;' src/winio.c
+        # 3. Ensure the title bar and status bar allow for multi-column character spacing
+        sed -i.bak 's/waddnwstr(window, \&widechar, 1);/waddnwstr(window, \&widechar, wcwidth(widechar));/' src/winio.c
+        _diff
+
+        ####                               ####
+        #### PDCursesMod especific patches ####
+        ####                               ####
+
         # Solve duplicated definitions ALT-ARROWS already in PDCursesMod
         echo -e "\n\nPATCH: remove duplicated definitions."
         sed -i.bak "/0x42[1234]/d" src/definitions.h
@@ -444,16 +444,6 @@ jobs:
         sed -i.bak "/int attributes/ s/\bint\b/chtype/g" src/rcfile.c
         sed -i.bak "/bool parse_combination/ s/\bint\b/chtype/g" src/rcfile.c
         _diff
-
-        # Fix wchar_t 16 bits limitation to display emojis and all the suplemental codepoints:
-        #echo -e "\n\nPATCH: change to 32 bits wchar_t."
-        #sed -i.bak '1,/#/ s/#/#define wchar_t int\n&/' src/definitions.h curses/curses.h
-        #sed -i.bak 's|(wchar_t \*)handle|(const wchar_t *)handle|g' curses/common/winclip.c
-        #sed -i.bak 's|(const wchar_t \*)handle|(const wchar_t *)(void *)handle|g' curses/common/winclip.c
-        #sed -i.bak 's|(const wchar_t \*)handle|(const wchar_t *)(uintptr_t)handle|g' curses/common/winclip.c
-        #sed -i.bak 's/-Werror//g' curses/vt/Makefile
-        #sed -i.bak 's/-pedantic//g' curses/vt/Makefile
-        #_diff
 
         # Desambiguation of BACKSPACE vs ^H, or ENTER vs ^M and certain CTRL+key combos             //o//
         echo -e "\n\nPATCH: Full key modifiers detection."
@@ -514,7 +504,7 @@ jobs:
         sed -i.bak 's/wine_ver_func)()/wine_ver_func)(void)/' curses/vt/pdcscrn.c
         _diff
 
-        # Force the UTF-8 decoder to process 4-byte sequences (emojis) 
+        # Force the UTF-8 decoder to process 4-byte sequences (emojis)
         # even if the system defines a small WCHAR_MAX
         sed -i.bak 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/vt/pdckbd.c
         _diff
@@ -546,7 +536,7 @@ jobs:
         sed -i.bak 's/wchar_t wstr\[256\];/int32_t wstr[256];/g' curses/pdcurses/getstr.c
         _diff
 
-        # Fix insstr.c: Change the temporary p pointer/variable to 32-bit 
+        # Fix insstr.c: Change the temporary p pointer/variable to 32-bit
         # Note: Check if it's 'wchar_t wch' or 'wchar_t *p' in your specific version
         sed -i.bak 's/wchar_t wch;/int32_t wch;/g' curses/pdcurses/insstr.c
         sed -i.bak 's/wchar_t \*p/int32_t *p/g' curses/pdcurses/insstr.c
