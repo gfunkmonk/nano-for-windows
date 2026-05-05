@@ -590,6 +590,13 @@ jobs:
         sed -i.bak 's/\bwchar_t\b/int32_t/g' curses/pdcurses/insstr.c
         _diff
 
+        # Fix curses.h: Update all public wide-character function declarations to use int32_t
+        # This resolves the "conflicting types" and "incompatible pointer types" errors
+        sed -i.bak 's/\bconst wchar_t\b/const int32_t/g' curses/curses.h
+        sed -i.bak 's/\(WINDOW \*, \)const wchar_t\b/\1const int32_t/g' curses/curses.h
+        sed -i.bak 's/\bwchar_t \*/int32_t */g' curses/curses.h
+        _diff
+
         ####                               ####
         ####   LLVM-MING SPECIFIC PATCHES  ####
         ####                               ####
