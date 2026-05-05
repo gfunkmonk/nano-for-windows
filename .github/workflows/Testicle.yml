@@ -582,6 +582,14 @@ jobs:
         sed -i.bak 's/wchar_t wstr\[256\];/int32_t wstr[256];/g' curses/pdcurses/getstr.c
         _diff
 
+        # Force ALL wchar_t declarations in these specific files to int32_t
+        # This guarantees compatibility with your updated PDC_wcstombs in curspriv.h
+        sed -i.bak 's/\bwchar_t\b/int32_t/g' curses/pdcurses/getch.c
+        sed -i.bak 's/\bwchar_t\b/int32_t/g' curses/pdcurses/getstr.c
+        sed -i.bak 's/\bwchar_t\b/int32_t/g' curses/pdcurses/addstr.c
+        sed -i.bak 's/\bwchar_t\b/int32_t/g' curses/pdcurses/insstr.c
+        _diff
+
         ####                               ####
         ####   LLVM-MING SPECIFIC PATCHES  ####
         ####                               ####
