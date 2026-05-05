@@ -1,0 +1,13 @@
+--- a/curses/wincon/pdcdisp.c	2026-04-30 09:38:25.731369424 -0400
++++ b/curses/wincon/pdcdisp.c	2026-04-30 09:16:24.396149957 -0400
+@@ -312,6 +312,10 @@
+     ansi = pdc_ansi || (fore >= 16 || back >= 16);
+     blink = (SP->termattrs & A_BLINK) && (attr & A_BLINK);
+
++#ifdef PDC_WIDE
++    ansi = TRUE;
++#endif 
++
+     if (blink)
+     {
+         attr &= ~A_BLINK;
