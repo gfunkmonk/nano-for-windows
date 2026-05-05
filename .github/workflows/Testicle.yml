@@ -571,6 +571,17 @@ jobs:
         sed -i.bak -E 's/wchar_t\s+c\[2\]/int32_t c[2]/g' curses/pdcurses/getch.c
         _diff
 
+        # 1. Fix getch.c: Change the local pointer types for wtmp and wpaste
+        # This handles the specific line: wchar_t *wtmp, *wpaste;
+        sed -i.bak -E 's/wchar_t[[:space:]]+\*wtmp,[[:space:]]+\*wpaste/int32_t *wtmp, *wpaste/g' curses/pdcurses/getch.c
+        # 2. Fix getch.c: Target the local buffer 'c' used for conversion
+        # This handles the specific line: wchar_t c[2];
+        sed -i.bak -E 's/wchar_t[[:space:]]+c\[2\]/int32_t c[2]/g' curses/pdcurses/getch.c
+        # 3. Fix getstr.c: Change the fixed-size array 'wstr' to 32-bit[cite: 12]
+        # This handles the error at line 90 in getstr.c[cite: 12]
+        sed -i.bak 's/wchar_t wstr\[256\];/int32_t wstr[256];/g' curses/pdcurses/getstr.c
+        _diff
+
         ####                               ####
         ####   LLVM-MING SPECIFIC PATCHES  ####
         ####                               ####
