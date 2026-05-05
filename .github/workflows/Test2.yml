@@ -32,14 +32,12 @@ env:
   CLICOLOR_FORCE: "1"
   WT_SESSION: "1"        # This triggers pdc_wt = TRUE
   ConEmuANSI: "ON"      # This is a fallback if WT_SESSION isn't found
-  PDC_VT: "RGB"
-  PDC_WINCON: "FALSE"
-  CHTYPE_32: "1"
   PDC_ANSI: "TRUE"
   PDC_FORCE_UTF8: "1"
   UNICODE: "1"
   HAVE_WCWIDTH: "TRUE"
   ENABLE_UTF8: "TRUE"
+  CFLAGS: "-O2 -fno-math-errno -flto -std=c17 -Wno-error -DPDC_NCMOUSE -DPDC_WIDE -DPDC_VT=RGB -DCHTYPE_64 -DPDC_FORCE_UTF8 -D_GNU_SOURCE -DPDC_SYMBOL_VERSIONING=0"
 
 jobs:
   ## PRECHECK ##############################################################################
@@ -455,10 +453,10 @@ jobs:
         _diff
 
         # Fix wchar_t 16 bits limitation to display emojis and all the suplemental codepoints:
-        echo -e "\n\nPATCH: change to 32 bits wchar_t."
-        sed -i.bak '1,/#/ s/#/#define wchar_t int\n&/' src/definitions.h curses/curses.h
-        _diff
-        echo -e "\n\nPATCH: fix for emojis input and output and transparent background."
+        #echo -e "\n\nPATCH: change to 32 bits wchar_t."
+        #sed -i.bak '1,/#/ s/#/#define wchar_t int\n&/' src/definitions.h curses/curses.h
+        #_diff
+        #echo -e "\n\nPATCH: fix for emojis input and output and transparent background."
         #wget -q https://github.com/okibcn/nano-editor/raw/my-github-sync/curses/pdcurses/getch.c
         #wget -q https://github.com/okibcn/nano-editor/raw/my-github-sync/curses/wincon/pdcdisp.c
         #wget -q https://github.com/okibcn/nano-editor/raw/my-github-sync/curses/wincon/pdckbd.c
@@ -517,11 +515,11 @@ jobs:
         ##########################
         PDTERM=${{ inputs.terminfo }}
         echo "PDTERM=${PDTERM}" >> $GITHUB_ENV
-        export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DPDC_WIDE -DPDC_VT=RGB -DCHTYPE_32 -DPDC_FORCE_UTF8 -D_GNU_SOURCE -DPDC_SYMBOL_VERSIONING=0"
+        export CFLAGS="${CFLAGS}"
         export CXXFLAGS="${CFLAGS}"
         unset NCURSESW_CFLAGS
         cd "nano/curses/${PDTERM}"
-          make -j$(($(nproc)*2)) WIDE=Y UTF8=Y DLL=N VT=Y CHTYPE_32=Y _${{matrix.short}}=Y PDC_SYMBOL_VERSIONING=0
+          make -j$(($(nproc)*2)) WIDE=Y UTF8=Y DLL=N VT=Y CHTYPE_64=Y _${{matrix.short}}=Y PDC_SYMBOL_VERSIONING=0
 
     - name: "🐞 SSH session"
       uses: mxschmitt/action-tmate@v3
@@ -543,7 +541,7 @@ jobs:
         TARGET="${{ matrix.arch }}-w64-mingw32"
         OUTDIR="${CWD}/nano/pkg"
         CURSES_DIR="${CWD}/nano/curses"
-        export CFLAGS="-O2 -fno-math-errno -flto -DPDC_NCMOUSE -DPDC_WIDE -DPDC_VT=RGB -DCHTYPE_32 -DPDC_FORCE_UTF8 -std=c17 -DPDC_SYMBOL_VERSIONING=0 -D_GNU_SOURCE -DPDC_FORCE_UTF8"
+        export CFLAGS="${CFLAGS}"
         export CXXFLAGS="${CFLAGS}"
         export LDFLAGS="-L${CURSES_DIR}/${{ env.PDTERM }} -static -static-libgcc ${CURSES_DIR}/${{ env.PDTERM }}/pdcurses.a"
         export NCURSESW_CFLAGS="-I${CURSES_DIR} -DNCURSES_STATIC  -DENABLE_MOUSE"
