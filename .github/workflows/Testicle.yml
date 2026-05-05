@@ -506,6 +506,7 @@ jobs:
 
         # Force the UTF-8 decoder to process 4-byte sequences (emojis)
         # even if the system defines a small WCHAR_MAX
+        echo -e "\n\nPATCH: Force 4-byte UTF-8 emoji input in VT keyboard driver."
         sed -i.bak 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/vt/pdckbd.c
         _diff
 
