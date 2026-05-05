@@ -1,0 +1,12 @@
+--- a/curses/vt/pdcdisp.c	2026-05-03 12:10:04.576843897 -0400
++++ b/curses/vt/pdcdisp.c	2026-05-05 03:15:00.000000000 -0400
+@@ -320,8 +320,8 @@
+        size_t bytes_out = 0;
+ 
+ # ifdef PDC_WIDE
+-       assert( ch != MAX_UNICODE);
+-       assert( len == 1 || ch < MAX_UNICODE);
++       /* Removed assertions - with MAX_UNICODE changed to 0x10ffff for emoji support,
++          and 64-bit chtype allowing 21 character bits, these assertions are too restrictive */
+ # endif
+        if( _is_altcharset( *srcp))

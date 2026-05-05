@@ -21,7 +21,7 @@ on:
       magic:
         description: Magic?
         required: true
-        default: false
+        default: true
         type: boolean
       terminfo:
         description: Terminal info
