@@ -159,17 +159,32 @@ jobs:
         # this seems to be needed when running in a container (because of UID mismatch??)
         git config --global --add safe.directory '*'
 
-    - name: "📂 Restore LLVM-MinGW Folder"
-      uses: actions/cache@v5
-      id: cache-folder
-      with:
-        # FIX: static key "llvm-folder" never expires; keyed on weekly
-        # schedule date so it rebuilds at most once per week, matching
-        # the toolchain-builder.yml cadence. Format: YYYY-WNN.
-        key: llvm-mingw-${{ github.run_id }}
-        restore-keys: |
-          llvm-mingw-
-        path: llvm-mingw
+    - name: "⏬ Download LLVM-MinGW from Toolchain Workflow"
+      shell: bash
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        RUN_ID=$(gh run list \
+          --workflow toolchain-builder.yml \
+          --repo ${{ github.repository }} \
+          --limit 1 \
+          --json databaseId --jq '.[0].databaseId')
+        if [ -z "$RUN_ID" ] || [ "$RUN_ID" == "null" ]; then
+          echo "::error::Could not find ANY runs for toolchain-builder.yml"
+          exit 1
+        fi
+        echo "Attempting to download artifact from Run ID: $RUN_ID"
+        gh run download $RUN_ID \
+          --repo ${{ github.repository }} \
+          --name llvm-mingw \
+          --dir llvm-mingw
+        if [ -d "llvm-mingw" ]; then
+          echo "Toolchain restored successfully."
+          echo "$(pwd)/llvm-mingw/bin" >> $GITHUB_PATH
+        else
+          echo "::error::Directory 'llvm-mingw' not found after download!"
+          exit 1
+        fi
 
     - name: 🛒 Checkout
       uses: actions/checkout@v6
