@@ -309,8 +309,8 @@ jobs:
         echo -e "\n\nPATCH: configuring Windows temporal folder."
         sed -i.bak 's|TMPDIR|TEMP|g' ./src/files.c
         echo -e "\n\nPATCH: Convert invalid filename characters to ! for backup files."
-        sed -i "s~if (thename\[i\] == '/')~if (strchr(\"<>:\\\\\"/\\\\\\\\|?*\", thename[i]))~g" ./src/files.c
-        sed -i 's|/tmp/|~/AppData/Local/Temp/|g' ./src/files.c
+        sed -i.bak "s~if (thename\[i\] == '/')~if (strchr(\"<>:\\\\\"/\\\\\\\\|?*\", thename[i]))~g" ./src/files.c
+        sed -i.bak 's|/tmp/|~/AppData/Local/Temp/|g' ./src/files.c
         _diff
 
         # Modify path expansion with backslashes
@@ -343,12 +343,12 @@ jobs:
         # Solve window resize crashes
         echo -e "\n\nPATCH: Window resize fix."
         sed -i.bak -e "/LINES and COLS accordingly/{n;N;d}" src/nano.c # delets 2 next lines
-        sed -i "/LINES and COLS accordingly/a\
+        sed -i.bak "/LINES and COLS accordingly/a\
             \\\\tresize_term(0, 0);\\n\
             erase();" src/nano.c
-        sed -i -e "/recreate the subwindows with their (new) sizes/{n;d}" src/nano.c
+        sed -i.bak -e "/recreate the subwindows with their (new) sizes/{n;d}" src/nano.c
         _diff
-        sed -i.bak 's/the_window_resized/input == KEY_RESIZE/' src/winio.c
+        sed -i.bak 's/\bresize_occurred\b/input == KEY_RESIZE/g' src/winio.c
         _diff
 
         # Solve long delay after unicode
@@ -369,14 +369,14 @@ jobs:
         # Fix for unicode char width detection using GNUlib internal function
         echo -e "\n\nPATCH: unicode char width detection using GNUlib internal function."
         sed -i.bak 's|wcwidth(wc)|uc_width(wc, "UTF-8")|g'  src/chars.c src/winio.c
-        sed -i '/prototypes.h/a#include "uniwidth.h"'  src/chars.c
+        sed -i.bak '/prototypes.h/a#include "uniwidth.h"'  src/chars.c
         _diff
 
         # Fix pipe-in data from Windows console.
         echo -e "\n\nPATCH: Fix pipe in data in Windows console."
         sed -i.bak "s|/dev/tty|CON|" src/nano.c
-        sed -i "s/stream, 0/stream, fd/" src/nano.c
-        sed -i "/FILE \*stream/,/stop the reading/ c\
+        sed -i.bak "s/stream, 0/stream, fd/" src/nano.c
+        sed -i.bak "/FILE \*stream/,/stop the reading/ c\
             \\\\t static FILE \*stream;\\n\
             static int fd\=0;\\n\
             if \(fd\=\=0){\\n\
@@ -393,7 +393,7 @@ jobs:
             \\t int errnumber \= errno;\\n\
             \\t if\(fd \> -1) close\(fd);\\n\
             return FALSE;}" src/nano.c
-        sed -i "/initscr/i\
+        sed -i.bak "/initscr/i\
             for\(int optind_\=optind; optind_ \< argc;optind_\+\+)\\n\
             if \(strcmp\(argv\[optind_], \"\-\") \=\= 0){scoop_stdin\();break;}" src/nano.c
         _diff
@@ -415,7 +415,7 @@ jobs:
         sed -i.bak "/int attributes/ {s/\bint\b/chtype/g}" src/definitions.h
         _diff
         sed -i.bak "/bool parse_combination/ {s/\bint\b/chtype/g}" src/rcfile.c
-        sed -i "/int attributes/ {s/\bint\b/chtype/g}" src/rcfile.c
+        sed -i.bak "/int attributes/ {s/\bint\b/chtype/g}" src/rcfile.c
         _diff
 
         # Desambiguation of BACKSPACE vs ^H, or ENTER vs ^M and certain CTRL+key combos             //o//
@@ -503,7 +503,7 @@ jobs:
         echo -e "\n\nBRANDING: NANO VER DISPLAY."
         cd ..
         sed -i.bak 's/ GNU nano from git,//' src/nano.c
-        sed -i 's|Compiled options|Project info at https://github.com/gfunkmonk/nano-for-windows\\n Using '"${CURSES}"'\\n &|' src/nano.c
+        sed -i.bak 's|Compiled options|Project info at https://github.com/gfunkmonk/nano-for-windows\\n Using '"${CURSES}"'\\n &|' src/nano.c
         _diff
 
     - name: "⚙️ Compile curses lib for ${{ matrix.name}}"
