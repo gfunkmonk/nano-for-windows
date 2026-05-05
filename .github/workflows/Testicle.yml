@@ -562,6 +562,15 @@ jobs:
         sed -i.bak 's/wchar_t/int32_t/g' curses/pdcurses/inch.c curses/pdcurses/inchstr.c
         _diff
 
+        # Fix getstr.c: Change the local wstr buffer from 16-bit to 32-bit
+        sed -i.bak 's/wchar_t wstr\[256\];/int32_t wstr[256];/g' curses/pdcurses/getstr.c
+        # Fix getch.c: Target the specific pointer declarations for wtmp and wpaste
+        # Using a more flexible regex to handle the comma-separated declaration
+        sed -i.bak -E 's/wchar_t\s*\*wtmp,\s*\*wpaste/int32_t *wtmp, *wpaste/g' curses/pdcurses/getch.c
+        # Fix getch.c: Also update the small local 'c' buffer used for single-char conversion
+        sed -i.bak -E 's/wchar_t\s+c\[2\]/int32_t c[2]/g' curses/pdcurses/getch.c
+        _diff
+
         ####                               ####
         ####   LLVM-MING SPECIFIC PATCHES  ####
         ####                               ####
