@@ -410,9 +410,11 @@ jobs:
 
         # PDCurses uses 64bit (chtype) for cell attributes instead of 32bit (int)
         echo -e "\n\nPATCH: Improving from 256colors to true color."
-        sed -i.bak "/interface_color_pair/ {s/\bint\b/chtype/g}" src/prototypes.h src/global.c
+        #sed -i.bak "/interface_color_pair/ {s/\bint\b/chtype/g}" src/prototypes.h src/global.c
+        sed -i.bak 's/\bint\b interface_color_pair/chtype interface_color_pair/' src/prototypes.h src/global.c
         _diff
-        sed -i.bak "/int attributes/ {s/\bint\b/chtype/g}" src/definitions.h
+        #sed -i.bak "/int attributes/ {s/\bint\b/chtype/g}" src/definitions.h
+        sed -i.bak 's/\bint\b attributes/chtype attributes/' src/definitions.h
         _diff
         sed -i.bak "/bool parse_combination/ {s/\bint\b/chtype/g}" src/rcfile.c
         sed -i.bak "/int attributes/ {s/\bint\b/chtype/g}" src/rcfile.c
@@ -454,8 +456,8 @@ jobs:
 
         # Fix wchar_t 16 bits limitation to display emojis and all the suplemental codepoints:
         #echo -e "\n\nPATCH: change to 32 bits wchar_t."
-        sed -i.bak '1,/#/ s/#/#define wchar_t int\n&/' src/definitions.h curses/curses.h
-        _diff
+        #sed -i.bak '1,/#/ s/#/#define wchar_t int\n&/' src/definitions.h curses/curses.h
+        #_diff
         #echo -e "\n\nPATCH: fix for emojis input and output and transparent background."
         #wget -q https://github.com/okibcn/nano-editor/raw/my-github-sync/curses/pdcurses/getch.c
         #wget -q https://github.com/okibcn/nano-editor/raw/my-github-sync/curses/wincon/pdcdisp.c
