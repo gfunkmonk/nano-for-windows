@@ -399,6 +399,13 @@ jobs:
         sed -i '/prototypes.h/a#include "uniwidth.h"'  src/chars.c
         _diff
 
+        # Treat supplemental-plane characters (emoji, U+10000+) as displayable wide chars.
+        # Without this, nano's is_extended_char check can filter them as non-printable
+        # before the PDCursesMod display path ever sees them.
+        echo -e "\n\nPATCH: treat SMP characters (emoji) as displayable in nano."
+        sed -i.bak '/if (is_extended_char(wc))/i \    if (wc > 0xFFFF) return true;' src/winio.c
+        _diff
+
         # Solve duplicated definitions ALT-ARROWS already in PDCursesMod
         echo -e "\n\nPATCH: remove duplicated definitions."
         sed -i.bak "/0x42[1234]/d" src/definitions.h
@@ -466,6 +473,7 @@ jobs:
 
         echo -e "\n\nPATCH: PDC_display_utf8 = TRUE"
         sed -i.bak 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wincon/*.c
+        sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/vt/*.c
         _diff
 
         echo -e "\n\nPATCH: Make MAX_UNICODE suck less."
@@ -475,6 +483,13 @@ jobs:
         # Fix prototype for VT driver compatibility
         echo -e "\n\nPATCH: Fixing wine_ver_func prototype in VT driver."
         sed -i 's/wine_ver_func)()/wine_ver_func)(void)/' curses/vt/pdcscrn.c
+        _diff
+
+        # Enable 4-byte UTF-8 (emoji) input in the VT keyboard driver.
+        # On MinGW, WCHAR_MAX=65535, so the upstream #if WCHAR_MAX > 65535 guard
+        # disables surrogate/SMP processing. Force it on unconditionally.
+        echo -e "\n\nPATCH: Force 4-byte UTF-8 emoji input in VT keyboard driver."
+        sed -i.bak 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced: MinGW wchar_t is 16-bit/g' curses/vt/pdckbd.c
         _diff
 
         ####                               ####

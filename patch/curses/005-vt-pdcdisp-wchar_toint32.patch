@@ -1,0 +1,29 @@
+--- a/curses/vt/pdcdisp.c
++++ b/curses/vt/pdcdisp.c
+@@ -364,7 +364,7 @@
+ 
+            for( i = bytes_out = 0; i < n_wchars; i++)
+            {
+-               bytes_out += PDC_wc_to_utf8( obuff + bytes_out, (wchar_t)unpacked[i]);
++               bytes_out += PDC_wc_to_utf8( obuff + bytes_out, (int32_t)unpacked[i]);
+                if( bytes_out > OBUFF_SIZE - 6)
+                   {
+                   put_to_stdout( obuff, bytes_out);
+@@ -379,7 +379,7 @@
+            bytes_out = 1;
+            *obuff = (char)ch;
+ #else
+-           bytes_out = PDC_wc_to_utf8( obuff, (wchar_t)ch);
++           bytes_out = PDC_wc_to_utf8( obuff, (int32_t)ch);
+ #endif
+ #ifdef PDC_WIDE
+            while( count < len && !((srcp[0] ^ srcp[count]) & ~A_CHARTEXT)
+@@ -397,7 +397,7 @@
+ #else
+                if( ch < (int)' ' || (ch >= 0x80 && ch <= 0x9f))
+                   ch = ' ';
+-               bytes_out += PDC_wc_to_utf8( obuff + bytes_out, (wchar_t)ch);
++               bytes_out += PDC_wc_to_utf8( obuff + bytes_out, (int32_t)ch);
+ #endif
+                if( bytes_out > OBUFF_SIZE - 6)
+                   {
