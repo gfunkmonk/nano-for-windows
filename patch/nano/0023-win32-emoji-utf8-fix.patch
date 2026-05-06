@@ -1,6 +1,6 @@
 --- a/src/winio.c	2026-05-05 00:00:00.000000000 -0400
 +++ b/src/winio.c	2026-05-05 00:00:00.000000000 -0400
-@@ -1902,6 +1902,31 @@
+@@ -1901,6 +1901,25 @@
  		/* Convert a multibyte character to a single code. */
  		charlength = mbtowide(&wc, text);
  
@@ -31,4 +31,3 @@
 +
  		/* Represent an invalid character with the Replacement Character. */
  		if (charlength < 0) {
- 			converted[index++] = '\xEF';
