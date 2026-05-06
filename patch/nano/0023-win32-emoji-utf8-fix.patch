@@ -15,27 +15,28 @@
  			}
  			else if (keycode < 0x20 && !last_escape_was_alone)
  				meta_key = TRUE;
-@@ -1901,6 +1912,31 @@
+@@ -1901,6 +1912,32 @@
  		/* Convert a multibyte character to a single code. */
  		charlength = mbtowide(&wc, text);
  
 +#ifdef _WIN32
-+		/* On Windows with 16-bit wchar_t, check if this is a 4-byte UTF-8 sequence
-+		 * that mbtowide failed to convert. If so, pass the raw bytes through
-+		 * instead of using the replacement character. */
-+		if (charlength < 0 && (unsigned char)text[0] >= 0xF0 && 
-+		    (unsigned char)text[0] <= 0xF4) {
-+			/* This is a valid 4-byte UTF-8 start byte. Check if we have enough bytes. */
-+			if (strlen(text) >= 4) {
-+				/* Verify it's a valid 4-byte UTF-8 sequence */
-+				if (((unsigned char)text[1] >= 0x80 && (unsigned char)text[1] <= 0xBF) &&
-+				    ((unsigned char)text[2] >= 0x80 && (unsigned char)text[2] <= 0xBF) &&
-+				    ((unsigned char)text[3] >= 0x80 && (unsigned char)text[3] <= 0xBF)) {
-+					/* Valid 4-byte UTF-8 sequence - pass raw bytes through */
-+					converted[index++] = text[0];
-+					converted[index++] = text[1];
-+					converted[index++] = text[2];
-+					converted[index++] = text[3];
++                /* On Windows with 16-bit wchar_t, mbtowide may fail on valid 3 or 4 byte 
++                 * UTF-8 sequences. Pass raw bytes through for symbols (0xE0 range) 
++                 * and emojis (0xF0 range) to bypass the 16-bit limitation. */
++                if (charlength < 0 && (unsigned char)text[0] >= 0xE0) {
++                        int needed = ((unsigned char)text[0] >= 0xF0) ? 4 : 3;
++                        
++                        if (strlen(text) >= (size_t)needed) {
++                                bool valid = TRUE;
++                                for (int i = 1; i < needed; i++) {
++                                        if ((unsigned char)text[i] < 0x80 || (unsigned char)text[i] > 0xBF)
++                                                valid = FALSE;
++                                }
++
++                                if (valid) {
++                                        for (int i = 0; i < needed; i++)
++                                                converted[index++] = text[i];
++                                        text += needed;
 +					text += 4;
 +					column++;
 +					continue;
