@@ -1,0 +1,22 @@
+--- a/src/nano.c
++++ b/src/nano.c
+@@ -1620,11 +1620,20 @@ void process_a_keystroke(void)
+ 	function = (shortcut ? shortcut->func : NULL);
+ 
+ 	/* If not a command, discard anything that is not a normal character byte. */
++#ifdef _WIN32
++	/* On Windows, accept UTF-32 values from PDCurses (assembled from surrogate pairs).
++	 * These include 4-byte emoji characters (U+10000 and above). */
++	if (!function) {
++		if ((input < 0x20 && input >= 0) || meta_key)
++			unbound_key(input);
++		else if (ISSET(VIEW_MODE))
++#else
+ 	if (!function) {
+ 		if (input < 0x20 || input > 0xFF || meta_key)
+ 			unbound_key(input);
+ 		else if (ISSET(VIEW_MODE))
++#endif
+ 			print_view_warning();
+ 		else {
+ #ifndef NANO_TINY
