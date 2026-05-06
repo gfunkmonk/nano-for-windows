@@ -1,0 +1,60 @@
+--- a/curses/wincon/pdckbd.c
++++ b/curses/wincon/pdckbd.c
+@@ -694,6 +694,57 @@ int PDC_get_key(void)
+ {
+     if( _get_mouse_event( &SP->mouse_status))
+         return( KEY_MOUSE);
++
++#ifdef PDC_WIDE
++    /* Check for clipboard paste via Ctrl+V - read directly from clipboard
++     * to bypass console ANSI conversion that corrupts UTF-8/emoji */
++    if (key_count == 0)
++    {
++        /* Try to peek at next input to see if it's Ctrl+V */
++        DWORD peek_count = 0;
++        INPUT_RECORD peek_ip;
++        if (GetNumberOfConsoleInputEvents(pdc_con_in, &peek_count) && peek_count > 0)
++        {
++            if (PeekConsoleInput(pdc_con_in, &peek_ip, 1, &peek_count))
++            {
++                if (peek_ip.EventType == KEY_EVENT && 
++                    peek_ip.Event.KeyEvent.bKeyDown &&
++                    peek_ip.Event.KeyEvent.wVirtualKeyCode == 'V' &&
++                    (peek_ip.Event.KeyEvent.dwControlKeyState & LEFT_CTRL_PRESSED))
++                {
++                    /* It's Ctrl+V - flush it and do clipboard paste instead */
++                    FlushConsoleInputBuffer(pdc_con_in);
++                    
++                    char *clipboard_data = NULL;
++                    long clipboard_len = 0;
++                    if (PDC_getclipboard(&clipboard_data, &clipboard_len) == PDC_CLIP_SUCCESS 
++                        && clipboard_len > 0)
++                    {
++                        /* Convert clipboard UTF-8 to wchar_t and push to input queue */
++                        wchar_t *wdata = (wchar_t *)malloc((clipboard_len + 1) * sizeof(wchar_t));
++                        if (wdata)
++                        {
++                            /* Clipboard is UTF-8, convert to wide chars */
++                            int wlen = MultiByteToWideChar(CP_UTF8, 0, clipboard_data, 
++                                                           clipboard_len, wdata, clipboard_len + 1);
++                            if (wlen > 0)
++                            {
++                                /* Push characters in reverse order for ungetch */
++                                for (int i = wlen - 1; i >= 0; i--)
++                                    PDC_ungetch((int)wdata[i]);
++                            }
++                            free(wdata);
++                        }
++                        PDC_freeclipboard(clipboard_data);
++                        /* Return first character */
++                        return PDC_get_key();
++                    }
++                }
++            }
++        }
++    }
++#endif
++
+     if (!key_count)
+     {
+         DWORD count;

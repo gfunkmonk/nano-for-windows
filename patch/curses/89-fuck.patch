@@ -1,0 +1,21 @@
+--- a/curses/wincon/pdckbd.c
++++ b/curses/wincon/pdckbd.c
+@@ -669,7 +669,18 @@ static int _get_key_count(void)
+     return( num_keys);
+ }
+ 
++#ifdef PDC_WIDE
++/* Force use of ReadConsoleInputW for proper Unicode support.
++ * Even with UNICODE defined, we want to be explicit about using 
++ * the wide character version to ensure UTF-8/emoji work correctly. */
++#ifdef ReadConsoleInput
++#undef ReadConsoleInput
++#endif
++#define ReadConsoleInput ReadConsoleInputW
++#define INPUT_RECORD_W INPUT_RECORD
++#endif
++
+ /* return the next available key or mouse event */
+ 
+ int PDC_get_key(void)
+	
