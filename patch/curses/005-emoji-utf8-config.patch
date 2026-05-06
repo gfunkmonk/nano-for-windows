@@ -1,21 +1,48 @@
---- a/curses/curses.h	2026-05-05 00:00:00.000000000 -0400
-+++ b/curses/curses.h	2026-05-05 00:00:00.000000000 -0400
-@@ -1,6 +1,15 @@
- /* Public domain curses library for Win32.
-  * Originally by Mark Hessling <mark@rexx.org>
-  */
-+
-+/* Enable 64-bit chtype for proper emoji support on Windows.
-+ * This allows storing full 32-bit Unicode code points without
-+ * truncation that occurs with 16-bit wchar_t on Windows. */
-+#ifndef CHTYPE_LONG
-+#define CHTYPE_LONG 1
-+#define CHTYPE_64 1
+--- a/curses/pdcurses/addstr.c	2026-05-05 00:00:00.000000000 -0400
++++ b/curses/pdcurses/addstr.c	2026-05-05 00:00:00.000000000 -0400
+@@ -68,6 +68,25 @@
+     while( (i < n || n < 0) && str[i])
+     {
+ #ifdef PDC_WIDE
++#ifdef __WIN32
++        /* Inline 32-bit UTF-8 decoder to replace PDC_mbtowc for proper emoji support.
++         * This function decodes UTF-8 sequences directly to 32-bit Unicode code points,
++         * avoiding the 16-bit wchar_t limitation on Windows. */
++        if ((unsigned char)str[i] >= 0x80) {
++            uint32_t codepoint;
++            int charlen;
++            
++            /* Decode UTF-8 sequence */
++            if ((unsigned char)str[i] >= 0xF0) { /* 4-byte sequence */
++                codepoint = ((str[i] & 0x07) << 18) |
++                          ((str[i+1] & 0x3F) << 12) |
++                          ((str[i+2] & 0x3F) << 6) |
++                          (str[i+3] & 0x3F);
++                charlen = 4;
++            } else if ((unsigned char)str[i] >= 0xE0) { /* 3-byte sequence */
++                codepoint = ((str[i] & 0x0F) << 12) |
++                          ((str[i+1] & 0x3F) << 6) |
++                          (str[i+2] & 0x3F);
++                charlen = 3;
++            } else if ((unsigned char)str[i] >= 0xC0) { /* 2-byte sequence */
++                codepoint = ((str[i] & 0x1F) << 6) |
++                          (str[i+1] & 0x3F);
++                charlen = 2;
++            } else {
++                i++; /* Invalid UTF-8, skip */
++                continue;
++            }
++            
++            /* Store the code point directly for emoji support */
++            if (waddch(win, (chtype)codepoint) == ERR)
++                return ERR;
++            
++            i += charlen;
++            continue;
++        }
 +#endif
-+
- #include <curses.h>
- #include <panel.h>
- #include <term.h>
+         wchar_t wch;
+         int retval = PDC_mbtowc(&wch, str + i, n >= 0 ? n - i : 6);
 
 --- a/curses/wincon/pdcdisp.c	2026-05-05 00:00:00.000000000 -0400
 +++ b/curses/wincon/pdcdisp.c	2026-05-05 00:00:00.000000000 -0400
@@ -42,7 +69,7 @@
 +
      /* If the high bit of the attribute is set, then this is a full
         width character, and we need to output a space following it. */
- 
+
 --- a/curses/wincon/pdcscrn.c	2026-05-05 00:00:00.000000000 -0400
 +++ b/curses/wincon/pdcscrn.c	2026-05-05 00:00:00.000000000 -0400
 @@ -30,6 +30,12 @@
