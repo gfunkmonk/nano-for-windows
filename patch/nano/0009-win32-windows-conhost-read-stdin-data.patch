@@ -21,7 +21,7 @@ index c11048e..72c25f4 100644
  
  	if (thetty < 0 || dup2(thetty, STDIN_FILENO) < 0)
  		die(_("Could not reconnect stdin to keyboard\n"));
-@@ -861,18 +861,22 @@ void reconnect_and_store_state(void)
+@@ -861,21 +861,24 @@ void reconnect_and_store_state(void)
  bool scoop_stdin(void)
  {
  	FILE *stream;

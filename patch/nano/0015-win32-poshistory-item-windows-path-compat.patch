@@ -20,7 +20,7 @@ index cf5451d..5034cb9 100644
  #include <errno.h>
  #include <string.h>
  
-@@ -414,6 +415,16 @@ void load_positions_register(void)
+@@ -414,9 +415,18 @@ void load_positions_register(void)
  	while (count++ < 200 && (length = getline(&phrase, &dummy, registry)) > 1) {
  		normalize_slashes(phrase);
  		stanza = strchr(phrase, '/');

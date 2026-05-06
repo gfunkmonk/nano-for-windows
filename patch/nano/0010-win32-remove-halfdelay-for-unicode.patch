@@ -12,7 +12,7 @@ diff --git a/src/winio.c b/src/winio.c
 index 7967390..42225df 100644
 --- a/src/winio.c
 +++ b/src/winio.c
-@@ -213,9 +213,6 @@ void read_keys_from(WINDOW *frame)
+@@ -213,12 +213,8 @@ void read_keys_from(WINDOW *frame)
  						lastmessage > HUSH && lastmessage < ALERT &&
  						lastmessage != INFO) || spotlighted)) {
  		timed = TRUE;

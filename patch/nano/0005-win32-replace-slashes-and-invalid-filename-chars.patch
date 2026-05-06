@@ -41,7 +41,7 @@ index f93acc0..36f8c3a 100644
  					thename[i] = '!';
  		} else
  			thename = copy_of(tail(realname));
-@@ -2425,6 +2428,8 @@ char *real_dir_from_tilde(const char *path)
+@@ -2425,8 +2428,10 @@ char *real_dir_from_tilde(const char *path)
  
  	free(tilded);
  
@@ -54,7 +54,7 @@ diff --git a/src/history.c b/src/history.c
 index b1f245c..cf5451d 100644
 --- a/src/history.c
 +++ b/src/history.c
-@@ -412,6 +412,7 @@ void load_positions_register(void)
+@@ -412,8 +412,9 @@ void load_positions_register(void)
  
  	/* Read and parse each line, and store the extracted data. */
  	while (count++ < 200 && (length = getline(&phrase, &dummy, registry)) > 1) {
@@ -66,7 +66,7 @@ diff --git a/src/prototypes.h b/src/prototypes.h
 index 488a686..8553779 100644
 --- a/src/prototypes.h
 +++ b/src/prototypes.h
-@@ -558,6 +558,7 @@ void complete_a_word(void);
+@@ -558,8 +558,9 @@ void complete_a_word(void);
  /* All functions in utils.c. */
  void get_homedir(void);
  const char *tail(const char *path);
@@ -96,7 +96,7 @@ index f061b5a..84df35c 100644
  /* Return a copy of the two given strings, welded together. */
  char *concatenate(const char *path, const char *name)
  {
-@@ -71,6 +82,8 @@ char *concatenate(const char *path, const char *name)
+@@ -71,9 +82,10 @@ char *concatenate(const char *path, const char *name)
  	strcpy(joined, path);
  	strcpy(joined + pathlen, name);
  

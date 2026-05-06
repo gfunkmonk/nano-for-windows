@@ -17,7 +17,7 @@ diff --git a/src/definitions.h b/src/definitions.h
 index 18cd28e..498842a 100644
 --- a/src/definitions.h
 +++ b/src/definitions.h
-@@ -388,7 +388,7 @@ typedef struct colortype {
+@@ -388,9 +388,9 @@ typedef struct colortype {
  		/* This combo's background color. */
  	short pairnum;
  		/* The pair number for this foreground/background color combination. */
@@ -39,7 +39,7 @@ index 8a6b985..bd102a2 100644
  		/* An array of characters that together depict the scrollbar. */
  ssize_t stripe_column = 0;
  		/* The column at which a vertical bar will be drawn. */
-@@ -269,7 +269,7 @@ int hilite_attribute = A_REVERSE;
+@@ -269,9 +269,9 @@ int hilite_attribute = A_REVERSE;
  colortype* color_combo[NUMBER_OF_ELEMENTS] = {NULL};
  		/* The color combinations for interface elements given in the rcfile. */
  #endif
@@ -61,7 +61,7 @@ index 72c25f4..b751566 100644
  
  	editwincols = COLS - margin - sidebar;
  
-@@ -2445,7 +2445,7 @@ int main(int argc, char **argv)
+@@ -2445,9 +2445,9 @@ int main(int argc, char **argv)
  
  #ifndef NANO_TINY
  	sidebar = (ISSET(INDICATOR) && LINES > 5 && COLS > 9) ? 1 : 0;
@@ -83,7 +83,7 @@ index 8553779..bddf473 100644
  extern ssize_t stripe_column;
  extern int cycling_aim;
  #endif
-@@ -181,7 +181,7 @@ extern int hilite_attribute;
+@@ -181,9 +181,9 @@ extern int hilite_attribute;
  #ifdef ENABLE_COLOR
  extern colortype *color_combo[NUMBER_OF_ELEMENTS];
  #endif
@@ -118,7 +118,7 @@ index 2531959..23055b9 100644
  {
  	bool vivid, thick;
  	char *comma;
-@@ -1162,7 +1166,7 @@ void parse_rule(char *ptr, int rex_flags)
+@@ -1162,9 +1166,9 @@ void parse_rule(char *ptr, int rex_flags)
  {
  	char *names, *regexstring;
  	short fg, bg;
@@ -131,7 +131,7 @@ diff --git a/src/winio.c b/src/winio.c
 index 7818a7b..762001b 100644
 --- a/src/winio.c
 +++ b/src/winio.c
-@@ -2309,7 +2309,7 @@ void statusline(message_type importance, const char *msg, ...)
+@@ -2309,10 +2309,9 @@ void statusline(message_type importance, const char *msg, ...)
  	static size_t start_col = 0;
  	char *compound, *message;
  	bool bracketed;

@@ -40,7 +40,7 @@ index e6b5783..3fad6fb 100644
  }
  #endif /* ENABLE_UTF8 */
  
-@@ -325,7 +326,7 @@ int advance_over(const char *string, size_t *column)
+@@ -325,9 +326,9 @@ int advance_over(const char *string, size_t *column)
  				return 1;
  			}
  
@@ -53,7 +53,7 @@ diff --git a/src/nano.c b/src/nano.c
 index 6fc3e20..c11048e 100644
 --- a/src/nano.c
 +++ b/src/nano.c
-@@ -1867,7 +1867,7 @@ int main(int argc, char **argv)
+@@ -1867,9 +1867,9 @@ int main(int argc, char **argv)
  #ifdef ENABLE_UTF8
  	/* If setting the locale is successful and it uses UTF-8, we will
  	 * need to use the multibyte functions for text processing. */
@@ -74,7 +74,7 @@ index 9a2ae42..7967390 100644
  
  #include <ctype.h>
  #ifdef __linux__
-@@ -1902,7 +1903,7 @@ char *display_string(const char *text, size_t column, size_t span,
+@@ -1902,10 +1903,9 @@ char *display_string(const char *text, size_t column, size_t span,
  		}
  
  		/* Determine whether the character takes zero, one, or two columns. */

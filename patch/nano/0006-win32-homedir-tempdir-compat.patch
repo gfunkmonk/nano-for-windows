@@ -22,7 +22,7 @@ index 36f8c3a..e541757 100644
  	char *tempdir = NULL, *tempfile_name = NULL;
  	char *extension;
  	int descriptor;
-@@ -1476,7 +1476,7 @@ char *safe_tempfile(FILE **stream)
+@@ -1476,9 +1476,9 @@ char *safe_tempfile(FILE **stream)
  		tempdir = check_writable_directory(P_tmpdir);
  
  	if (tempdir == NULL)
@@ -35,7 +35,7 @@ diff --git a/src/utils.c b/src/utils.c
 index 84df35c..ad14c79 100644
 --- a/src/utils.c
 +++ b/src/utils.c
-@@ -35,15 +35,11 @@ void get_homedir(void)
+@@ -35,18 +35,13 @@ void get_homedir(void)
  	if (homedir == NULL) {
  		const char *homenv = getenv("HOME");
  
