@@ -1,0 +1,19 @@
+--- a/src/winio.c	2026-05-05 00:00:00.000000000 -0400
++++ b/src/winio.c	2026-05-05 00:00:00.000000000 -0400
+@@ -21,6 +21,7 @@
+ 
+ #include "prototypes.h"
+ #include "revision.h"
++#include "uniwidth.h"
+ 
+ #include <ctype.h>
+ #ifdef __linux__
+@@ -1912,7 +1913,7 @@
+ 		}
+ 
+ 		/* Determine whether the character takes zero, one, or two columns. */
+-		charwidth = wcwidth(wc);
++		charwidth = uc_width(wc, "UTF-8");
+ 
+ 		/* Watch the number of zero-widths, to keep ample memory reserved. */
+ 		if (charwidth == 0 && --stowaways == 0) {
