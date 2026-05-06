@@ -1,14 +1,42 @@
---- a/src/winio.c
-+++ b/src/winio.c
-@@ -1199,6 +1199,12 @@ int parse_kbinput(WINDOW *frame)
- 	if (escapes == 0) {
- 		/* Most key codes in byte range cannot be special keys. */
- 		if (keycode < 0xFF && keycode != '\t' && keycode != DEL_CODE)
- 			return keycode;
+--- a/src/winio.c     2026-05-06 01:40:07.551636700 -0400
++++ b/src/winio.c.p   2026-05-06 01:42:07.417283220 -0400
+@@ -43,6 +43,39 @@
+ #define USING_OLDER_LIBVTE  yes
+ #endif
+
 +#ifdef _WIN32
-+		/* PDCursesMod assembles surrogate pairs into full codepoints
-+		 * (U+10000..U+10FFFF); return them directly as character input. */
-+		if ((unsigned int)keycode >= 0x10000)
-+			return keycode;
++#include <windows.h>
++
++/* Manually fetch UTF-16 from clipboard and convert to UTF-8 to prevent emoji garbling. */
++void win32_paste_utf8(void)
++{
++    if (!IsClipboardFormatAvailable(CF_UNICODETEXT))
++        return;
++
++    if (OpenClipboard(NULL)) {
++        HANDLE hData = GetClipboardData(CF_UNICODETEXT);
++        if (hData) {
++            wchar_t *pText = (wchar_t *)GlobalLock(hData);
++            if (pText) {
++                int size = WideCharToMultiByte(CP_UTF8, 0, pText, -1, NULL, 0, NULL, NULL);
++                char *utf8_str = nmalloc(size);
++
++                WideCharToMultiByte(CP_UTF8, 0, pText, -1, utf8_str, size, NULL, NULL);
++
++                /* Inject the converted string into the current buffer. */
++                do_verbatim_input(utf8_str);
++
++                free(utf8_str);
++                GlobalUnlock(hData);
++            }
++        }
++        CloseClipboard();
++    }
++    currmenu = MMAIN;
++    refresh_needed = TRUE;
++}
 +#endif
- 	} else if (escapes == 1) {
++
+ static int *key_buffer = NULL;
+                    /* A buffer for the keystrokes that haven't been handled yet. */
+ static int *nextcodes = NULL;

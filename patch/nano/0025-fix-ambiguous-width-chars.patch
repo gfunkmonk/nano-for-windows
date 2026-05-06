@@ -1,0 +1,15 @@
+--- a/src/chars.c
++++ b/src/chars.c
+@@ -450,6 +450,13 @@
+ {
+     if (wc < 0x20 || (wc >= 0x7F && wc < 0xA0))
+         return 1;
++#ifdef _WIN32
++    /* Force double-width for common bitmap/emoji ranges if uc_width fails. */
++    if ((wc >= 0x2600 && wc <= 0x26FF) || (wc >= 0x1F300)) {
++        int width = uc_width(wc, "UTF-8");
++        return (width > 0) ? width : 2;
++    }
++#endif
+     return uc_width(wc, "UTF-8");
+ }
