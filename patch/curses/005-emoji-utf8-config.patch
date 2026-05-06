@@ -1,5 +1,5 @@
---- a/curses/pdcurses/addstr.c	2026-05-05 00:00:00.000000000 -0400
-+++ b/curses/pdcurses/addstr.c	2026-05-05 00:00:00.000000000 -0400
+--- a/curses/pdcurses/addstr.c
++++ b/curses/pdcurses/addstr.c
 @@ -2,6 +2,7 @@
  
  #include <curspriv.h>
@@ -7,39 +7,40 @@
 +#include <string.h>
  
  /*man-start**************************************************************
- 
---- a/curses/pdcurses/addstr.c	2026-05-05 00:00:00.000000000 -0400
-+++ b/curses/pdcurses/addstr.c	2026-05-05 00:00:00.000000000 -0400
-@@ -79,6 +79,27 @@
-     while( (i < n || n < 0) && str[i])
-     {
+
+@@ -79,6 +80,30 @@
+      while( (i < n || n < 0) && str[i])
+      {
  #ifdef PDC_WIDE
 +#ifdef _WIN32
-+        /* Inline 32-bit UTF-8 decoder for 4-byte emoji sequences only.
-+         * This handles emoji that PDC_mbtowc can't convert due to 16-bit wchar_t limitation.
-+         * Other UTF-8 sequences (2-byte, 3-byte) use normal PDC_mbtowc to preserve bitmap symbols. */
-+        if ((unsigned char)str[i] >= 0xF0 && (unsigned char)str[i] <= 0xF4) {
-+            /* This is a 4-byte UTF-8 sequence - handle it directly for emoji support */
-+            uint32_t codepoint = ((str[i] & 0x07) << 18) |
-+                              ((str[i+1] & 0x3F) << 12) |
-+                              ((str[i+2] & 0x3F) << 6) |
-+                              (str[i+3] & 0x3F);
++        /* Inline 32-bit UTF-8 decoder for 3-byte and 4-byte sequences.
++         * This handles symbols (0xE0) and emoji (0xF0) that PDC_mbtowc can't convert 
++         * due to 16-bit wchar_t limitation. */
++        if ((unsigned char)str[i] >= 0xE0) {
++            int needed = ((unsigned char)str[i] >= 0xF0) ? 4 : 3;
 +            
-+            /* Validate it's a valid 4-byte sequence */
-+            if (i + 3 < (n >= 0 ? n : strlen(str)) &&
-+                (str[i+1] & 0xC0) == 0x80 && (str[i+2] & 0xC0) == 0x80 && (str[i+3] & 0xC0) == 0x80) {
++            if (i + (needed - 1) < (n >= 0 ? n : (int)strlen(str))) {
++                uint32_t codepoint;
++                if (needed == 4) {
++                    codepoint = ((str[i] & 0x07) << 18) | ((str[i+1] & 0x3F) << 12) |
++                                ((str[i+2] & 0x3F) << 6) | (str[i+3] & 0x3F);
++                } else {
++                    codepoint = ((str[i] & 0x0F) << 12) | ((str[i+1] & 0x3F) << 6) |
++                                (str[i+2] & 0x3F);
++                }
++
 +                if (waddch(win, (chtype)codepoint) == ERR)
 +                    return ERR;
-+                i += 4;
++                i += needed;
 +                continue;
 +            }
 +        }
 +#endif
-         wchar_t wch;
-         int retval = PDC_mbtowc(&wch, str + i, n >= 0 ? n - i : 6);
-
---- a/curses/wincon/pdcscrn.c	2026-05-05 00:00:00.000000000 -0400
-+++ b/curses/wincon/pdcscrn.c	2026-05-05 00:00:00.000000000 -0400
+          wchar_t wch;
+          int retval = PDC_mbtowc(&wch, str + i, n >= 0 ? n - i : 6);
+ 
+--- a/curses/wincon/pdcscrn.c
++++ b/curses/wincon/pdcscrn.c
 @@ -30,6 +30,12 @@
  
  int PDC_scr_open(void)
@@ -47,7 +48,7 @@
 +    /* Enable proper UTF-8 support for emoji display */
 +    SetConsoleOutputCP(65001); // UTF-8 code page
 +    SetConsoleCP(65001);       // UTF-8 code page
-+    
++
 +    /* Enable virtual terminal processing for modern emoji support */
 +    DWORD mode = 0;
      const char *str;
