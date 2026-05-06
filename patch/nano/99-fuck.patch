@@ -1,142 +1,38 @@
---- a/src/winio.c
-+++ b/src/winio.c
-@@ -1900,6 +1900,140 @@
+--- a/src/winio.c	2026-05-05 00:00:00.000000000 -0400
++++ b/src/winio.c	2026-05-05 00:00:00.000000000 -0400
+@@ -1055,8 +1055,14 @@
+ #ifdef ENABLE_UTF8
+ 			else if (0xC0 <= keycode && keycode <= 0xFF && using_utf8) {
++#ifdef _WIN32
++				/* On Windows, allow UTF-8 sequences for emoji and symbol support.
++				 * Don't treat them as foreign sequences that get discarded. */
++				return keycode;
++#else
+ 				while (waiting_codes && 0x80 <= nextcodes[0] && nextcodes[0] <= 0xBF)
+ 					get_input(NULL);
+ 				return FOREIGN_SEQUENCE;
++#endif
+ 			}
+ 			else if (keycode < 0x20 && !last_escape_was_alone)
+ 				meta_key = TRUE;
+@@ -1901,6 +1912,21 @@
  		/* Convert a multibyte character to a single code. */
  		charlength = mbtowide(&wc, text);
-
+ 
 +#ifdef _WIN32
-+		/* Replace 2-char and 3-char emojis with ASCII symbols that Windows console can display */
-+		if (charlength > 0) {
-+			switch(wc) {
-+				/* 2-char Unicode symbols */
-+				case 0x2660: wc = 0x2660; break; /* ♠ Black spade suit */
-+				case 0x2665: wc = 0x2665; break; /* ♥ Black heart suit */
-+				case 0x2663: wc = 0x2663; break; /* ♣ Black club suit */
-+				case 0x2666: wc = 0x2666; break; /* ♦ Black diamond suit */
-+				case 0x2661: wc = 0x2661; break; /* ♡ White heart suit */
-+				case 0x2662: wc = 0x2662; break; /* ♢ White diamond suit */
-+				case 0x2664: wc = 0x2664; break; /* ♤ White spade suit */
-+				case 0x2667: wc = 0x2667; break; /* ♧ White club suit */
-+				
-+				/* 3-char symbols that don't work -> ASCII fallbacks */
-+				case 0x1F528: wc = L'*'; break;   /* 🔨 Hammer -> asterisk */
-+				case 0x1F511: wc = L'K'; break;   /* 🔑 Key -> K */
-+				case 0x1F512: wc = L'L'; break;   /* 🔒 Lock -> L */
-+				case 0x1F513: wc = L'U'; break;   /* 🔓 Unlock -> U */
-+				case 0x1F4A1: wc = L'*'; break;   /* 💡 Light bulb -> asterisk */
-+				case 0x1F4B0: wc = L'$'; break;   /* 💰 Money bag -> dollar */
-+				case 0x1F4B1: wc = L'$'; break;   /* 💱 Money with wings -> dollar */
-+				case 0x1F4B2: wc = L'$'; break;   /* 💲 Heavy dollar sign -> dollar */
-+				case 0x1F4B3: wc = L'C'; break;   /* 💳 Credit card -> C */
-+				case 0x1F4B4: wc = L'$'; break;   /* 💴 Banknote with yen sign -> dollar */
-+				case 0x1F4B5: wc = L'$'; break;   /* 💵 Banknote with dollar sign -> dollar */
-+				case 0x1F4B6: wc = L'$'; break;   /* 💶 Banknote with euro sign -> dollar */
-+				case 0x1F4B7: wc = L'$'; break;   /* 💷 Banknote with pound sign -> dollar */
-+				case 0x1F4B8: wc = L'$'; break;   /* 💸 Money with wings -> dollar */
-+				case 0x1F4B9: wc = L'$'; break;   /* 💹 Chart increasing -> dollar */
-+				case 0x1F4AA: wc = L'S'; break;   /* 💪 Flexed biceps -> S */
-+				case 0x1F4AC: wc = L'"'; break;   /* 💬 Speech balloon -> quote */
-+				case 0x1F4AD: wc = L'"'; break;   /* 💭 Thought balloon -> quote */
-+				case 0x1F4AF: wc = L'!'; break;   /* 💯 Hundred points -> exclamation */
-+				case 0x1F4C8: wc = L'@'; break;   /* 📈 Chart increasing -> at */
-+				case 0x1F4C9: wc = L'V'; break;   /* 📉 Chart decreasing -> V */
-+				case 0x1F4CD: wc = L'P'; break;   /* 📍 Pushpin -> P */
-+				case 0x1F4CE: wc = L'P'; break;   /* 📎 Paperclip -> P */
-+				case 0x1F4CF: wc = L'R'; break;   /* 📏 Straight ruler -> R */
-+				case 0x1F4D0: wc = L'T'; break;   /* 📐 Triangular ruler -> T */
-+				case 0x1F4D1: wc = L'B'; break;   /* 📑 Bookmark tab -> B */
-+				case 0x1F4D2: wc = L'L'; break;   /* 📒 Ledger -> L */
-+				case 0x1F4D3: wc = L'N'; break;   /* 📓 Notebook -> N */
-+				case 0x1F4D4: wc = L'B'; break;   /* 📔 Notebook with decorative cover -> B */
-+				case 0x1F4D5: wc = L'B'; break;   /* 📕 Closed book -> B */
-+				case 0x1F4D6: wc = L'B'; break;   /* 📖 Open book -> B */
-+				case 0x1F4D7: wc = L'G'; break;   /* 📗 Green book -> G */
-+				case 0x1F4D8: wc = L'B'; break;   /* 📘 Blue book -> B */
-+				case 0x1F4D9: wc = L'O'; break;   /* 📙 Orange book -> O */
-+				case 0x1F4DA: wc = L'B'; break;   /* 📚 Books -> B */
-+				case 0x1F4DB: wc = L'N'; break;   /* 📛 Name badge -> N */
-+				case 0x1F4DC: wc = L'S'; break;   /* 📜 Scroll -> S */
-+				case 0x1F4DD: wc = L'T'; break;   /* 📝 Memo -> T */
-+				case 0x1F4DE: wc = L'T'; break;   /* 📞 Telephone receiver -> T */
-+				case 0x1F4DF: wc = L'P'; break;   /* 📟 Pager -> P */
-+				case 0x1F4E0: wc = L'F'; break;   /* 📠 Fax machine -> F */
-+				case 0x1F4E1: wc = L'S'; break;   /* 📡 Satellite antenna -> S */
-+				case 0x1F4E2: wc = L'P'; break;   /* 📢 Public address loudspeaker -> P */
-+				case 0x1F4E3: wc = L'M'; break;   /* 📣 Cheering megaphone -> M */
-+				case 0x1F4E4: wc = L'S'; break;   /* 📤 Outbox tray -> S */
-+				case 0x1F4E5: wc = L'I'; break;   /* 📥 Inbox tray -> I */
-+				case 0x1F4E6: wc = L'P'; break;   /* 📦 Package -> P */
-+				case 0x1F4E7: wc = L'E'; break;   /* 📧 E-mail symbol -> E */
-+				case 0x1F4E8: wc = L'I'; break;   /* 📨 Incoming envelope -> I */
-+				case 0x1F4E9: wc = L'O'; break;   /* 📩 Envelope with arrow -> O */
-+				case 0x1F4EA: wc = L'O'; break;   /* 📪 Closed mailbox with lowered flag -> O */
-+				case 0x1F4EB: wc = L'O'; break;   /* 📫 Closed mailbox with raised flag -> O */
-+				case 0x1F4EC: wc = L'O'; break;   /* 📬 Open mailbox with raised flag -> O */
-+				case 0x1F4ED: wc = L'O'; break;   /* 📭 Open mailbox with lowered flag -> O */
-+				case 0x1F4EE: wc = L'P'; break;   /* 📮 Postbox -> P */
-+				case 0x1F4EF: wc = L'T'; break;   /* 📯 Postal horn -> T */
-+				case 0x1F4F0: wc = L'N'; break;   /* 📰 Newspaper -> N */
-+				case 0x1F4F1: wc = L'I'; break;   /* 📱 Mobile phone -> I */
-+				case 0x1F4F2: wc = L'M'; break;   /* 📲 Mobile phone with arrow -> M */
-+				case 0x1F4F3: wc = L'V'; break;   /* 📳 Vibration mode -> V */
-+				case 0x1F4F4: wc = L'M'; break;   /* 📴 Mobile phone off -> M */
-+				case 0x1F4F5: wc = L'N'; break;   /* 📵 No mobile phones -> N */
-+				case 0x1F4F6: wc = L'S'; break;   /* 📶 Antenna with bars -> S */
-+				case 0x1F4F7: wc = L'C'; break;   /* 📷 Camera -> C */
-+				case 0x1F4F8: wc = L'C'; break;   /* 📸 Camera with flash -> C */
-+				case 0x1F4F9: wc = L'V'; break;   /* 📹 Video camera -> V */
-+				case 0x1F4FA: wc = L'T'; break;   /* 📺 Television -> T */
-+				case 0x1F4FB: wc = L'R'; break;   /* 📻 Radio -> R */
-+				case 0x1F4FC: wc = L'V'; break;   /* 📼 Videocassette -> V */
-+				case 0x1F4FD: wc = L'P'; break;   /* 📽 Film projector -> P */
-+				case 0x1F4FF: wc = L'M'; break;   /* 📿 Prayer beads -> M */
-+				case 0x1F50D: wc = L'S'; break;   /* 🔍 Magnifying glass tilted left -> S */
-+				case 0x1F50E: wc = L'S'; break;   /* 🔎 Magnifying glass tilted right -> S */
-+				case 0x1F50F: wc = L'L'; break;   /* 🔏 Lock with ink pen -> L */
-+				case 0x1F510: wc = L'L'; break;   /* 🔐 Closed lock with key -> L */
-+				case 0x1F514: wc = L'B'; break;   /* 🔔 Bell -> B */
-+				case 0x1F515: wc = L'B'; break;   /* 🔕 Bell with slash -> B */
-+				case 0x1F516: wc = L'B'; break;   /* 🔖 Bookmark -> B */
-+				case 0x1F517: wc = L'L'; break;   /* 🔗 Link -> L */
-+				case 0x1F518: wc = L'R'; break;   /* 🔘 Radio button -> R */
-+				case 0x1F519: wc = L'B'; break;   /* 🔙 BACK arrow -> B */
-+				case 0x1F51A: wc = L'E'; break;   /* 🔚 END arrow -> E */
-+				case 0x1F51B: wc = L'O'; break;   /* 🔛 ON! arrow -> O */
-+				case 0x1F51C: wc = L'S'; break;   /* 🔜 SOON arrow -> S */
-+				case 0x1F51D: wc = L'T'; break;   /* 🔝 TOP arrow -> T */
-+				case 0x1F520: wc = L'A'; break;   /* 🔠 Input symbol for latin capital letters -> A */
-+				case 0x1F521: wc = L'a'; break;   /* 🔡 Input symbol for latin small letters -> a */
-+				case 0x1F522: wc = L'#'; break;   /* 🔢 Input symbol for numbers -> # */
-+				case 0x1F523: wc = L'S'; break;   /* 🔣 Input symbol for symbols -> S */
-+				case 0x1F524: wc = L'L'; break;   /* 🔤 Input symbol for latin letters -> L */
-+				case 0x1F525: wc = L'F'; break;   /* 🔥 Fire -> F */
-+				case 0x1F526: wc = L'T'; break;   /* 🔦 Flashlight -> T */
-+				case 0x1F527: wc = L'W'; break;   /* 🔧 Wrench -> W */
-+				case 0x1F529: wc = L'N'; break;   /* 🔩 Nut and bolt -> N */
-+				case 0x1F52A: wc = L'H'; break;   /* 🔪 Hocho -> H */
-+				case 0x1F52B: wc = L'G'; break;   /* 🔫 Pistol -> G */
-+				case 0x1F52C: wc = L'M'; break;   /* 🔬 Microscope -> M */
-+				case 0x1F52D: wc = L'T'; break;   /* 🔭 Telescope -> T */
-+				case 0x1F52E: wc = L'D'; break;   /* 🔮 Crystal ball -> D */
-+				case 0x1F52F: wc = L'S'; break;   /* 🔯 Six pointed star -> S */
-+				case 0x1F530: wc = L'D'; break;   /* 🔰 Japanese symbol for beginner -> D */
-+				case 0x1F531: wc = L'T'; break;   /* 🔱 Trident emblem -> T */
-+				case 0x1F532: wc = L'B'; break;   /* 🔲 Black square button -> B */
-+				case 0x1F533: wc = L'W'; break;   /* 🔳 White square button -> W */
-+				case 0x1F534: wc = L'R'; break;   /* 🔴 Red circle -> R */
-+				case 0x1F535: wc = L'B'; break;   /* 🔵 Blue circle -> B */
-+				case 0x1F536: wc = L'O'; break;   /* 🔶 Orange diamond -> O */
-+				case 0x1F537: wc = L'B'; break;   /* 🔷 Blue diamond -> B */
-+				case 0x1F538: wc = L'S'; break;   /* 🔸 Small orange diamond -> S */
-+				case 0x1F539: wc = L'S'; break;   /* 🔹 Small blue diamond -> S */
-+				case 0x1F53A: wc = L'R'; break;   /* 🔺 Red triangle pointed up -> R */
-+				case 0x1F53B: wc = L'R'; break;   /* 🔻 Red triangle pointed down -> R */
-+				case 0x1F53C: wc = L'B'; break;   /* 🔼 Small red triangle -> B */
-+				case 0x1F53D: wc = L'B'; break;   /* 🔽 Small red triangle -> B */
-+				
-+				default: break;
-+			}
-+		}
++               /* Correct counting for Windows: 4-byte = 2 cols, 3-byte = 1 col */
++               unsigned char lead = (unsigned char)text[0];
++               if (charlength < 0 && lead >= 0xE0) {
++                       int u_len = (lead >= 0xF0) ? 4 : 3;
++                       if ((int)strlen(text) >= u_len) {
++                               for (int j = 0; j < u_len; j++)
++                                       converted[index++] = text[j];
++                               text += u_len;
++                               column += (u_len == 4) ? 2 : 1;
++                               continue;
++                       }
++               }
 +#endif
-
++
  		/* Represent an invalid character with the Replacement Character. */
+ 		if (charlength < 0) {
