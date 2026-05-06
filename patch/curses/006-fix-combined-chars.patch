@@ -1,0 +1,34 @@
+--- a/curses/wincon/pdcdisp.c	2026-05-06 14:58:42.665491458 -0400
++++ b/curses/wincon/pdcdisp.c	2026-05-06 15:02:22.120067418 -0400
+@@ -181,6 +181,31 @@
+ 
+ #ifdef PDC_WIDE
+         ch &= A_CHARTEXT;
++        /* Handle combined characters (e.g., base char + variation selector)
++         * that are stored as values > MAX_UNICODE. These need to be expanded
++         * to their component codepoints for proper display. */
++        if (ch > MAX_UNICODE)
++        {
++            cchar_t added[10], root = ch;
++            int n_combined = 0;
++
++            while ((root = PDC_expand_combined_characters(root,
++                                   &added[n_combined])) > MAX_UNICODE)
++                n_combined++;
++            /* Write the root character */
++            if (root <= MAX_UNICODE) {
++                if (IS_SUPPLEMENTAL_MULTILINGUAL_PLANE(root)) {
++                    buffer[n_out++] = (WCHAR)((root - 0x10000) >> 10 | 0xD800);
++                    buffer[n_out++] = (WCHAR)(root & 0x3FF) | 0xDC00;
++                } else
++                    buffer[n_out++] = (WCHAR)root;
++            }
++            /* Write any combined characters */
++            ch = (chtype)added[n_combined];
++            while (n_combined)
++                buffer[n_out++] = (WCHAR)added[--n_combined];
++        }
++        else
+         if( ch <= MAX_UNICODE)
+         {
+             if( IS_SUPPLEMENTAL_MULTILINGUAL_PLANE( ch))
