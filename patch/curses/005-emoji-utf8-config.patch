@@ -1,59 +1,53 @@
---- a/curses/pdcurses/addstr.c  2026-05-05 00:00:00.000000000 -0400
-+++ b/curses/pdcurses/addstr.c  2026-05-05 00:00:00.000000000 -0400
-@@ -68,6 +68,43 @@
+--- a/curses/pdcurses/addstr.c        2026-05-03 12:40:26.569580709 -0400
++++ b/curses/pdcurses/addstr.c        2026-05-05 22:23:06.915340375 -0400
+@@ -2,6 +2,7 @@
+
+ #include <curspriv.h>
+ #include <assert.h>
++#include <string.h>
+
+ /*man-start**************************************************************
+
+--- a/curses/pdcurses/addstr.c	2026-05-05 00:00:00.000000000 -0400
++++ b/curses/pdcurses/addstr.c	2026-05-05 00:00:00.000000000 -0400
+@@ -79,6 +79,27 @@
      while( (i < n || n < 0) && str[i])
      {
  #ifdef PDC_WIDE
 +#ifdef __WIN32
-+        /* Inline 32-bit UTF-8 decoder to replace PDC_mbtowc for proper emoji support.
-+         * This function decodes UTF-8 sequences directly to 32-bit Unicode code points,
-+         * avoiding the 16-bit wchar_t limitation on Windows. */
-+        if ((unsigned char)str[i] >= 0x80) {
-+            uint32_t codepoint;
-+            int charlen;
-+
-+            /* Decode UTF-8 sequence */
-+            if ((unsigned char)str[i] >= 0xF0) { /* 4-byte sequence */
-+                codepoint = ((str[i] & 0x07) << 18) |
-+                          ((str[i+1] & 0x3F) << 12) |
-+                          ((str[i+2] & 0x3F) << 6) |
-+                          (str[i+3] & 0x3F);
-+                charlen = 4;
-+            } else if ((unsigned char)str[i] >= 0xE0) { /* 3-byte sequence */
-+                codepoint = ((str[i] & 0x0F) << 12) |
-+                          ((str[i+1] & 0x3F) << 6) |
-+                          (str[i+2] & 0x3F);
-+                charlen = 3;
-+            } else if ((unsigned char)str[i] >= 0xC0) { /* 2-byte sequence */
-+                codepoint = ((str[i] & 0x1F) << 6) |
-+                          (str[i+1] & 0x3F);
-+                charlen = 2;
-+            } else {
-+                i++; /* Invalid UTF-8, skip */
++        /* Inline 32-bit UTF-8 decoder for 4-byte emoji sequences only.
++         * This handles emoji that PDC_mbtowc can't convert due to 16-bit wchar_t limitation.
++         * Other UTF-8 sequences (2-byte, 3-byte) use normal PDC_mbtowc to preserve bitmap symbols. */
++        if ((unsigned char)str[i] >= 0xF0 && (unsigned char)str[i] <= 0xF4) {
++            /* This is a 4-byte UTF-8 sequence - handle it directly for emoji support */
++            uint32_t codepoint = ((str[i] & 0x07) << 18) |
++                              ((str[i+1] & 0x3F) << 12) |
++                              ((str[i+2] & 0x3F) << 6) |
++                              (str[i+3] & 0x3F);
++            
++            /* Validate it's a valid 4-byte sequence */
++            if (i + 3 < (n >= 0 ? n : strlen(str)) &&
++                (str[i+1] & 0xC0) == 0x80 && (str[i+2] & 0xC0) == 0x80 && (str[i+3] & 0xC0) == 0x80) {
++                if (waddch(win, (chtype)codepoint) == ERR)
++                    return ERR;
++                i += 4;
 +                continue;
 +            }
-+
-+            /* Store the code point directly for emoji support */
-+            if (waddch(win, (chtype)codepoint) == ERR)
-+                return ERR;
-+
-+            i += charlen;
-+            continue;
 +        }
 +#endif
          wchar_t wch;
          int retval = PDC_mbtowc(&wch, str + i, n >= 0 ? n - i : 6);
 
---- a/curses/wincon/pdcscrn.c   2026-05-05 00:00:00.000000000 -0400
-+++ b/curses/wincon/pdcscrn.c   2026-05-05 00:00:00.000000000 -0400
+--- a/curses/wincon/pdcscrn.c	2026-05-05 00:00:00.000000000 -0400
++++ b/curses/wincon/pdcscrn.c	2026-05-05 00:00:00.000000000 -0400
 @@ -30,6 +30,12 @@
-
+ 
  int PDC_scr_open(void)
  {
 +    /* Enable proper UTF-8 support for emoji display */
 +    SetConsoleOutputCP(65001); // UTF-8 code page
 +    SetConsoleCP(65001);       // UTF-8 code page
-+
++    
 +    /* Enable virtual terminal processing for modern emoji support */
 +    DWORD mode = 0;
      const char *str;
@@ -61,7 +55,7 @@
      HMODULE h_kernel;
 @@ -37,6 +43,14 @@
      int i;
-
+ 
      PDC_LOG(("PDC_scr_open() - called\n"));
 +
 +    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -71,5 +65,5 @@
 +            SetConsoleMode(hOut, mode);
 +        }
 +    }
-
+ 
      for (i = 0; i < 16; i++)
