@@ -43,7 +43,7 @@ export PDC_FORCE_UTF8="1"
 export UNICODE="1"
 export HAVE_WCWIDTH="TRUE"
 export ENABLE_UTF8="TRUE"
-export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DCHTYPE_64 -DPDC_WIDE -DPDC_WINCON -DPDC_FORCE_UTF8 -DPDC_SYMBOL_VERSIONING=0 -D_GNU_SOURCE"
+export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DCHTYPE_64 -DPDC_WIDE -DPDC_WINCON -DPDC_FORCE_UTF8 -D_GNU_SOURCE"
 
 # --- 3. Toolchain Setup (gfunkmonk/win-cross) ---
 echo -e "${TEAL}Setting up toolchain...${NC}"
@@ -261,7 +261,7 @@ done
     make clean || true
     unset NCURSESW_CFLAGS
     make -j$(nproc) CC="$TRIPLET-gcc" AR="$TRIPLET-ar" STRIP="$TRIPLET-strip" \
-        WIDE=Y UTF8=Y DLL=N CHTYPE_64=Y _${SHORT}=Y PDC_SYMBOL_VERSIONING=0 \
+        WIDE=Y UTF8=Y DLL=N CHTYPE_64=Y _${SHORT}=Y \
         CFLAGS="${CFLAGS} -I.." \
         CXXFLAGS="${CFLAGS}"
 
@@ -279,13 +279,13 @@ done
         NCURSESW_CFLAGS="-I${BUILDDIR}/nano/curses/ -DNCURSES_STATIC  -DENABLE_MOUSE" \
         NCURSESW_LIBS="-l:pdcurses.a -lwinmm -lbcrypt"
 
-echo "
+cat << EOF >> config.h
 #define HAVE_FREXP_IN_LIBC 1
 #define HAVE_FREXPL_IN_LIBC 1
 #define HAVE_SNPRINTF_RETVAL_C99 1
 #define HAVE_SNPRINTF_TRUNCATION_C99 1
 #define MBRTOWC_EMPTY_INPUT_BUG 1
-" >> config.h
+EOF
 
     sed -i "/#define NEED_PRINTF_DIRECTIVE_A 1/d" config.h
     sed -i "/#define NEED_PRINTF_DIRECTIVE_F 1/d" config.h
