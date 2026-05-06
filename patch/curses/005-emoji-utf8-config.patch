@@ -14,7 +14,7 @@
      while( (i < n || n < 0) && str[i])
      {
  #ifdef PDC_WIDE
-+#ifdef __WIN32
++#ifdef _WIN32
 +        /* Inline 32-bit UTF-8 decoder for 4-byte emoji sequences only.
 +         * This handles emoji that PDC_mbtowc can't convert due to 16-bit wchar_t limitation.
 +         * Other UTF-8 sequences (2-byte, 3-byte) use normal PDC_mbtowc to preserve bitmap symbols. */

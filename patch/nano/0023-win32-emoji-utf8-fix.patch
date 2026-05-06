@@ -3,7 +3,7 @@
 @@ -1055,8 +1055,21 @@
  #ifdef ENABLE_UTF8
  			else if (0xC0 <= keycode && keycode <= 0xFF && using_utf8) {
-+#ifdef __WIN32
++#ifdef _WIN32
 +				/* On Windows, allow UTF-8 sequences for emoji and symbol support.
 +				 * Don't treat them as foreign sequences that get discarded. */
 +				return keycode;
@@ -14,7 +14,7 @@
 +#endif
  			}
 +#ifdef ENABLE_UTF8
-+#ifdef __WIN32
++#ifdef _WIN32
 +			else if (0x80 <= keycode && keycode <= 0xBF && using_utf8) {
 +				return keycode; /* Allow UTF-8 continuation bytes */
 +			}
@@ -26,7 +26,7 @@
  		/* Convert a multibyte character to a single code. */
  		charlength = mbtowide(&wc, text);
  
-+#ifdef __WIN32
++#ifdef _WIN32
 +		/* On Windows with 16-bit wchar_t, check if this is a 4-byte UTF-8 sequence
 +		 * that mbtowide failed to convert. If so, pass the raw bytes through
 +		 * instead of using the replacement character. */

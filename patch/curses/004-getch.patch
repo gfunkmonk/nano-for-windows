@@ -32,7 +32,7 @@
  int mvgetch(int y, int x)
  {
      PDC_LOG(("mvgetch() - called\n"));
-@@ -809,13 +795,47 @@
+@@ -809,13 +795,58 @@
                  rval = ERR;
              }
              else     /* successfully converted to multi-byte string */
@@ -65,6 +65,17 @@
 +        {
 +            /* Combine them into a single 32-bit Unicode point */
 +            ch = ((ch - 0xD800) << 10) + (low - 0xDC00) + 0x10000;
++            /* Convert the SMP codepoint to a 4-byte UTF-8 sequence.
++             * Unget the three trailing continuation bytes so that
++             * subsequent wgetch() calls deliver them in order.  Only
++             * the leading byte is returned here.  This matches the
++             * PDC_display_utf8=TRUE convention used throughout the
++             * build and lets nano's byte-oriented UTF-8 input path
++             * process pasted supplementary-plane emoji correctly. */
++            PDC_ungetch(0x80 | (ch & 0x3F));
++            PDC_ungetch(0x80 | ((ch >> 6) & 0x3F));
++            PDC_ungetch(0x80 | ((ch >> 12) & 0x3F));
++            ch = 0xF0 | ((ch >> 18) & 0x07);
 +        }
 +        else
 +        {
