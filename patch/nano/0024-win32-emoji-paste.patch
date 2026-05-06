@@ -1,0 +1,14 @@
+--- a/src/winio.c
++++ b/src/winio.c
+@@ -1199,6 +1199,12 @@ int parse_kbinput(WINDOW *frame)
+ 	if (escapes == 0) {
+ 		/* Most key codes in byte range cannot be special keys. */
+ 		if (keycode < 0xFF && keycode != '\t' && keycode != DEL_CODE)
+ 			return keycode;
++#ifdef _WIN32
++		/* PDCursesMod assembles surrogate pairs into full codepoints
++		 * (U+10000..U+10FFFF); return them directly as character input. */
++		if ((unsigned int)keycode >= 0x10000)
++			return keycode;
++#endif
+ 	} else if (escapes == 1) {
