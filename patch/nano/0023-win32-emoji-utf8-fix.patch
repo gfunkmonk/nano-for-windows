@@ -1,0 +1,48 @@
+--- a/src/winio.c	2026-05-05 00:00:00.000000000 -0400
++++ b/src/winio.c	2026-05-05 00:00:00.000000000 -0400
+@@ -1055,8 +1055,14 @@
+ #ifdef ENABLE_UTF8
+ 			else if (0xC0 <= keycode && keycode <= 0xFF && using_utf8) {
++#ifdef _WIN32
++				/* On Windows, allow UTF-8 sequences for emoji and symbol support.
++				 * Don't treat them as foreign sequences that get discarded. */
++				return keycode;
++#else
+ 				while (waiting_codes && 0x80 <= nextcodes[0] && nextcodes[0] <= 0xBF)
+ 					get_input(NULL);
+ 				return FOREIGN_SEQUENCE;
++#endif
+ 			}
+ 			else if (keycode < 0x20 && !last_escape_was_alone)
+ 				meta_key = TRUE;
+@@ -1901,6 +1912,31 @@
+ 		/* Convert a multibyte character to a single code. */
+ 		charlength = mbtowide(&wc, text);
+ 
++#ifdef _WIN32
++		/* On Windows with 16-bit wchar_t, check if this is a 4-byte UTF-8 sequence
++		 * that mbtowide failed to convert. If so, pass the raw bytes through
++		 * instead of using the replacement character. */
++		if (charlength < 0 && (unsigned char)text[0] >= 0xF0 && 
++		    (unsigned char)text[0] <= 0xF4) {
++			/* This is a valid 4-byte UTF-8 start byte. Check if we have enough bytes. */
++			if (strlen(text) >= 4) {
++				/* Verify it's a valid 4-byte UTF-8 sequence */
++				if (((unsigned char)text[1] >= 0x80 && (unsigned char)text[1] <= 0xBF) &&
++				    ((unsigned char)text[2] >= 0x80 && (unsigned char)text[2] <= 0xBF) &&
++				    ((unsigned char)text[3] >= 0x80 && (unsigned char)text[3] <= 0xBF)) {
++					/* Valid 4-byte UTF-8 sequence - pass raw bytes through */
++					converted[index++] = text[0];
++					converted[index++] = text[1];
++					converted[index++] = text[2];
++					converted[index++] = text[3];
++					text += 4;
++					column++;
++					continue;
++				}
++			}
++		}
++#endif
++
+ 		/* Represent an invalid character with the Replacement Character. */
+ 		if (charlength < 0) {
