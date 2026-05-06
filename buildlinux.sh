@@ -37,12 +37,12 @@ else
 fi
 
 # Global variables from your workflow
-export PDC_WINCON="TRUE"
-export PDC_ANSI="TRUE"
-export PDC_FORCE_UTF8="1"
-export UNICODE="1"
-export HAVE_WCWIDTH="TRUE"
-export ENABLE_UTF8="TRUE"
+#export PDC_WINCON="TRUE"
+#export PDC_ANSI="TRUE"
+#export PDC_FORCE_UTF8="1"
+#export UNICODE="1"
+#export HAVE_WCWIDTH="TRUE"
+#export ENABLE_UTF8="TRUE"
 export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DCHTYPE_64 -DPDC_WIDE -DPDC_WINCON -DPDC_FORCE_UTF8 -D_GNU_SOURCE"
 
 # --- 3. Toolchain Setup (gfunkmonk/win-cross) ---
@@ -112,13 +112,13 @@ if [ -d "$BASE_DIR/patch/curses" ]; then
 fi
 
 # --- 5. A.I. Killer - Slayer of Giants ---
-echo -e "\n" >> src/definitions.h
-echo '#define PDC_WINCON 1' >> src/definitions.h
-echo '#define PDC_WIDE 1' >> src/definitions.h
-echo '#define CHTYPE_64 1' >> src/definitions.h
-echo '#define PDC_ANSI 1' >> src/definitions.h
-echo '#define PDC_FORCE_UTF8 1' >> src/definitions.h
-echo '#define UNICODE 1' >> src/definitions.h
+#echo -e "\n" >> src/definitions.h
+#echo '#define PDC_WINCON 1' >> src/definitions.h
+#echo '#define PDC_WIDE 1' >> src/definitions.h
+#echo '#define CHTYPE_64 1' >> src/definitions.h
+#echo '#define PDC_ANSI 1' >> src/definitions.h
+#echo '#define PDC_FORCE_UTF8 1' >> src/definitions.h
+#echo '#define UNICODE 1' >> src/definitions.h
 
 # realpath() workaround
 echo -e "${TEAL}PATCH: ${BWHITE}realpath() workaround applied.${NC}"
@@ -227,11 +227,11 @@ sed -i "s/rewinddir(dir)/rewinddir((DIR *)dir)/" src/browser.c
 #sed -i "/int attributes/ s/\bint\b/chtype/g" src/rcfile.c
 #sed -i "/bool parse_combination/ s/\bint\b/chtype/g" src/rcfile.c
 
-echo -e "\n\nPATCH: PDC_display_utf8 = TRUE"
+#echo -e "\n\nPATCH: PDC_display_utf8 = TRUE"
 #sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wincon/*.c
 #sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/vt/*.c
 
-echo -e "\n\nPATCH: Make MAX_UNICODE suck less."
+#echo -e "\n\nPATCH: Make MAX_UNICODE suck less."
 #sed -i 's|MAX_UNICODE 0xffff|MAX_UNICODE 0x10ffff|g' curses/curspriv.h
 
 # Fix folder access test
