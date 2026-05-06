@@ -1,5 +1,5 @@
---- a/curses/wincon/pdcscrn.c	2026-05-01 23:27:03.916218356 -0400
-+++ b/curses/wincon/pdcscrn.c	2026-05-02 03:28:17.532758389 -0400
+--- a/curses/wincon/pdcscrn.c	2026-05-03 12:40:26.650963989 -0400
++++ b/curses/wincon/pdcscrn.c	2026-05-05 21:45:10.126792570 -0400
 @@ -2,6 +2,7 @@
  
  #include "pdcwin.h"
@@ -8,9 +8,7 @@
  #if !defined( __WATCOMC__) && !defined( __DMC__)
     #include <wincon.h>
     #define USE_GET_CONSOLE_WINDOW
-@@ -387,15 +388,28 @@
- /* open the physical screen -- miscellaneous initialization, may save
-    the existing screen for later restoration */
+@@ -389,12 +390,25 @@
  
  int PDC_scr_open(void)
  {
@@ -32,13 +30,11 @@
  
 +    SetConsoleOutputCP(65001); // Set output to UTF-8
 +    SetConsoleCP(65001);       // Set input to UTF-8
-+    
++
      PDC_LOG(("PDC_scr_open() - called\n"));
  
      for (i = 0; i < 16; i++)
-@@ -482,13 +496,19 @@
-     xcpt_filter = SetUnhandledExceptionFilter(_restore_console);
-     SetConsoleCtrlHandler(_ctrl_break, TRUE);
+@@ -482,8 +496,14 @@
  
      SP->_preserve = (getenv("PDC_PRESERVE_SCREEN") != NULL);
  
@@ -47,11 +43,11 @@
 +    DWORD requested_mode = 0x0010; // Existing Grid Mode
 +
 +    /* If we are in a modern terminal, add the Emoji/VT flag */
-+    if (pdc_ansi) 
++    if (pdc_ansi)
 +        requested_mode |= 0x0004; // ENABLE_VIRTUAL_TERMINAL_PROCESSING
 +
 +    result = SetConsoleMode(pdc_con_out, requested_mode);
-+    
++
      if (result)
          SP->termattrs |= A_UNDERLINE | A_LEFT | A_RIGHT;
  
