@@ -15,23 +15,33 @@
      {
  #ifdef PDC_WIDE
 +#ifdef _WIN32
-+        /* Inline 32-bit UTF-8 decoder for 4-byte emoji sequences only.
-+         * This handles emoji that PDC_mbtowc can't convert due to 16-bit wchar_t limitation.
-+         * Other UTF-8 sequences (2-byte, 3-byte) use normal PDC_mbtowc to preserve bitmap symbols. */
-+        if ((unsigned char)str[i] >= 0xF0 && (unsigned char)str[i] <= 0xF4) {
-+            /* This is a 4-byte UTF-8 sequence - handle it directly for emoji support */
-+            uint32_t codepoint = ((str[i] & 0x07) << 18) |
-+                              ((str[i+1] & 0x3F) << 12) |
-+                              ((str[i+2] & 0x3F) << 6) |
-+                              (str[i+3] & 0x3F);
-+            
-+            /* Validate it's a valid 4-byte sequence */
-+            if (i + 3 < (n >= 0 ? n : strlen(str)) &&
-+                (str[i+1] & 0xC0) == 0x80 && (str[i+2] & 0xC0) == 0x80 && (str[i+3] & 0xC0) == 0x80) {
-+                if (waddch(win, (chtype)codepoint) == ERR)
-+                    return ERR;
-+                i += 4;
-+                continue;
++        /* Inline UTF-8 decoder for all multi-byte sequences (2-, 3-, and 4-byte).
++         * PDC_mbtowc relies on mbrtowc which fails for UTF-8 when the C locale is not
++         * UTF-8 (common on Windows).  Decode directly so that symbols like ♠ ♥ ♣ ♦
++         * (3-byte BMP) and emoji like 🔨 with variation selectors (U+FE0F, also 3-byte)
++         * display correctly alongside 4-byte SMP emoji. */
++        {
++            unsigned char b0 = (unsigned char)str[i];
++            int seqlen = 0;
++            uint32_t codepoint = 0;
++            if (b0 >= 0xF0 && b0 <= 0xF4) { seqlen = 4; codepoint = b0 & 0x07; }
++            else if (b0 >= 0xE0)           { seqlen = 3; codepoint = b0 & 0x0F; }
++            else if (b0 >= 0xC0)           { seqlen = 2; codepoint = b0 & 0x1F; }
++            if (seqlen > 0) {
++                int lim = n >= 0 ? n : (int)strlen(str);
++                if (i + seqlen - 1 < lim) {
++                    int k;
++                    for (k = 1; k < seqlen; k++) {
++                        if ((str[i+k] & 0xC0) != 0x80) break;
++                        codepoint = (codepoint << 6) | (str[i+k] & 0x3F);
++                    }
++                    if (k == seqlen) {
++                        if (waddch(win, (chtype)codepoint) == ERR)
++                            return ERR;
++                        i += seqlen;
++                        continue;
++                    }
++                }
 +            }
 +        }
 +#endif
