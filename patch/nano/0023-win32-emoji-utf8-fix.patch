@@ -20,26 +20,25 @@
  		charlength = mbtowide(&wc, text);
  
 +#ifdef _WIN32
-+		/* On Windows with 16-bit wchar_t, check if this is a 4-byte UTF-8 sequence
-+		 * that mbtowide failed to convert. If so, pass the raw bytes through
-+		 * instead of using the replacement character. */
-+		if (charlength < 0 && (unsigned char)text[0] >= 0xF0 && 
-+		    (unsigned char)text[0] <= 0xF4) {
-+			/* This is a valid 4-byte UTF-8 start byte. Check if we have enough bytes. */
-+			if (strlen(text) >= 4) {
-+				/* Verify it's a valid 4-byte UTF-8 sequence */
-+				if (((unsigned char)text[1] >= 0x80 && (unsigned char)text[1] <= 0xBF) &&
-+				    ((unsigned char)text[2] >= 0x80 && (unsigned char)text[2] <= 0xBF) &&
-+				    ((unsigned char)text[3] >= 0x80 && (unsigned char)text[3] <= 0xBF)) {
-+					/* Valid 4-byte UTF-8 sequence - pass raw bytes through */
-+					converted[index++] = text[0];
-+					converted[index++] = text[1];
-+					converted[index++] = text[2];
-+					converted[index++] = text[3];
-+					text += 4;
-+					column++;
-+					continue;
-+				}
++		/* On Windows, mbtowide (gnulib mbrtowc) may fail for any multi-byte UTF-8
++		 * sequence when the C locale is not UTF-8.  Handle 2-, 3-, and 4-byte
++		 * sequences here so that symbols like ♠ ♥ ♣ ♦ (3-byte BMP), variation
++		 * selectors like U+FE0F (also 3-byte), and 4-byte SMP emoji all pass
++		 * through as raw bytes rather than being replaced with U+FFFD. */
++		if (charlength < 0 && (unsigned char)text[0] >= 0xC0) {
++			unsigned char b0 = (unsigned char)text[0];
++			int seqlen = (b0 >= 0xF0 && b0 <= 0xF4) ? 4 : (b0 >= 0xE0) ? 3 : 2;
++			/* Validate continuation bytes; '\0' is caught by the < 0x80 check. */
++			int k;
++			for (k = 1; k < seqlen; k++)
++				if ((unsigned char)text[k] < 0x80 || (unsigned char)text[k] > 0xBF)
++					break;
++			if (k == seqlen) {
++				for (k = 0; k < seqlen; k++)
++					converted[index++] = text[k];
++				text += seqlen;
++				column++;
++				continue;
 +			}
 +		}
 +#endif
