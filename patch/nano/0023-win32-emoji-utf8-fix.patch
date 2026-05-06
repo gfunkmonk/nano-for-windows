@@ -1,6 +1,6 @@
 --- a/src/winio.c	2026-05-05 00:00:00.000000000 -0400
 +++ b/src/winio.c	2026-05-05 00:00:00.000000000 -0400
-@@ -1055,8 +1055,21 @@
+@@ -1055,8 +1055,14 @@
  #ifdef ENABLE_UTF8
  			else if (0xC0 <= keycode && keycode <= 0xFF && using_utf8) {
 +#ifdef _WIN32
@@ -13,13 +13,6 @@
  				return FOREIGN_SEQUENCE;
 +#endif
  			}
-+#ifdef ENABLE_UTF8
-+#ifdef _WIN32
-+			else if (0x80 <= keycode && keycode <= 0xBF && using_utf8) {
-+				return keycode; /* Allow UTF-8 continuation bytes */
-+			}
-+#endif
-+#endif
  			else if (keycode < 0x20 && !last_escape_was_alone)
  				meta_key = TRUE;
 @@ -1901,6 +1912,31 @@
