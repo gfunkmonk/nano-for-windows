@@ -32,7 +32,7 @@ Pretty much everything is supported except for Linux-specific functions, includi
 - Transparent backgrounds in Windows Terminal, and other supported environments.
 - Beta native support for Windows on ARM (WoA)
 
-<div align="center"><img width="947" alt="image" src="https://user-images.githubusercontent.com/22417711/218406120-a7198c98-fd5f-4a1b-8793-b65c3ba68d7c.png"></div>
+<div align="center"><img width="947" alt="image" src="https://github.com/user-attachments/assets/96f12597-b9af-4d20-a0d5-88950218f71d"></div>
 
 <br/>
 
