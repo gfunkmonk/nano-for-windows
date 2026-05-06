@@ -1,0 +1,21 @@
+--- a/curses/wincon/pdcscrn.c
++++ b/curses/wincon/pdcscrn.c
+@@ -437,6 +437,18 @@
+ #endif
+         pdc_conemu ? !strcmp(str, "ON") : FALSE;
+ 
++    /* Enable VT mode and UTF-8 after handles are open and flags are set */
++    if (pdc_con_out != INVALID_HANDLE_VALUE) {
++        DWORD mode = 0;
++        if (GetConsoleMode(pdc_con_out, &mode)) {
++            mode |= 0x0004; // ENABLE_VIRTUAL_TERMINAL_PROCESSING
++            SetConsoleMode(pdc_con_out, mode);
++        }
++    }
++
++    SetConsoleOutputCP(65001);
++    SetConsoleCP(65001);
++
+     GetConsoleScreenBufferInfo(pdc_con_out, &csbi);
+     GetConsoleScreenBufferInfo(pdc_con_out, &orig_scr);
+     GetConsoleMode(pdc_con_in, &old_console_mode);
