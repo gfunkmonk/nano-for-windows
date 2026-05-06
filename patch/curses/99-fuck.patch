@@ -1,0 +1,22 @@
+--- a/curses/wincon/pdckbd.c	2026-05-06 15:52:15.594321585 -0400
++++ b/curses/wincon/pdckbd.c	2026-05-06 15:56:27.201577505 -0400
+@@ -477,6 +477,19 @@
+     WORD vk = KEV.wVirtualKeyCode;
+     DWORD state = KEV.dwControlKeyState;
+ 
++#ifdef PDC_WIDE
++    /* Debug: Log all non-zero Unicode character values to stderr */
++    if (key != 0) {
++        fprintf(stderr, "[DEBUG] vk=0x%04X unicode=0x%04X (%d) state=%08X\n", 
++                vk, key, key, state);
++    }
++    /* Debug: Log surrogate range characters specifically */
++    if (key >= 0xD800 && key < 0xE000) {
++        fprintf(stderr, "[SURROGATE] 0x%04X %s\n", key, 
++                (key < 0xDC00) ? "HIGH" : "LOW");
++    }
++#endif
++
+     int idx;
+     BOOL enhanced;
+ 
