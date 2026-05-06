@@ -221,18 +221,18 @@ echo -e "${GREEN}[${BWHITE}browser.c${GREEN}] ${BWHITE}fix GNUlib glob DIR* conf
 sed -i "s/rewinddir(dir)/rewinddir((DIR *)dir)/" src/browser.c
 
 # PDCurses uses 64bit (chtype) for cell attributes instead of 32bit (int)
-echo -e "\n\nPATCH: Improving from 256colors to true color."
-sed -i "/interface_color_pair/ s/\bint\b/chtype/g" src/prototypes.h src/global.c
-sed -i "/int attributes/ s/\bint\b/chtype/g" src/definitions.h
-sed -i "/int attributes/ s/\bint\b/chtype/g" src/rcfile.c
-sed -i "/bool parse_combination/ s/\bint\b/chtype/g" src/rcfile.c
+#echo -e "\n\nPATCH: Improving from 256colors to true color."
+#sed -i "/interface_color_pair/ s/\bint\b/chtype/g" src/prototypes.h src/global.c
+#sed -i "/int attributes/ s/\bint\b/chtype/g" src/definitions.h
+#sed -i "/int attributes/ s/\bint\b/chtype/g" src/rcfile.c
+#sed -i "/bool parse_combination/ s/\bint\b/chtype/g" src/rcfile.c
 
 echo -e "\n\nPATCH: PDC_display_utf8 = TRUE"
-sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wincon/*.c
-sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/vt/*.c
+#sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wincon/*.c
+#sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/vt/*.c
 
 echo -e "\n\nPATCH: Make MAX_UNICODE suck less."
-sed -i 's|MAX_UNICODE 0xffff|MAX_UNICODE 0x10ffff|g' curses/curspriv.h
+#sed -i 's|MAX_UNICODE 0xffff|MAX_UNICODE 0x10ffff|g' curses/curspriv.h
 
 # Fix folder access test
 echo -e "\n\nPATCH: Porting folder accessibility from executable to read access."
