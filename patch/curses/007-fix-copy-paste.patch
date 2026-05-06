@@ -1,0 +1,20 @@
+--- a/curses/vt/pdcscrn.c
++++ b/curses/vt/pdcscrn.c
+@@ -123,15 +123,18 @@ static int set_win10_for_vt_codes( const bool setting_mode)
+         GetConsoleMode( hIn, &old_input_mode);
+         dwMode = ENABLE_VIRTUAL_TERMINAL_INPUT;
+ #ifdef PDC_WIDE
+         old_code_page = SetConsoleOutputCP( 65001);
++        SetConsoleInputCP( 65001);
+ #else
+         old_code_page = SetConsoleOutputCP( 437);
++        SetConsoleInputCP( 437);
+ #endif
+         }
+     else       /* restoring initial mode */
+         {
+         dwMode = old_input_mode;
+         if( old_code_page)
+             SetConsoleOutputCP( old_code_page);
++            SetConsoleInputCP( old_code_page);
+         }
