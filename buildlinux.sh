@@ -315,4 +315,4 @@ EOF
     upx --lzma --best nano.exe || true
     ls -als
     7z a -mx9 -mm=Deflate64 -mmt$(nproc) "${BASE_DIR}/dist/nano-for-windows_${ARCH}_$(date +%y%m%d_%H%M%S).zip" * .nanorc
-done
+#done
