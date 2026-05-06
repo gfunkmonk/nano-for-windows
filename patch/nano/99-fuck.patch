@@ -1,0 +1,33 @@
+--- a/src/winio.c
++++ b/src/winio.c
+@@ -21,6 +21,11 @@
+ 
+ #include "prototypes.h"
+ #include "revision.h"
++#ifdef _WIN32
++#include <windows.h>
++#include <io.h>
++#include <fcntl.h>
++#endif
+ 
+ #include <ctype.h>
+ #ifdef __linux__
+@@ -1867,6 +1872,18 @@
+ char *display_string(const char *text, size_t column, size_t span,
+ 		bool isdata, bool isprompt)
+ {
++#ifdef _WIN32
++	/* Force Windows console to UTF-8 mode for emoji support */
++	static int console_utf8_set = 0;
++	if (!console_utf8_set) {
++		SetConsoleOutputCP(CP_UTF8);
++		SetConsoleCP(CP_UTF8);
++		_setmode(_fileno(stdout), _O_U8TEXT);
++		_setmode(_fileno(stderr), _O_U8TEXT);
++		console_utf8_set = 1;
++	}
++#endif
++
+ #ifdef ENABLE_UTF8
+ 	wchar_t wc;
+ 	int charwidth;
