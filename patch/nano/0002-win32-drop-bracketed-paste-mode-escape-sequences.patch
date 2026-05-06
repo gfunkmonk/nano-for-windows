@@ -36,7 +36,7 @@ index 55feb92..3a7e47c 100644
  }
  
  /* Ask ncurses for a keycode, or assign a default one. */
-@@ -2496,11 +2487,8 @@ int main(int argc, char **argv)
+@@ -2496,9 +2487,6 @@ int main(int argc, char **argv)
  	shiftaltup = get_keycode("kUP4", SHIFT_ALT_UP);
  	shiftaltdown = get_keycode("kDN4", SHIFT_ALT_DOWN);
  
@@ -62,7 +62,7 @@ index bd48d85..9a2ae42 100644
  
  	linger_after_escape = TRUE;
  
-@@ -1555,14 +1550,8 @@ char *get_verbatim_kbinput(WINDOW *frame, size_t *count)
+@@ -1555,11 +1550,6 @@ char *get_verbatim_kbinput(WINDOW *frame, size_t *count)
  
  	linger_after_escape = FALSE;
  

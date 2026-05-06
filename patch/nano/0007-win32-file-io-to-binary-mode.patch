@@ -12,7 +12,7 @@ diff --git a/src/nano.c b/src/nano.c
 index 3a7e47c..6fc3e20 100644
 --- a/src/nano.c
 +++ b/src/nano.c
-@@ -1842,9 +1842,13 @@ int main(int argc, char **argv)
+@@ -1842,6 +1842,11 @@ int main(int argc, char **argv)
  		{NULL, 0, NULL, 0}
  	};
  

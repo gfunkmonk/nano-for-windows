@@ -35,7 +35,7 @@ index 7fa372b..18cd28e 100644
  #define SHIFT_CONTROL_LEFT    0x411
  #define SHIFT_CONTROL_RIGHT   0x412
  #define SHIFT_CONTROL_UP      0x413
-@@ -191,18 +191,12 @@
+@@ -191,16 +191,10 @@
  #define SHIFT_CONTROL_HOME    0x415
  #define SHIFT_CONTROL_END     0x416
  #define CONTROL_SHIFT_DELETE  0x41D
@@ -91,7 +91,7 @@ index b93f035..8a6b985 100644
  			else
  				return keystring[2];
  		}
-@@ -1357,9 +1377,9 @@ void shortcut_init(void)
+@@ -1357,7 +1377,7 @@ void shortcut_init(void)
  	add_to_sclist(MMAIN, "M-;", 0, run_macro, 0);
  	add_to_sclist(MMAIN, "M-U", 0, do_undo, 0);
  	add_to_sclist(MMAIN, "M-E", 0, do_redo, 0);
@@ -219,7 +219,7 @@ index 42225df..7818a7b 100644
  			switch (keycode) {
  				case KEY_UP:    return KEY_PPAGE;
  				case KEY_DOWN:  return KEY_NPAGE;
-@@ -1262,10 +1275,8 @@ int parse_kbinput(WINDOW *frame)
+@@ -1262,7 +1275,6 @@ int parse_kbinput(WINDOW *frame)
  		}
  #endif
  	}

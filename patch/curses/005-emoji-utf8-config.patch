@@ -53,7 +53,7 @@
      const char *str;
      CONSOLE_SCREEN_BUFFER_INFO csbi;
      HMODULE h_kernel;
-@@ -37,5 +43,13 @@
+@@ -37,6 +43,14 @@
      int i;
  
      PDC_LOG(("PDC_scr_open() - called\n"));

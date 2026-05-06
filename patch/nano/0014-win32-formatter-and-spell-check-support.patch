@@ -185,7 +185,7 @@ index b8899da..e4bff6b 100644
  #endif
  }
  #endif /* ENABLE_SPELLER || ENABLE_FORMATTER */
-@@ -2572,11 +2738,13 @@ void do_spell(void)
+@@ -2572,8 +2738,11 @@ void do_spell(void)
  
  	if (alt_speller && *alt_speller)
  		treat(temp_name, alt_speller, TRUE);
