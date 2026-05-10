@@ -414,14 +414,14 @@ jobs:
         _diff
 
         # PDCurses uses 64bit (chtype) for cell attributes instead of 32bit (int)
-        echo -e "\n\nPATCH: Improving from 256colors to true color."
-        sed -i.bak "/interface_color_pair/ s/\bint\b/chtype/g" src/prototypes.h src/global.c
-        _diff
-        sed -i.bak "/int attributes/ s/\bint\b/chtype/g" src/definitions.h
-        _diff
-        sed -i.bak "/int attributes/ s/\bint\b/chtype/g" src/rcfile.c
-        sed -i.bak "/bool parse_combination/ s/\bint\b/chtype/g" src/rcfile.c
-        _diff
+        #echo -e "\n\nPATCH: Improving from 256colors to true color."
+        #sed -i.bak "/interface_color_pair/ s/\bint\b/chtype/g" src/prototypes.h src/global.c
+        #_diff
+        #sed -i.bak "/int attributes/ s/\bint\b/chtype/g" src/definitions.h
+        #_diff
+        #sed -i.bak "/int attributes/ s/\bint\b/chtype/g" src/rcfile.c
+        #sed -i.bak "/bool parse_combination/ s/\bint\b/chtype/g" src/rcfile.c
+        #_diff
 
         # Desambiguation of BACKSPACE vs ^H, or ENTER vs ^M and certain CTRL+key combos             //o//
         echo -e "\n\nPATCH: Full key modifiers detection."
@@ -468,14 +468,14 @@ jobs:
             meta_key\=PDC_get_key_modifiers\() \& PDC_KEY_MODIFIER_ALT;" src/winio.c
         _diff
 
-        echo -e "\n\nPATCH: PDC_display_utf8 = TRUE"
-        sed -i.bak 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wincon/*.c
-        sed -i.bak 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/vt/*.c
-        _diff
+        #echo -e "\n\nPATCH: PDC_display_utf8 = TRUE"
+        #sed -i.bak 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wincon/*.c
+        #sed -i.bak 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/vt/*.c
+        #_diff
 
-        echo -e "\n\nPATCH: Make MAX_UNICODE suck less."
-        sed -i.bak 's|MAX_UNICODE 0xffff|MAX_UNICODE 0x10ffff|g' curses/curspriv.h
-        _diff
+        #echo -e "\n\nPATCH: Make MAX_UNICODE suck less."
+        #sed -i.bak 's|MAX_UNICODE 0xffff|MAX_UNICODE 0x10ffff|g' curses/curspriv.h
+        #_diff
 
         # Force the UTF-8 decoder to process 4-byte sequences (emojis)
         # even if the system defines a small WCHAR_MAX
