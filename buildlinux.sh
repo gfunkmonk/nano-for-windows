@@ -31,7 +31,8 @@ BASE_DIR="$(pwd)"
 BUILDDIR="${BASE_DIR}/build"
 
 if [ ! -d "$BUILDDIR" ]; then
-  mkdir -p "${BUILDDIR}" && cd "${BUILDDIR}"
+  mkdir -p "${BUILDDIR}"
+  cd "${BUILDDIR}"
 else
   cd "${BUILDDIR}"
 fi
