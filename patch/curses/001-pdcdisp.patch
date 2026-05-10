@@ -63,14 +63,19 @@
      blink = (SP->termattrs & A_BLINK) && (attr & A_BLINK);
  
 +#ifdef PDC_WIDE
-+    /* Force ANSI path for runs containing SMP characters (emoji/supplemental
-+       plane), because WriteConsoleOutput does not handle surrogate pairs.
++    /* Force ANSI path for runs containing SMP characters or combined
++       characters (used for ZWJ emoji clusters), because WriteConsoleOutput
++       does not handle surrogate pairs/combining clusters correctly.
 +       WriteConsoleW (used by the ANSI path) handles them correctly. */
 +    if (!ansi)
 +    {
 +        int k;
 +        for (k = 0; k < len; k++)
-+            if (IS_SUPPLEMENTAL_MULTILINGUAL_PLANE(srcp[k] & A_CHARTEXT))
++            if (IS_SUPPLEMENTAL_MULTILINGUAL_PLANE(srcp[k] & A_CHARTEXT)
++#ifdef USING_COMBINING_CHARACTER_SCHEME
++                || ((srcp[k] & A_CHARTEXT) > MAX_UNICODE)
++#endif
++               )
 +            {
 +                ansi = TRUE;
 +                break;
