@@ -1,0 +1,50 @@
+--- a/curses/pdcurses/addstr.c	2026-05-05 00:00:00.000000000 -0400
++++ b/curses/pdcurses/addstr.c	2026-05-05 00:00:00.000000000 -0400
+@@ -2,6 +2,7 @@
+ 
+ #include <curspriv.h>
+ #include <assert.h>
++#include <string.h>
+ 
+ /*man-start**************************************************************
+ 
+--- a/curses/pdcurses/addstr.c	2026-05-05 00:00:00.000000000 -0400
++++ b/curses/pdcurses/addstr.c	2026-05-05 00:00:00.000000000 -0400
+@@ -79,6 +79,37 @@
+     while( (i < n || n < 0) && str[i])
+     {
+ #ifdef PDC_WIDE
++#ifdef _WIN32
++        /* Inline UTF-8 decoder for all multi-byte sequences (2-, 3-, and 4-byte).
++         * PDC_mbtowc relies on mbrtowc which fails for UTF-8 when the C locale is not
++         * UTF-8 (common on Windows).  Decode directly so that symbols like ♠ ♥ ♣ ♦
++         * (3-byte BMP) and emoji like 🔨 with variation selectors (U+FE0F, also 3-byte)
++         * display correctly alongside 4-byte SMP emoji. */
++        {
++            unsigned char b0 = (unsigned char)str[i];
++            int seqlen = 0;
++            uint32_t codepoint = 0;
++            if (b0 >= 0xF0 && b0 <= 0xF4) { seqlen = 4; codepoint = b0 & 0x07; }
++            else if (b0 >= 0xE0)           { seqlen = 3; codepoint = b0 & 0x0F; }
++            else if (b0 >= 0xC0)           { seqlen = 2; codepoint = b0 & 0x1F; }
++            if (seqlen > 0) {
++                int lim = n >= 0 ? n : (int)strlen(str);
++                if (i + seqlen - 1 < lim) {
++                    int k;
++                    for (k = 1; k < seqlen; k++) {
++                        if ((str[i+k] & 0xC0) != 0x80) break;
++                        codepoint = (codepoint << 6) | (str[i+k] & 0x3F);
++                    }
++                    if (k == seqlen) {
++                        if (waddch(win, (chtype)codepoint) == ERR)
++                            return ERR;
++                        i += seqlen;
++                        continue;
++                    }
++                }
++            }
++        }
++#endif
+         wchar_t wch;
+         int retval = PDC_mbtowc(&wch, str + i, n >= 0 ? n - i : 6);
+

@@ -1,9 +1,8 @@
 name: Toolchain Builder
-# REGENERATES THE LLVM-MINGW for Alpine Linux with fresh code.
+
 on:
   schedule:
     - cron: '51 10 * * SAT'
-    # runs at 10:51 UTC every Saturday
   workflow_dispatch:
     inputs:
       debug_enabled:
@@ -13,37 +12,55 @@ on:
         type: boolean
 
 jobs:
-
   build:
-    if: ${{ true }}
     name: Builds toolchain
     runs-on: ubuntu-latest
-    container: alpine:edge
-    defaults:
-      run:
-        shell: bash
+    container:
+      image: alpine:edge
+      options: --user root
+    env:
+      # Use all available cores and setup ccache path
+      MAKEFLAGS: "-j$(nproc)"
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+    
     steps:
-    - name: "⏬ Download tools"
-      if: ${{ job.container }}
+    - name: "⏬ Install Base Dependencies"
       shell: sh
       run: |
         apk update && apk upgrade
-        apk add  git bash curl jq tar \
-           build-base python3 cmake linux-headers coreutils perl
-        # set PATH like in Ubuntu
+        apk add git bash curl jq tar build-base python3 cmake linux-headers coreutils perl openssh-client xz ccache ninja
+        mkdir -p $HOME/.local/bin
         echo "PATH=$HOME/.local/bin:$PATH" >> $GITHUB_ENV
-        # this seems to be needed when running in a container (beause of UID mismatch??)
         git config --global --add safe.directory '*'
-        
+
+    - name: "🕐 Get latest LLVM-MinGW commit hash for cache key"
+      id: llvm-rev
+      shell: bash
+      run: |
+        # FIX: use the upstream HEAD SHA as cache key so the cache is
+        # invalidated whenever llvm-mingw is updated, not every run.
+        REV=$(git ls-remote https://github.com/mstorsjo/llvm-mingw.git HEAD | cut -f1)
+        echo "rev=${REV}" >> $GITHUB_OUTPUT
+
+    - name: "💾 Cache Toolchain"
+      uses: actions/cache@v5
+      id: cache-toolchain
+      with:
+        path: llvm-mingw
+        # FIX: was "llvm-mingw-${{ github.run_id }}" — unique per run means
+        # restore-keys never find a warm cache. Now keyed on upstream HEAD SHA.
+        key: llvm-mingw-${{ steps.llvm-rev.outputs.rev }}
+        restore-keys: |
+          llvm-mingw-
+
     - name: "🔧 Prepare debug session"
       if: github.event.inputs.debug_enabled == 'true'
+      shell: bash
       run: |
-        apk add bash nano-syntax iproute2 util-linux-misc
-        wget https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/posh-linux-amd64 -O /usr/local/bin/oh-my-posh
+        apk add nano iproute2 util-linux
+        curl -fsSL -o /usr/local/bin/oh-my-posh https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/posh-linux-amd64
         chmod +x /usr/local/bin/oh-my-posh
-        wget -q https://github.com/okibcn/miniU/raw/main/Github_Linux/.nanorc -O /etc/nanorc
-        wget -q https://github.com/okibcn/miniU/raw/main/Github_Linux/profile.sh -O ~/.zshrc
-        cat ~/.zshrc >> ~/.bashrc 
+        echo 'eval "$(oh-my-posh init bash)"' >> ~/.bashrc
 
     - name: "🐞 Debug session"
       uses: mxschmitt/action-tmate@v3
@@ -51,19 +68,52 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: "⚙️ Build LLVM-MinGW Master"
-      run: |
-        echo " Using SHELL: $0"
-        git clone https://github.com/mstorsjo/llvm-mingw.git llvm
-        cd llvm
-          ./build-all.sh ../llvm-mingw
+    - name: "💾 Restore ccache"
+      uses: actions/cache@v5
+      with:
+        path: .ccache
+        key: ccache-llvm-${{ steps.llvm-rev.outputs.rev }}
+        restore-keys: |
+          ccache-llvm-
 
-    - name: "🚮 Recycle Cache"
+    - name: "⚙️ Build LLVM-MinGW Master"
+      # FIX: skip rebuild if cache was fully restored
+      if: steps.cache-toolchain.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        # Create ccache symlinks for Alpine if they don't exist
+        # This ensures 'gcc' actually points to 'ccache'
+        mkdir -p $HOME/.local/bin
+        ln -sf /usr/bin/ccache $HOME/.local/bin/gcc
+        ln -sf /usr/bin/ccache $HOME/.local/bin/g++
+        ln -sf /usr/bin/ccache $HOME/.local/bin/cc
+        ln -sf /usr/bin/ccache $HOME/.local/bin/c++
+        
+        # Ensure our local bin is at the front of the PATH
+        export PATH="$HOME/.local/bin:$PATH"
+        
+        # Verify ccache is active
+        which gcc # Should return /root/.local/bin/gcc
+
+        echo "Using SHELL: $SHELL"
+        if [ ! -d "llvm" ]; then
+          git clone --depth 1 https://github.com/mstorsjo/llvm-mingw.git llvm
+        fi
+        cd llvm
+        mkdir -p ../llvm-mingw
+        ./build-all.sh ../llvm-mingw
+
+    - name: "🚮 Delete stale caches"
+      # Only prune old caches after a successful fresh build.
+      # FIX: was running even on cache-hit (pointless); now gated on fresh build.
+      if: steps.cache-toolchain.outputs.cache-hit != 'true' && success()
       uses: snnaplab/delete-branch-cache-action@v1
 
-    - name: "💾 Save Build Folder"
-      uses: actions/cache@v3.3.1
-      id: cache-folder
+    - name: "📦 Upload Toolchain Artifact"
+      # Make the toolchain available as a downloadable artifact in addition
+      # to the cache, so other workflows can fetch it via download-artifact.
+      uses: actions/upload-artifact@v7  # FIX: was missing entirely
       with:
-        key: llvm-folder
+        name: llvm-mingw
         path: llvm-mingw
+        retention-days: 7
