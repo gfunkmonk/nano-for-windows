@@ -9,8 +9,6 @@ Signed-off-by: Chawye Hsu <su+git@chawyehsu.com>
  src/utils.c | 12 ++++--------
  2 files changed, 6 insertions(+), 10 deletions(-)
 
-diff --git a/src/files.c b/src/files.c
-index 36f8c3a..e541757 100644
 --- a/src/files.c
 +++ b/src/files.c
 @@ -1462,7 +1462,7 @@ char *check_writable_directory(const char *path)
@@ -31,30 +29,6 @@ index 36f8c3a..e541757 100644
  
  	extension = strrchr(openfile->filename, '.');
  	normalize_slashes(extension);
-diff --git a/src/utils.c b/src/utils.c
-index 84df35c..ad14c79 100644
---- a/src/utils.c
-+++ b/src/utils.c
-@@ -35,15 +35,11 @@ void get_homedir(void)
- 	if (homedir == NULL) {
- 		const char *homenv = getenv("HOME");
- 
--#ifdef HAVE_PWD_H
--		/* When $HOME is unset, or when we're root, try the database. */
--		if (homenv == NULL || geteuid() == ROOT_UID) {
--			const struct passwd *userage = getpwuid(geteuid());
-+		if (homenv == NULL || *homenv == '\0')
-+			homenv = getenv("USERPROFILE");
- 
--			if (userage != NULL)
--				homenv = userage->pw_dir;
--		}
--#endif
-+		if (homenv == NULL || *homenv == '\0')
-+			homenv = getenv("ALLUSERSPROFILE");
- 
- 		/* Only set `homedir` if a home directory could be determined. */
- 		if (homenv != NULL && *homenv != '\0')
 -- 
 2.54.0.windows.1
 

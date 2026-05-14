@@ -1,17 +1,21 @@
 --- a/curses/pdcurses/addch.c   2026-05-10 00:00:00.000000000 -0400
 +++ b/curses/pdcurses/addch.c   2026-05-10 00:00:00.000000000 -0400
-@@ -537,8 +537,24 @@
+@@ -537,8 +537,28 @@
      {
          const bool is_combining = (text && !text_width);
 +        /* Bypass broken combining system for ZWJ sequences and emoji */
-+        const bool is_zwj = (text == 0x200D);
++        const bool is_zwj = (text >= 0x200D && text <= 0x20FF);
 +        const bool is_variation_selector = (text >= 0xFE00 && text <= 0xFE0F);
 +        const bool is_emoji = (text >= 0x1F000 && text <= 0x1FFFF) ||  /* Emoji */
-+                              (text >= 0x2600 && text <= 0x27BF) ||  /* Symbols */
++                              (text >= 0x2600 && text <= 0x26FF) ||  /* Misc symbols */
++                              (text >= 0x2700 && text <= 0x27BF) ||  /* Dingbats */
++                              (text >= 0x1F018 && text <= 0x1F270) ||  /* Various asian characters */
++                              (text >= 0x1F1E6 && text <= 0x1F1FF) ||  /* Regional country flags */
 +                              (text >= 0x1F300 && text <= 0x1F5FF) ||  /* Misc emoji */
 +                              (text >= 0x1F600 && text <= 0x1F64F) ||  /* Emoticons */
 +                              (text >= 0x1F680 && text <= 0x1F6FF) ||  /* Transport */
-+                              (text >= 0x1F700 && text <= 0x1F77F);    /* Alchemical */
++                              (text >= 0x1F700 && text <= 0x1F77F) ||  /* Alchemical */
++                              (text >= 0x1F900 && text <= 0x1F9FF);  /* Supplemental Symbols and Pictographs */
 +
 +        /* Store emoji/ZWJ/variation selector sequences directly without combining */
 +        if (is_emoji || is_zwj || is_variation_selector) {
