@@ -15,7 +15,7 @@
  			}
  			else if (keycode < 0x20 && !last_escape_was_alone)
  				meta_key = TRUE;
-@@ -1901,6 +1912,45 @@
+@@ -1901,6 +1912,30 @@
  		/* Convert a multibyte character to a single code. */
  		charlength = mbtowide(&wc, text);
  
@@ -37,22 +37,7 @@
 +				for (k = 0; k < seqlen; k++)
 +					converted[index++] = text[k];
 +				text += seqlen;
-+					/* Decode the Unicode codepoint to calculate proper column width */
-+					int32_t codepoint = 0;
-+					if (seqlen == 2) {
-+						codepoint = ((text[0] & 0x1F) << 6) | (text[1] & 0x3F);
-+					} else if (seqlen == 3) {
-+						codepoint = ((text[0] & 0x0F) << 12) | ((text[1] & 0x3F) << 6) | (text[2] & 0x3F);
-+					} else if (seqlen == 4) {
-+						codepoint = ((text[0] & 0x07) << 18) | ((text[1] & 0x3F) << 12) | 
-+						           ((text[2] & 0x3F) << 6) | (text[3] & 0x3F);
-+					}
-+					
-+					/* Use uc_width to get the actual display width.
-+					 * This fixes ZWJ sequences (width 0), variation selectors (width 0),
-+					 * and double-width characters like ⬛ (width 2). */
-+					int charwidth = uc_width((wchar_t)codepoint, "UTF-8");
-+					column += charwidth;
++				column++;
 +				continue;
 +			}
 +		}
