@@ -200,6 +200,11 @@ sed -i "/initscr/i\\
 echo -e "${GREEN}[${BWHITE}browser.c${GREEN}] ${BWHITE}Zeroing selected status${NC}"
 sed -i 's/--selected/selected=0/' src/browser.c
 
+# GNUlib glob wraps opendir with its own gl_directory type, so dir is
+# struct gl_directory* by the time rewinddir is called. Cast it to DIR*.
+echo -e "${GREEN}[${BWHITE}browser.c${GREEN}] ${BWHITE}fix GNUlib glob DIR* conflict${NC}"
+sed -i 's/rewinddir(dir)/rewinddir((DIR *)dir)/' src/browser.c
+
 echo -e "${GREEN}[${BWHITE}nano.c${GREEN}] ${BWHITE}Updating modified buffer prompt text${NC}"
 sed -i "s|Save modified buffer|& (Y/N/^C)|" src/nano.c
 
@@ -221,6 +226,17 @@ sed -i "/0x42[1234]/d" src/definitions.h
 echo -e "${GREEN}[${BWHITE}browser.c${GREEN}] ${BWHITE}fix GNUlib glob DIR* conflict in browser.c.${NC}"
 sed -i "s/rewinddir(dir)/rewinddir((DIR *)dir)/" src/browser.c
 
+# 1. Force nano to treat the character range for Emojis as double-width (2 columns)
+# This patches the wide-character width detection logic.
+echo -e "${GREEN}[${BWHITE}chars.c${GREEN}] ${BWHITE}fix wcwidth${NC}"
+sed -i 's/return wcwidth(wc);/if (wc >= 0x1F300 \&\& wc <= 0x1F9FF) return 2; return wcwidth(wc);/' src/chars.c
+# 2. Adjust winio.c to prevent PDCurses from truncating high-plane characters
+# This ensures that characters outside the BMP (Basic Multilingual Plane) aren't filtered.
+echo -e "${GREEN}[${BWHITE}winio.c${GREEN}] ${BWHITE}fix wcwidth${NC}"
+sed -i '/if (is_extended_char(wc))/i \    if (wc > 0xFFFF) return true;' src/winio.c
+# 3. Ensure the title bar and status bar allow for multi-column character spacing
+sed -i 's/waddnwstr(window, \&widechar, 1);/waddnwstr(window, \&widechar, wcwidth(widechar));/' src/winio.c
+
 # PDCurses uses 64bit (chtype) for cell attributes instead of 32bit (int)
 #echo -e "\n\nPATCH: Improving from 256colors to true color."
 #sed -i "/interface_color_pair/ s/\bint\b/chtype/g" src/prototypes.h src/global.c
@@ -234,15 +250,6 @@ sed -i "s/rewinddir(dir)/rewinddir((DIR *)dir)/" src/browser.c
 
 #echo -e "\n\nPATCH: Make MAX_UNICODE suck less."
 #sed -i 's|MAX_UNICODE 0xffff|MAX_UNICODE 0x10ffff|g' curses/curspriv.h
-
-# Fix folder access test
-echo -e "\n\nPATCH: Porting folder accessibility from executable to read access."
-sed -i "s/X_OK/R_OK/" src/files.c
-
-# GNUlib glob wraps opendir with its own gl_directory type, so dir is
-# struct gl_directory* by the time rewinddir is called. Cast it to DIR*.
-echo -e "\n\nPATCH: fix GNUlib glob DIR* conflict in browser.c."
-sed -i 's/rewinddir(dir)/rewinddir((DIR *)dir)/' src/browser.c
 
 # --- 6. Build Binaries ---
 for TRIPLET in "${TARGETS[@]}"; do

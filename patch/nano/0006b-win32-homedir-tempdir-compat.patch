@@ -1,0 +1,22 @@
+--- a/src/utils.c	2026-05-14 16:15:31.548598312 -0400
++++ b/src/utils.c.p	2026-05-14 16:16:50.533580992 -0400
+@@ -35,15 +35,11 @@
+ 	if (homedir == NULL) {
+ 		const char *homenv = getenv("HOME");
+ 
+-#ifdef HAVE_PWD_H
+-		/* When $HOME is unset, or when we're root, try the database. */
+-		if (homenv == NULL || geteuid() == ROOT_UID) {
+-			const struct passwd *userage = getpwuid(geteuid());
++                   if (homenv == NULL || *homenv == '\0')
++                             homenv = getenv("USERPROFILE");
+ 
+-			if (userage)
+-				homenv = userage->pw_dir;
+-		}
+-#endif
++                   if (homenv == NULL || *homenv == '\0')
++                             homenv = getenv("ALLUSERSPROFILE");
+ 
+ 		/* Only set `homedir` if a home directory could be determined. */
+ 		if (homenv && *homenv)
