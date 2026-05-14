@@ -26,7 +26,7 @@
          const bool is_low_surrogate = PDC_IS_LOW_SURROGATE( text);
 
 -        if( is_combining || is_low_surrogate)
-+        if( is_combining || is_zwj || is_variation_selector || is_low_surrogate)
++        if( is_combining || is_low_surrogate)
          {
              chtype prev_char;
 
