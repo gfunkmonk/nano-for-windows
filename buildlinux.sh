@@ -247,6 +247,10 @@ sed -i "s/rewinddir(dir)/rewinddir((DIR *)dir)/" src/browser.c
 #echo -e "\n\nPATCH: Make MAX_UNICODE suck less."
 #sed -i 's|MAX_UNICODE 0xffff|MAX_UNICODE 0x10ffff|g' curses/curspriv.h
 
+echo -e "${GREEN}[${BWHITE}pdckbd.c${GREEN}] ${BWHITE}Forced for 64-bit chtype${NC}"
+sed -i 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/vt/pdckbd.c
+sed -i 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/wincon/pdckbd.c
+
 # --- 6. Build Binaries ---
 for TRIPLET in "${TARGETS[@]}"; do
     # Now ARCH is actually the arch (e.g., x86_64)
