@@ -38,13 +38,9 @@ else
 fi
 
 # Global variables from your workflow
-#export PDC_WINCON="TRUE"
-#export PDC_ANSI="TRUE"
-#export PDC_FORCE_UTF8="1"
-#export UNICODE="1"
-#export HAVE_WCWIDTH="TRUE"
-#export ENABLE_UTF8="TRUE"
 export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DCHTYPE_64 -DPDC_WIDE -DPDC_WINCON -DPDC_FORCE_UTF8 -D_GNU_SOURCE"
+export WT_SESSION="1"
+export ConEmuANSI="ON"
 
 # --- 3. Toolchain Setup (gfunkmonk/win-cross) ---
 echo -e "${TEAL}Setting up toolchain...${NC}"
@@ -228,14 +224,14 @@ sed -i "s/rewinddir(dir)/rewinddir((DIR *)dir)/" src/browser.c
 
 # 1. Force nano to treat the character range for Emojis as double-width (2 columns)
 # This patches the wide-character width detection logic.
-echo -e "${GREEN}[${BWHITE}chars.c${GREEN}] ${BWHITE}fix wcwidth${NC}"
-sed -i 's/return wcwidth(wc);/if (wc >= 0x1F300 \&\& wc <= 0x1F9FF) return 2; return wcwidth(wc);/' src/chars.c
+##echo -e "${GREEN}[${BWHITE}chars.c${GREEN}] ${BWHITE}fix wcwidth${NC}"
+##sed -i 's/return wcwidth(wc);/if (wc >= 0x1F300 \&\& wc <= 0x1F9FF) return 2; return wcwidth(wc);/' src/chars.c
 # 2. Adjust winio.c to prevent PDCurses from truncating high-plane characters
 # This ensures that characters outside the BMP (Basic Multilingual Plane) aren't filtered.
-echo -e "${GREEN}[${BWHITE}winio.c${GREEN}] ${BWHITE}fix wcwidth${NC}"
-sed -i '/if (is_extended_char(wc))/i \    if (wc > 0xFFFF) return true;' src/winio.c
+##echo -e "${GREEN}[${BWHITE}winio.c${GREEN}] ${BWHITE}fix wcwidth${NC}"
+##sed -i '/if (is_extended_char(wc))/i \    if (wc > 0xFFFF) return true;' src/winio.c
 # 3. Ensure the title bar and status bar allow for multi-column character spacing
-sed -i 's/waddnwstr(window, \&widechar, 1);/waddnwstr(window, \&widechar, wcwidth(widechar));/' src/winio.c
+##sed -i 's/waddnwstr(window, \&widechar, 1);/waddnwstr(window, \&widechar, wcwidth(widechar));/' src/winio.c
 
 # PDCurses uses 64bit (chtype) for cell attributes instead of 32bit (int)
 #echo -e "\n\nPATCH: Improving from 256colors to true color."
@@ -257,8 +253,8 @@ for TRIPLET in "${TARGETS[@]}"; do
     ARCH=$(echo "$TRIPLET" | cut -d'-' -f1)
     PREFIX="$BASE_DIR/dist/$ARCH"
 
-    # Mapping for your 'Win64/WinARM64' labels
-    NAME=$(echo "$ARCH" | sed 's/aarch64/WinARM64/;s/x86_64/Win64/;s/i686/Win32/')
+    # Mapping for your 'Win64/WinARM' labels
+    NAME=$(echo "$ARCH" | sed 's/aarch64/WinARM/;s/x86_64/Win64/;s/i686/Win32/')
     SHORT=$(echo "$ARCH" | cut -d'-' -f1 | sed 's/aarch64/a64/;s/x86_64/w64/;s/i686/w32/')
 
     echo -e "${TEAL}Building for ${ARCH} (Target: ${TRIPLET})${NC}"
@@ -269,7 +265,7 @@ done
     make clean || true
     unset NCURSESW_CFLAGS
     make -j$(nproc) CC="$TRIPLET-gcc" AR="$TRIPLET-ar" STRIP="$TRIPLET-strip" \
-        WIDE=Y UTF8=Y DLL=N CHTYPE_64=Y _${SHORT}=Y \
+        WIDE=Y UTF8=Y DLL=N CHTYPE_64=Y WINCON=Y _${SHORT}=Y \
         CFLAGS="${CFLAGS} -I.." \
         CXXFLAGS="${CFLAGS}"
 
@@ -279,7 +275,7 @@ done
     [ -d "build" ] && rm -rf build
     mkdir build && cd build
     ../configure --host="$TRIPLET" --prefix="$PREFIX" \
-        --enable-utf8 --enable-threads=windows --disable-nls --sysconfdir="C:\\\\ProgramData" --enable-extras --enable-color --enable-nanorc \
+        --enable-utf8 --enable-threads=windows --disable-nls --sysconfdir="C:\\\\ProgramData" --enable-extras --enable-color --enable-nanorc --disable-dependency-tracking \
         CFLAGS="${CFLAGS} -DPDC_NCMOUSE" \
         CXXFLAGS="${CFLAGS}" \
         LDFLAGS="-L${BUILDDIR}/nano/curses/$PDTERM -static -static-libgcc $BUILDDIR/nano/curses/$PDTERM/pdcurses.a" \
