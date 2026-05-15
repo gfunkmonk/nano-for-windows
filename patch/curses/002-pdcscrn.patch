@@ -1,7 +1,8 @@
---- a/curses/wincon/pdcscrn.c
-+++ b/curses/wincon/pdcscrn.c
-@@ -30,6 +30,12 @@
-
+diff -ruN curses/wincon/pdcscrn.c cursesb/wincon/pdcscrn.c
+--- a/curses/wincon/pdcscrn.c	2026-05-15 06:42:07.805023451 -0400
++++ b/curses/wincon/pdcscrn.c	2026-05-15 06:44:15.225022614 -0400
+@@ -389,6 +389,12 @@
+ 
  int PDC_scr_open(void)
  {
 +    /* Enable proper UTF-8 support for emoji display */
@@ -13,11 +14,10 @@
      const char *str;
      CONSOLE_SCREEN_BUFFER_INFO csbi;
      HMODULE h_kernel;
-@@ -37,6 +43,14 @@
-     int i;
-
+@@ -397,6 +403,14 @@
+ 
      PDC_LOG(("PDC_scr_open() - called\n"));
-+
+ 
 +    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
 +    if (hOut != INVALID_HANDLE_VALUE) {
 +        if (GetConsoleMode(hOut, &mode)) {
@@ -25,13 +25,14 @@
 +            SetConsoleMode(hOut, mode);
 +        }
 +    }
-
++
      for (i = 0; i < 16; i++)
-
-@@ -437,6 +437,18 @@
+     {
+         pdc_curstoreal[realtocurs[i]] = (short)i;
+@@ -434,6 +448,18 @@
  #endif
          pdc_conemu ? !strcmp(str, "ON") : FALSE;
-
+ 
 +    /* Enable VT mode and UTF-8 after handles are open and flags are set */
 +    if (pdc_con_out != INVALID_HANDLE_VALUE) {
 +        DWORD mode = 0;
