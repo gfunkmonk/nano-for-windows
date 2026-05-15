@@ -24,7 +24,7 @@ env:
   CLICOLOR_FORCE: "1"
   WT_SESSION: "1"        # This triggers pdc_wt = TRUE
   ConEmuANSI: "ON"      # This is a fallback if WT_SESSION isn't found
-  CFLAGS: "-O2 -fno-math-errno -flto -std=c17 -Wno-error -DCHTYPE_64 -DPDC_WIDE -DPDC_VT=RGB -DPDC_FORCE_UTF8 -DPDC_SYMBOL_VERSIONING=0 -D_GNU_SOURCE"
+  CFLAGS: "-O3 -fno-math-errno -flto -std=c17 -Wno-error -DCHTYPE_64 -DPDC_WIDE -DPDC_VT=RGB -DPDC_FORCE_UTF8 -DPDC_SYMBOL_VERSIONING=0 -D_GNU_SOURCE"
 
 jobs:
   ## PRECHECK ##############################################################################
@@ -128,7 +128,7 @@ jobs:
           - { arch: i686,    name: Win32,    short: w32, pretty: 32 bits  }
           - { arch: x86_64,  name: Win64,    short: w64, pretty: 64 bits  }
           #- { arch: arm,     name: arm32,    short: a32, pretty: on Arm32 }
-          - { arch: aarch64, name: WinARM64, short: a64, pretty: on Arm64 }
+          - { arch: aarch64, name: WinARM, short: a64, pretty: on Arm64 }
     defaults:
       run:
         shell: bash
@@ -383,14 +383,14 @@ jobs:
 
         # 1. Force nano to treat the character range for Emojis as double-width (2 columns)
         # This patches the wide-character width detection logic.
-        echo -e "\n\nPATCH: fix wcwidth"
-        sed -i.bak 's/return wcwidth(wc);/if (wc >= 0x1F300 \&\& wc <= 0x1F9FF) return 2; return wcwidth(wc);/' src/chars.c
+        #echo -e "\n\nPATCH: fix wcwidth"
+        #sed -i.bak 's/return wcwidth(wc);/if (wc >= 0x1F300 \&\& wc <= 0x1F9FF) return 2; return wcwidth(wc);/' src/chars.c
         # 2. Adjust winio.c to prevent PDCurses from truncating high-plane characters
         # This ensures that characters outside the BMP (Basic Multilingual Plane) aren't filtered.
-        sed -i.bak '/if (is_extended_char(wc))/i \    if (wc > 0xFFFF) return true;' src/winio.c
+        #sed -i.bak '/if (is_extended_char(wc))/i \    if (wc > 0xFFFF) return true;' src/winio.c
         # 3. Ensure the title bar and status bar allow for multi-column character spacing
-        sed -i.bak 's/waddnwstr(window, \&widechar, 1);/waddnwstr(window, \&widechar, wcwidth(widechar));/' src/winio.c
-        _diff
+        #sed -i.bak 's/waddnwstr(window, \&widechar, 1);/waddnwstr(window, \&widechar, wcwidth(widechar));/' src/winio.c
+        #_diff
 
         ####                               ####
         #### PDCursesMod especific patches ####
@@ -469,6 +469,7 @@ jobs:
         # even if the system defines a small WCHAR_MAX
         echo -e "\n\nPATCH: Force 4-byte UTF-8 emoji input in VT keyboard driver."
         sed -i.bak 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/vt/pdckbd.c
+        sed -i.bak 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/wincon/pdckbd.c
         _diff
 
         ####                               ####
@@ -499,7 +500,7 @@ jobs:
         echo -e "\n\nBRANDING: NANO VER DISPLAY."
         cd ..
         sed -i.bak 's/ GNU nano from git,//' src/nano.c
-        sed -i 's|Compiled options|Project info at https://github.com/gfunkmonk/nano-for-windows\\n Using '"${CURSES}"'\\n &|' src/nano.c
+        sed -i.bak 's|Compiled options|Project info at https://github.com/gfunkmonk/nano-for-windows\\n Using '"${CURSES}"'\\n &|' src/nano.c
         _diff
 
     - name: "⚙️ Compile curses lib for ${{ matrix.name}}"

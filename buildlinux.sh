@@ -44,7 +44,7 @@ fi
 #export UNICODE="1"
 #export HAVE_WCWIDTH="TRUE"
 #export ENABLE_UTF8="TRUE"
-export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DCHTYPE_64 -DPDC_WIDE -DPDC_WINCON -DPDC_FORCE_UTF8 -D_GNU_SOURCE"
+export CFLAGS="-O3 -fno-math-errno -flto -std=c17 -Wno-error -DCHTYPE_64 -DPDC_WIDE -DPDC_WINCON -DPDC_FORCE_UTF8 -D_GNU_SOURCE"
 
 # --- 3. Toolchain Setup (gfunkmonk/win-cross) ---
 echo -e "${TEAL}Setting up toolchain...${NC}"
@@ -228,14 +228,14 @@ sed -i "s/rewinddir(dir)/rewinddir((DIR *)dir)/" src/browser.c
 
 # 1. Force nano to treat the character range for Emojis as double-width (2 columns)
 # This patches the wide-character width detection logic.
-echo -e "${GREEN}[${BWHITE}chars.c${GREEN}] ${BWHITE}fix wcwidth${NC}"
-sed -i 's/return wcwidth(wc);/if (wc >= 0x1F300 \&\& wc <= 0x1F9FF) return 2; return wcwidth(wc);/' src/chars.c
+#echo -e "${GREEN}[${BWHITE}chars.c${GREEN}] ${BWHITE}fix wcwidth${NC}"
+#sed -i 's/return wcwidth(wc);/if (wc >= 0x1F300 \&\& wc <= 0x1F9FF) return 2; return wcwidth(wc);/' src/chars.c
 # 2. Adjust winio.c to prevent PDCurses from truncating high-plane characters
 # This ensures that characters outside the BMP (Basic Multilingual Plane) aren't filtered.
-echo -e "${GREEN}[${BWHITE}winio.c${GREEN}] ${BWHITE}fix wcwidth${NC}"
-sed -i '/if (is_extended_char(wc))/i \    if (wc > 0xFFFF) return true;' src/winio.c
+#echo -e "${GREEN}[${BWHITE}winio.c${GREEN}] ${BWHITE}fix wcwidth${NC}"
+#sed -i '/if (is_extended_char(wc))/i \    if (wc > 0xFFFF) return true;' src/winio.c
 # 3. Ensure the title bar and status bar allow for multi-column character spacing
-sed -i 's/waddnwstr(window, \&widechar, 1);/waddnwstr(window, \&widechar, wcwidth(widechar));/' src/winio.c
+#sed -i 's/waddnwstr(window, \&widechar, 1);/waddnwstr(window, \&widechar, wcwidth(widechar));/' src/winio.c
 
 # PDCurses uses 64bit (chtype) for cell attributes instead of 32bit (int)
 #echo -e "\n\nPATCH: Improving from 256colors to true color."
@@ -250,6 +250,10 @@ sed -i 's/waddnwstr(window, \&widechar, 1);/waddnwstr(window, \&widechar, wcwidt
 
 #echo -e "\n\nPATCH: Make MAX_UNICODE suck less."
 #sed -i 's|MAX_UNICODE 0xffff|MAX_UNICODE 0x10ffff|g' curses/curspriv.h
+
+echo -e "${GREEN}[${BWHITE}pdckbd.c${GREEN}] ${BWHITE}Forced for 64-bit chtype${NC}"
+sed -i 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/vt/pdckbd.c
+sed -i 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/wincon/pdckbd.c
 
 # --- 6. Build Binaries ---
 for TRIPLET in "${TARGETS[@]}"; do
