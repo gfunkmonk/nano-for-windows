@@ -1,13 +1,13 @@
---- a/src/winio.c
-+++ b/src/winio.c
+--- a/src/winio.c	2026-05-15 10:06:13.484943033 -0400
++++ b/src/winio.c	2026-05-15 10:12:32.034940547 -0400
 @@ -1073,9 +1073,15 @@
  #endif
  #ifdef ENABLE_UTF8
  			else if (0xC0 <= keycode && keycode <= 0xFF && using_utf8) {
 +#ifdef _WIN32
-+				/* On Windows, allow UTF-8 sequences for emoji and symbol support.
-+				 * Don't treat them as foreign sequences that get discarded. */
-+				return keycode;
++                       /* On Windows, allow UTF-8 sequences for emoji and symbol support.
++                        * Don't treat them as foreign sequences that get discarded. */
++                       return keycode;
 +#else
  				while (waiting_codes && 0x80 <= nextcodes[0] && nextcodes[0] <= 0xBF)
  					get_input(NULL);
@@ -26,82 +26,86 @@
  	size_t allocsize = (COLS + stowaways) * MAXCHARLEN + 1;
  		/* The amount of memory to reserve for the displayable string. */
  	char *converted = nmalloc(allocsize);
-@@ -1908,6 +1917,31 @@
+@@ -1907,6 +1916,33 @@
+ 
  		/* Convert a multibyte character to a single code. */
  		charlength = mbtowide(&wc, text);
- 
++		uint32_t true_cp = wc;
++
 +#ifdef _WIN32
-+		/* On Windows, mbtowide (gnulib mbrtowc) can fail for valid UTF-8 when
-+		 * the C locale isn't UTF-8. Decode valid UTF-8 manually so symbol and
-+		 * emoji width handling still works. */
-+		if (charlength < 0 && (unsigned char)text[0] >= 0xC0) {
-+			unsigned char b0 = (unsigned char)text[0];
-+			int seqlen = (b0 >= 0xF0 && b0 <= 0xF4) ? 4 : (b0 >= 0xE0) ? 3 : 2;
-+			unsigned int codepoint = (b0 >= 0xF0 && b0 <= 0xF4) ? (b0 & 0x07) :
-+							(b0 >= 0xE0) ? (b0 & 0x0F) : (b0 & 0x1F);
-+			int k;
++               /* On Windows, mbtowide (gnulib mbrtowc) can fail for valid UTF-8 when
++                * the C locale isn't UTF-8. Decode valid UTF-8 manually so symbol and
++                * emoji width handling still works. */
++               if (charlength < 0 && (unsigned char)text[0] >= 0xC0) {
++                 unsigned char b0 = (unsigned char)text[0];
++                 int seqlen = (b0 >= 0xF0 && b0 <= 0xF4) ? 4 : (b0 >= 0xE0) ? 3 : 2;
++                 unsigned int codepoint = (b0 >= 0xF0 && b0 <= 0xF4) ? (b0 & 0x07) :
++                                               (b0 >= 0xE0) ? (b0 & 0x0F) : (b0 & 0x1F);
++                 int k;
 +
-+			for (k = 1; k < seqlen && text[k] != '\0'; k++) {
-+				unsigned char bx = (unsigned char)text[k];
-+				if (bx < 0x80 || bx > 0xBF)
-+					break;
-+				codepoint = (codepoint << 6) | (bx & 0x3F);
-+			}
++                 for (k = 1; k < seqlen && text[k] != '\0'; k++) {
++                       unsigned char bx = (unsigned char)text[k];
++                       if (bx < 0x80 || bx > 0xBF)
++                               break;
++                       codepoint = (codepoint << 6) | (bx & 0x3F);
++                 }
 +
-+			if (k == seqlen) {
-+				wc = (wchar_t)codepoint;
-+				charlength = seqlen;
-+			}
-+		}
++                 if (k == seqlen) {
++                       wc = (wchar_t)codepoint;
++                       true_cp = codepoint;
++                       charlength = seqlen;
++                 }
++               }
 +#endif
-+
+ 
  		/* Represent an invalid character with the Replacement Character. */
  		if (charlength < 0) {
- 			converted[index++] = '\xEF';
-@@ -1921,6 +1955,46 @@
- 		/* Determine whether the character takes zero, one, or two columns. */
- 		charwidth = uc_width(wc, "UTF-8");
+@@ -1919,7 +1955,47 @@
+ 		}
  
+ 		/* Determine whether the character takes zero, one, or two columns. */
+-		charwidth = uc_width(wc, "UTF-8");
++		charwidth = uc_width(true_cp, "UTF-8");
++
 +#ifdef _WIN32
-+		/* Keep common emoji clusters in one displayed cell span: FE0F upgrades
-+		 * text-style symbols to emoji width, and ZWJ keeps following emoji in
-+		 * the same grapheme cluster. */
-+		if (wc == 0x200D)
-+			charwidth = 0;
-+		else if (wc >= 0x1F3FB && wc <= 0x1F3FF)
-+			charwidth = 0;
-+		else if (preceded_by_zwj && charwidth > 0)
-+			charwidth = 0;
++               /* Keep common emoji clusters in one displayed cell span: FE0F upgrades
++                * text-style symbols to emoji width, and ZWJ keeps following emoji in
++                * the same grapheme cluster. */
++               if (true_cp == 0x200D)
++                 charwidth = 0;
++               else if (true_cp >= 0x1F3FB && true_cp <= 0x1F3FF)
++                 charwidth = 0;
++               else if (preceded_by_zwj && charwidth > 0)
++                 charwidth = 0;
 +
-+		if (charwidth == 1) {
-+			wchar_t nextwc = 0;
-+			int nextlength = mbtowide(&nextwc, text + charlength);
++               if (charwidth == 1) {
++                 wchar_t nextwc = 0;
++                 int nextlength = mbtowide(&nextwc, text + charlength);
 +
-+			if (nextlength < 0 && (unsigned char)text[charlength] >= 0xC0) {
-+				unsigned char b0 = (unsigned char)text[charlength];
-+				int seqlen = (b0 >= 0xF0 && b0 <= 0xF4) ? 4 : (b0 >= 0xE0) ? 3 : 2;
-+				unsigned int codepoint = (b0 >= 0xF0 && b0 <= 0xF4) ? (b0 & 0x07) :
-+								(b0 >= 0xE0) ? (b0 & 0x0F) : (b0 & 0x1F);
-+				int k;
++                 if (nextlength < 0 && (unsigned char)text[charlength] >= 0xC0) {
++                       unsigned char b0 = (unsigned char)text[charlength];
++                       int seqlen = (b0 >= 0xF0 && b0 <= 0xF4) ? 4 : (b0 >= 0xE0) ? 3 : 2;
++                       unsigned int codepoint = (b0 >= 0xF0 && b0 <= 0xF4) ? (b0 & 0x07) :
++                                                       (b0 >= 0xE0) ? (b0 & 0x0F) : (b0 & 0x1F);
++                       int k;
 +
-+				for (k = 1; k < seqlen; k++) {
-+					unsigned char bx = (unsigned char)text[charlength + k];
-+					if (bx < 0x80 || bx > 0xBF)
-+						break;
-+					codepoint = (codepoint << 6) | (bx & 0x3F);
-+				}
++                       for (k = 1; k < seqlen; k++) {
++                               unsigned char bx = (unsigned char)text[charlength + k];
++                               if (bx < 0x80 || bx > 0xBF)
++                                       break;
++                               codepoint = (codepoint << 6) | (bx & 0x3F);
++                       }
 +
-+				if (k == seqlen)
-+					nextwc = (wchar_t)codepoint;
-+			}
++                       if (k == seqlen)
++                               nextwc = (wchar_t)codepoint;
++                 }
 +
-+			if (nextwc == 0xFE0F)
-+				charwidth = 2;
-+		}
++                 if (nextwc == 0xFE0F || true_cp == 0xFE0F)
++                       charwidth = 2;
++               }
 +
-+		preceded_by_zwj = (wc == 0x200D);
++               preceded_by_zwj = (true_cp == 0x200D);
 +#endif
-+
+ 
  		/* Watch the number of zero-widths, to keep ample memory reserved. */
  		if (charwidth == 0 && --stowaways == 0) {
- 			stowaways = 40;
