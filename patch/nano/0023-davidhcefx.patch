@@ -40,7 +40,7 @@ diff -ruN a/doc/nanorc.5 nano/doc/nanorc.5
 diff -ruN a/src/definitions.h b/src/definitions.h
 --- a/src/definitions.h	2026-05-15 05:36:18.685049385 -0400
 +++ b/src/definitions.h	2026-05-15 05:39:44.455048033 -0400
-@@ -322,6 +322,7 @@
+@@ -316,6 +316,7 @@
  	PROMPT_BAR,
  	STATUS_BAR,
  	ERROR_MESSAGE,
@@ -51,7 +51,7 @@ diff -ruN a/src/definitions.h b/src/definitions.h
 diff -ruN a/src/global.c b/src/global.c
 --- a/src/global.c	2026-05-15 05:36:18.685049385 -0400
 +++ b/src/global.c	2026-05-15 05:43:11.965046671 -0400
-@@ -671,6 +671,8 @@
+@@ -691,6 +691,8 @@
  	const char *wordcount_gist =
  		N_("Count the number of lines, words, and characters");
  	const char *suspend_gist = N_("Suspend the editor (return to the shell)");
@@ -60,7 +60,7 @@ diff -ruN a/src/global.c b/src/global.c
  #endif
  	const char *refresh_gist = N_("Refresh (redraw) the current screen");
  #ifdef ENABLE_WORDCOMPLETION
-@@ -1027,6 +1029,10 @@
+@@ -1047,6 +1049,10 @@
  			N_("Delete"), WHENHELP(delete_gist), BLANKAFTER);
  
  #ifndef NANO_TINY
@@ -71,7 +71,7 @@ diff -ruN a/src/global.c b/src/global.c
  	add_to_funcs(chop_previous_word, MMAIN,
  			/* TRANSLATORS: The next two strings refer to deleting words. */
  			N_("Chop Left"), WHENHELP(chopwordleft_gist), TOGETHER);
-@@ -1446,6 +1452,8 @@
+@@ -1466,6 +1472,8 @@
  	add_to_sclist(MEXECUTE, "^Z", 0, do_suspend, 0);
  	add_to_sclist(MMAIN, "^Z", 0, suggest_ctrlT_ctrlZ, 0);
  	add_to_sclist(MMAIN, "M-D", 0, count_lines_words_and_characters, 0);
@@ -83,7 +83,7 @@ diff -ruN a/src/global.c b/src/global.c
 diff -ruN a/src/nano.c b/src/nano.c
 --- a/src/nano.c	2026-05-15 05:36:18.685049385 -0400
 +++ b/src/nano.c	2026-05-15 05:45:35.065045731 -0400
-@@ -638,6 +638,7 @@
+@@ -634,6 +634,7 @@
  	print_opt("-w", "--nowrap", N_("Don't hard-wrap long lines [default]"));
  #endif
  	print_opt("-x", "--nohelp", N_("Don't show the two help lines"));
@@ -99,7 +99,7 @@ diff -ruN a/src/nano.c b/src/nano.c
  		{NULL, 0, NULL, 0}
  	};
  
-@@ -2139,6 +2141,9 @@
+@@ -2151,6 +2153,9 @@
  			case 0xCC:
  				SET(WHITESPACE_DISPLAY);
  				break;
@@ -165,7 +165,7 @@ diff -ruN a/src/search.c b/src/search.c
 diff -ruN a/src/text.c b/src/text.c
 --- a/src/text.c	2026-05-15 05:36:18.685049385 -0400
 +++ b/src/text.c	2026-05-15 05:51:34.575043370 -0400
-@@ -3034,6 +3034,66 @@
+@@ -3203,6 +3203,66 @@
  						words, P_("word", "words", words),
  						chars, P_("character", "characters", chars));
  }

@@ -15,7 +15,7 @@ diff --git a/src/files.c b/src/files.c
 index f93acc0..36f8c3a 100644
 --- a/src/files.c
 +++ b/src/files.c
-@@ -1435,6 +1435,8 @@ char *get_full_path(const char *origpath)
+@@ -1390,6 +1390,8 @@ char *get_full_path(const char *origpath)
  
  	free(untilded);
  
@@ -24,7 +24,7 @@ index f93acc0..36f8c3a 100644
  	return target;
  }
  
-@@ -1477,6 +1479,7 @@ char *safe_tempfile(FILE **stream)
+@@ -1432,6 +1434,7 @@ char *safe_tempfile(FILE **stream)
  		tempdir = copy_of("/tmp/");
  
  	extension = strrchr(openfile->filename, '.');
@@ -32,7 +32,7 @@ index f93acc0..36f8c3a 100644
  
  	if (!extension || strchr(extension, '/'))
  		extension = openfile->filename + strlen(openfile->filename);
-@@ -1627,7 +1630,7 @@ bool make_backup_of(char *realname)
+@@ -1576,7 +1579,7 @@ bool make_backup_of(char *realname)
  		 * just use the file-name portion of the given path. */
  		if (thename) {
  			for (int i = 0; thename[i] != '\0'; i++)
@@ -41,7 +41,7 @@ index f93acc0..36f8c3a 100644
  					thename[i] = '!';
  		} else
  			thename = copy_of(tail(realname));
-@@ -2425,6 +2428,8 @@ char *real_dir_from_tilde(const char *path)
+@@ -2363,6 +2366,8 @@ char *real_dir_from_tilde(const char *path)
  
  	free(tilded);
  
