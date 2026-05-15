@@ -8,17 +8,9 @@ BWHITE="\x1b[1;37m"
 GREEN="\x1b[1;32m"
 NC="\x1b[0m"
 
-# Map the input to the full triplet
-case "x86_64" in
-    x86_64)  TARGETS=("x86_64-w64-mingw32") ;;
-    i686)    TARGETS=("i686-w64-mingw32") ;;
-    aarch64) TARGETS=("aarch64-w64-mingw32") ;;
-    *) echo "Invalid architecture: x86_64"; exit 1 ;;
-esac
-
 # Map PDTERM
 PDTERM="wincon"
-echo "Building for x86_64 with PDTERM=$PDTERM"
+echo "Preparing clean build dir"
 
 # --- 2. Configuration & Environment ---
 BASE_DIR="$(pwd)"
@@ -33,8 +25,8 @@ export WT_SESSION="1"
 export ConEmuANSI="ON"
 
 # --- 3. Toolchain Setup (gfunkmonk/win-cross) ---
-echo -e "${TEAL}Setting up toolchain...${NC}"
-TOOLCHAIN_RELEASE="BillsBastards" # Plug in release name here
+#echo -e "${TEAL}Setting up toolchain...${NC}"
+#TOOLCHAIN_RELEASE="BillsBastards" # Plug in release name here
 
 # Define a persistent toolchain directory outside the BUILDDIR if you want true persistence,
 # or just check if it's already in the BUILDDIR.

@@ -8,17 +8,9 @@ BWHITE="\x1b[1;37m"
 GREEN="\x1b[1;32m"
 NC="\x1b[0m"
 
-# Map the input to the full triplet
-case "x86_64" in
-    x86_64)  TARGETS=("x86_64-w64-mingw32") ;;
-    i686)    TARGETS=("i686-w64-mingw32") ;;
-    aarch64) TARGETS=("aarch64-w64-mingw32") ;;
-    *) echo "Invalid architecture: x86_64"; exit 1 ;;
-esac
-
 # Map PDTERM
 PDTERM="wincon"
-echo "Building for x86_64 with PDTERM=$PDTERM"
+echo "Preparing patch validation"
 
 # --- 2. Configuration & Environment ---
 BASE_DIR="$(pwd)"
@@ -80,35 +72,24 @@ sync_repo "https://git.savannah.gnu.org/git/gnulib.git" "gnulib"
 
 # Patch Nano
 if [ -d "$BASE_DIR/patch/nano" ]; then
-    for p in "$BASE_DIR/patch/nano"/*.patch; do
-        if [ -f "$p" ]; then
-            echo -e "${PURPLE}Applying $(basename "$p") to nano${NC}"
-            patch -p1 --fuzz=0 < "$p" || exit 1
-        fi
-    done
+    while IFS= read -r p; do
+        [ -n "$p" ] || continue
+        echo -e "${PURPLE}Applying $(basename "$p") to nano${NC}"
+        patch -p1 < "$p" || exit 1
+    done < <(find "$BASE_DIR/patch/nano" -maxdepth 1 -type f -name '*.patch' | sort -V)
 fi
 
-# Curses Build
+# Patch Curses
 if [ -d "$BASE_DIR/patch/curses" ]; then
-    for p in "$BASE_DIR/patch/curses"/*.patch; do
-        if [ -f "$p" ]; then
-            echo -e "${YELLOW}Applying $(basename "$p") to curses${NC}"
-            patch -p1 --fuzz=0 < "$p" || exit 1
-        fi
-    done
+    while IFS= read -r p; do
+        [ -n "$p" ] || continue
+        echo -e "${YELLOW}Applying $(basename "$p") to curses${NC}"
+        patch -p1 < "$p" || exit 1
+    done < <(find "$BASE_DIR/patch/curses" -maxdepth 1 -type f -name '*.patch' | sort -V)
 fi
-
-# --- 5. A.I. Killer - Slayer of Giants ---
-#echo -e "\n" >> src/definitions.h
-#echo '#define PDC_WINCON 1' >> src/definitions.h
-#echo '#define PDC_WIDE 1' >> src/definitions.h
-#echo '#define CHTYPE_64 1' >> src/definitions.h
-#echo '#define PDC_ANSI 1' >> src/definitions.h
-#echo '#define PDC_FORCE_UTF8 1' >> src/definitions.h
-#echo '#define UNICODE 1' >> src/definitions.h
 
 # realpath() workaround
-echo -e "${TEAL}PATCH: ${BWHITE}realpath() workaround applied.${NC}"
+echo -e "${GREEN}[${BWHITE}definitions.h${GREEN}] ${BWHITE}realpath() workaround applied.${NC}"
 cp -p ./src/definitions.h{,.bak}
 echo " " >> ./src/definitions.h
 echo "#ifdef _WIN32" >> ./src/definitions.h
