@@ -54,7 +54,7 @@ TOOLCHAIN_RELEASE="BillsBastards" # Plug in release name here
 # --- 4. Source Setup ---
 # Function to sync without redownloading the universe
 sync_repo() {
-    local url=x86_64
+    local url=$1
     local dir=$2
     if [ ! -d "$dir" ]; then
         git clone "$url" --depth=1 "$dir"
