@@ -89,7 +89,7 @@ if [ -d "$BASE_DIR/patch/nano" ]; then
     for p in "$BASE_DIR/patch/nano"/*.patch; do
         if [ -f "$p" ]; then
             echo -e "${PURPLE}Applying $(basename "$p") to nano${NC}"
-            patch -p1 --fuzz=1 < "$p" || exit 1
+            patch -p1 < "$p" || exit 1
         fi
     done
 fi
@@ -99,7 +99,7 @@ if [ -d "$BASE_DIR/patch/curses" ]; then
     for p in "$BASE_DIR/patch/curses"/*.patch; do
         if [ -f "$p" ]; then
             echo -e "${YELLOW}Applying $(basename "$p") to curses${NC}"
-            patch -p1 --fuzz=1 < "$p" || exit 1
+            patch -p1 < "$p" || exit 1
         fi
     done
 fi

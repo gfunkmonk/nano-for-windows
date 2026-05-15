@@ -1,12 +1,6 @@
 #!/bin/bash
 set -euo pipefail
 
-if [ $# -lt 1 ]; then
-    echo "Usage: $0 [x86_64|i686|aarch64]"
-    echo "Example: $0 i686"
-    exit 1
-fi
-
 PURPLE="\x1b[1;35m"
 YELLOW="\x1b[1;33m"
 TEAL="\x1b[2;36m"
@@ -15,16 +9,16 @@ GREEN="\x1b[1;32m"
 NC="\x1b[0m"
 
 # Map the input to the full triplet
-case "$1" in
+case "x86_64" in
     x86_64)  TARGETS=("x86_64-w64-mingw32") ;;
     i686)    TARGETS=("i686-w64-mingw32") ;;
     aarch64) TARGETS=("aarch64-w64-mingw32") ;;
-    *) echo "Invalid architecture: $1"; exit 1 ;;
+    *) echo "Invalid architecture: x86_64"; exit 1 ;;
 esac
 
 # Map PDTERM
 PDTERM="wincon"
-echo "Building for $1 with PDTERM=$PDTERM"
+echo "Building for x86_64 with PDTERM=$PDTERM"
 
 # --- 2. Configuration & Environment ---
 BASE_DIR="$(pwd)"
@@ -44,23 +38,23 @@ TOOLCHAIN_RELEASE="BillsBastards" # Plug in release name here
 
 # Define a persistent toolchain directory outside the BUILDDIR if you want true persistence,
 # or just check if it's already in the BUILDDIR.
-if [ ! -d "$BASE_DIR/toolchains/$1-mingw" ]; then
-    echo -e "${YELLOW}Downloading toolchain release: ${TOOLCHAIN_RELEASE}${NC}"
-    mkdir -p "$BASE_DIR/toolchains"
-    curl -L -o "$BASE_DIR/toolchains/toolchain.tar.xz" "https://github.com/gfunkmonk/win-cross/releases/download/${TOOLCHAIN_RELEASE}/${1}-w64-mingw32.tar.xz"
-    cd "$BASE_DIR/toolchains"
-    tar -xJf toolchain.tar.xz && mv "$1"-* "$1"-mingw && rm toolchain.tar.xz
-    cd "$BASE_DIR"
-else
-    echo -e "${GREEN}Toolchain cache hit: $1-mingw found.${NC}"
-fi
+#if [ ! -d "$BASE_DIR/toolchains/x86_64-mingw" ]; then
+#    echo -e "${YELLOW}Downloading toolchain release: ${TOOLCHAIN_RELEASE}${NC}"
+#    mkdir -p "$BASE_DIR/toolchains"
+#    curl -L -o "$BASE_DIR/toolchains/toolchain.tar.xz" "https://github.com/gfunkmonk/win-cross/releases/download/${TOOLCHAIN_RELEASE}/${1}-w64-mingw32.tar.xz"
+#    cd "$BASE_DIR/toolchains"
+#    tar -xJf toolchain.tar.xz && mv "x86_64"-* "x86_64"-mingw && rm toolchain.tar.xz
+#    cd "$BASE_DIR"
+#else
+#    echo -e "${GREEN}Toolchain cache hit: x86_64-mingw found.${NC}"
+#fi
 
-export PATH="$BASE_DIR/toolchains/$1-mingw/bin:$PATH"
+#export PATH="$BASE_DIR/toolchains/x86_64-mingw/bin:$PATH"
 
 # --- 4. Source Setup ---
 # Function to sync without redownloading the universe
 sync_repo() {
-    local url=$1
+    local url=x86_64
     local dir=$2
     if [ ! -d "$dir" ]; then
         git clone "$url" --depth=1 "$dir"
@@ -89,7 +83,7 @@ if [ -d "$BASE_DIR/patch/nano" ]; then
     for p in "$BASE_DIR/patch/nano"/*.patch; do
         if [ -f "$p" ]; then
             echo -e "${PURPLE}Applying $(basename "$p") to nano${NC}"
-            patch -p1 --fuzz=1 < "$p" || exit 1
+            patch -p1 --fuzz=0 < "$p" || exit 1
         fi
     done
 fi
@@ -99,7 +93,7 @@ if [ -d "$BASE_DIR/patch/curses" ]; then
     for p in "$BASE_DIR/patch/curses"/*.patch; do
         if [ -f "$p" ]; then
             echo -e "${YELLOW}Applying $(basename "$p") to curses${NC}"
-            patch -p1 --fuzz=1 < "$p" || exit 1
+            patch -p1 --fuzz=0 < "$p" || exit 1
         fi
     done
 fi
