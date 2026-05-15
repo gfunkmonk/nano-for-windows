@@ -88,6 +88,27 @@ if [ -d "$BASE_DIR/patch/curses" ]; then
     done < <(find "$BASE_DIR/patch/curses" -maxdepth 1 -type f -name '*.patch' | sort -V)
 fi
 
+function _diff() {
+  # Thanks to @rasa for this function
+  mapfile -t < <(find . -type f -name '*.bak')
+  for bak in "${MAPFILE[@]}"; do
+    src=${bak/.bak/}
+    for ((n=1; ; n++)); do
+      patch=${src}-${n}.patch
+      test -f "${patch}" || break
+    done
+    diff -u -w "${bak}" "${src}" >"${patch}" || true
+    rm -f "${bak}" || true
+    if [[ ! -s "${patch}" ]]; then
+      rm -f "${patch}" || true
+      continue
+    fi
+    echo "${patch}":
+    cat "${patch}"
+  done
+  return 0
+}
+
 # realpath() workaround
 echo -e "${GREEN}[${BWHITE}definitions.h${GREEN}] ${BWHITE}realpath() workaround applied.${NC}"
 cp -p ./src/definitions.h{,.bak}
@@ -100,15 +121,18 @@ echo "#endif" >> ./src/definitions.h
 
 # Default open() files in binary mode
 echo -e "${GREEN}[${BWHITE}files.c${GREEN}] ${BWHITE}default open in binary mode${NC}"
-sed -i 's/O_..ONLY/& | _O_BINARY/g' ./src/files.c
-sed -i 's/O_..ONLY/& | _O_BINARY/g' ./src/text.c
+sed -i.bak 's/O_..ONLY/& | _O_BINARY/g' ./src/files.c
+sed -i.bak 's/O_..ONLY/& | _O_BINARY/g' ./src/text.c
+_diff
 
 # Environment and Path Fixes
 echo -e "${GREEN}[${BWHITE}files.c${GREEN}] ${BWHITE}Swapping TMPDIR for TEMP${NC}"
-sed -i 's|TMPDIR|TEMP|g' ./src/files.c
+sed -i.bak 's|TMPDIR|TEMP|g' ./src/files.c
+_diff
 
 echo -e "${GREEN}[${BWHITE}files.c${GREEN}] ${BWHITE}Hardening invalid character check${NC}"
-sed -i 's!if (thename\[i\] == "/")!if (strchr("<>\\\\:\\\"/\\\\\\\\|?*", thename[i]))!g' src/files.c
+sed -i.bak 's!if (thename\[i\] == "/")!if (strchr("<>\\\\:\\\"/\\\\\\\\|?*", thename[i]))!g' src/files.c
+_diff
 
 echo -e "${GREEN}[${BWHITE}files.c${GREEN}] ${BWHITE}Injecting backslash normalization loop${NC}"
 perl -i -pe "s|if\(\*tilded == \"\\\\\\\\\"\)|if(*tilded == '\\\\')|g; s|\*tilded = \"/\"|*tilded = '/'|g" src/files.c
@@ -117,27 +141,33 @@ echo -e "${GREEN}[${BWHITE}files.c${GREEN}] ${BWHITE}Updating path separator com
 perl -i -pe 's|path\[i\] != \x27/\x27|path[i] != \x27/\x27 && path[i] != \x27\\\\\x27|g' src/files.c
 
 echo -e "${GREEN}[${BWHITE}files.c${GREEN}] ${BWHITE}Redirecting /tmp/ to AppData Local${NC}"
-sed -i 's|/tmp/|~/AppData/Local/Temp/|g' ./src/files.c
+sed -i.bak 's|/tmp/|~/AppData/Local/Temp/|g' ./src/files.c
+_diff
 
 echo -e "${GREEN}[${BWHITE}utils.c${GREEN}] ${BWHITE}Mapping HOME to USERPROFILE${NC}"
-sed -i 's|\"HOME\"|"USERPROFILE\"|g' ./src/utils.c
+sed -i.bak 's|\"HOME\"|"USERPROFILE\"|g' ./src/utils.c
+_diff
 
 # UI and Terminal Logic
 echo -e "${GREEN}[${BWHITE}rcfile.c${GREEN}] ${BWHITE}Patching 256 color support check${NC}"
-sed -i "/COLORS == 256/ {s/==/>=/}" src/rcfile.c
+sed -i.bak "/COLORS == 256/ {s/==/>=/}" src/rcfile.c
+_diff
 
 echo -e "${GREEN}[${BWHITE}winio.c${GREEN}] ${BWHITE}Stripping halfdelay and kb_interrupt calls${NC}"
-sed -i "/halfdelay(ISSET(QUICK_BLANK)/,/disable_kb_interrupt/d" src/winio.c
+sed -i.bak "/halfdelay(ISSET(QUICK_BLANK)/,/disable_kb_interrupt/d" src/winio.c
+_diff
 
 echo -e "${GREEN}[${BWHITE}nano.c${GREEN}] ${BWHITE}Mapping /dev/tty to CON${NC}"
-sed -i "s|/dev/tty|CON|" src/nano.c
+sed -i.bak "s|/dev/tty|CON|" src/nano.c
+_diff
 
 # The STDIN / Stream Handler
 echo -e "${GREEN}[${BWHITE}nano.c${GREEN}] ${BWHITE}Fixing stream/fd assignment${NC}"
-sed -i "s/stream, 0/stream, fd/" src/nano.c
+sed -i.bak "s/stream, 0/stream, fd/" src/nano.c
+_diff
 
 echo -e "${GREEN}[${BWHITE}nano.c${GREEN}] ${BWHITE}Injecting Windows Console/STDIN handler block${NC}"
-sed -i "/FILE \*stream/,/stop the reading/ c\\
+sed -i.bak "/FILE \*stream/,/stop the reading/ c\\
 \t static FILE *stream;\\n\\
 \t static int fd=0;\\n\\
 \t if (fd==0){\\n\\
@@ -154,38 +184,48 @@ sed -i "/FILE \*stream/,/stop the reading/ c\\
 \t \t int errnumber = errno;\\n\\
 \t \t if(fd > -1) close(fd);\\n\\
 \t return FALSE;}" src/nano.c
+_diff
 
 echo -e "${GREEN}[${BWHITE}nano.c${GREEN}] ${BWHITE}Adding scoop_stdin trigger${NC}"
-sed -i "/initscr/i\\
+sed -i.bak "/initscr/i\\
 \t for(int optind_=optind; optind_ < argc;optind_++)\\n\\
 \t if (strcmp(argv[optind_], \"-\") == 0){scoop_stdin();break;}" src/nano.c
+_diff
 
 # 6. Prompts and Character Handling
 echo -e "${GREEN}[${BWHITE}browser.c${GREEN}] ${BWHITE}Zeroing selected status${NC}"
-sed -i 's/--selected/selected=0/' src/browser.c
+sed -i.bak 's/--selected/selected=0/' src/browser.c
+_diff
 
 # GNUlib glob wraps opendir with its own gl_directory type, so dir is
 # struct gl_directory* by the time rewinddir is called. Cast it to DIR*.
 echo -e "${GREEN}[${BWHITE}browser.c${GREEN}] ${BWHITE}fix GNUlib glob DIR* conflict${NC}"
-sed -i 's/rewinddir(dir)/rewinddir((DIR *)dir)/' src/browser.c
+sed -i.bak 's/rewinddir(dir)/rewinddir((DIR *)dir)/' src/browser.c
+_diff
 
 echo -e "${GREEN}[${BWHITE}nano.c${GREEN}] ${BWHITE}Updating modified buffer prompt text${NC}"
-sed -i "s|Save modified buffer|& (Y/N/^C)|" src/nano.c
+sed -i.bak "s|Save modified buffer|& (Y/N/^C)|" src/nano.c
+_diff
 
 echo -e "${GREEN}[${BWHITE}nano.c${GREEN}] ${BWHITE}Cleaning vt220 and applying setlocale${NC}"
-sed -i 's|vt220||g; /x1B/d; /nl_langinfo(CODESET)/ c\tsetlocale(LC_ALL, "");' src/nano.c
+sed -i.bak 's|vt220||g; /x1B/d; /nl_langinfo(CODESET)/ c\tsetlocale(LC_ALL, "");' src/nano.c
+_diff
 
 echo -e "${GREEN}[${BWHITE}nano.c${GREEN}] ${BWHITE}Injecting UTF-8 Code Page (65001) force${NC}"
-sed -i '/setlocale(LC_ALL, "");/a #ifdef _WIN32\n\tSetConsoleOutputCP(65001);\n\tSetConsoleCP(65001);\n#endif' src/nano.c
+sed -i.bak '/setlocale(LC_ALL, "");/a #ifdef _WIN32\n\tSetConsoleOutputCP(65001);\n\tSetConsoleCP(65001);\n#endif' src/nano.c
+_diff
 
 echo -e "${GREEN}[${BWHITE}chars.c/winio.c${GREEN}] ${BWHITE}Swapping wcwidth for uc_width${NC}"
-sed -i 's|wcwidth(wc)|uc_width(wc, "UTF-8")|g' src/chars.c src/winio.c
+sed -i.bak 's|wcwidth(wc)|uc_width(wc, "UTF-8")|g' src/chars.c src/winio.c
+_diff
 
 echo -e "${GREEN}[${BWHITE}chars.c${GREEN}] ${BWHITE}Including uniwidth.h${NC}"
-sed -i '/prototypes.h/a#include "uniwidth.h"' src/chars.c
+sed -i.bak '/prototypes.h/a#include "uniwidth.h"' src/chars.c
+_diff
 
 echo -e "${GREEN}[${BWHITE}definitions.h${GREEN}] ${BWHITE}IDeleting 0x42 range${NC}"
-sed -i "/0x42[1234]/d" src/definitions.h
+sed -i.bak "/0x42[1234]/d" src/definitions.h
+_diff
 
 # 1. Force nano to treat the character range for Emojis as double-width (2 columns)
 # This patches the wide-character width detection logic.
@@ -213,6 +253,7 @@ sed -i "/0x42[1234]/d" src/definitions.h
 #sed -i 's|MAX_UNICODE 0xffff|MAX_UNICODE 0x10ffff|g' curses/curspriv.h
 
 echo -e "${GREEN}[${BWHITE}pdckbd.c${GREEN}] ${BWHITE}Forced for 64-bit chtype${NC}"
-sed -i 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/vt/pdckbd.c
-sed -i 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/wincon/pdckbd.c
+sed -i.bak 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/vt/pdckbd.c
+sed -i.bak 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/wincon/pdckbd.c
+_diff
 
