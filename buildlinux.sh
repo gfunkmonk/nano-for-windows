@@ -30,12 +30,8 @@ echo "Building for $1 with PDTERM=$PDTERM"
 BASE_DIR="$(pwd)"
 BUILDDIR="${BASE_DIR}/build"
 
-if [ ! -d "$BUILDDIR" ]; then
-  mkdir -p "${BUILDDIR}"
-  cd "${BUILDDIR}"
-else
-  cd "${BUILDDIR}"
-fi
+mkdir -p "${BUILDDIR}"
+cd "${BUILDDIR}"
 
 # Global variables from your workflow
 export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DCHTYPE_64 -DPDC_WIDE -DPDC_WINCON -DPDC_FORCE_UTF8 -D_GNU_SOURCE"
@@ -93,7 +89,7 @@ if [ -d "$BASE_DIR/patch/nano" ]; then
     for p in "$BASE_DIR/patch/nano"/*.patch; do
         if [ -f "$p" ]; then
             echo -e "${PURPLE}Applying $(basename "$p") to nano${NC}"
-            patch -p1 --fuzz=3 < "$p" || exit 1
+            patch -p1 --fuzz=1 < "$p" || exit 1
         fi
     done
 fi
@@ -103,7 +99,7 @@ if [ -d "$BASE_DIR/patch/curses" ]; then
     for p in "$BASE_DIR/patch/curses"/*.patch; do
         if [ -f "$p" ]; then
             echo -e "${YELLOW}Applying $(basename "$p") to curses${NC}"
-            patch -p1 --fuzz=3 < "$p" || exit 1
+            patch -p1 --fuzz=1 < "$p" || exit 1
         fi
     done
 fi
@@ -157,9 +153,6 @@ sed -i "/COLORS == 256/ {s/==/>=/}" src/rcfile.c
 
 echo -e "${GREEN}[${BWHITE}winio.c${GREEN}] ${BWHITE}Stripping halfdelay and kb_interrupt calls${NC}"
 sed -i "/halfdelay(ISSET(QUICK_BLANK)/,/disable_kb_interrupt/d" src/winio.c
-
-echo -e "${GREEN}[${BWHITE}nano.c${GREEN}] ${BWHITE}Removing vt220 string${NC}"
-sed -i 's|vt220||g' ./src/nano.c
 
 echo -e "${GREEN}[${BWHITE}nano.c${GREEN}] ${BWHITE}Mapping /dev/tty to CON${NC}"
 sed -i "s|/dev/tty|CON|" src/nano.c
@@ -219,9 +212,6 @@ sed -i '/prototypes.h/a#include "uniwidth.h"' src/chars.c
 echo -e "${GREEN}[${BWHITE}definitions.h${GREEN}] ${BWHITE}IDeleting 0x42 range${NC}"
 sed -i "/0x42[1234]/d" src/definitions.h
 
-echo -e "${GREEN}[${BWHITE}browser.c${GREEN}] ${BWHITE}fix GNUlib glob DIR* conflict in browser.c.${NC}"
-sed -i "s/rewinddir(dir)/rewinddir((DIR *)dir)/" src/browser.c
-
 # 1. Force nano to treat the character range for Emojis as double-width (2 columns)
 # This patches the wide-character width detection logic.
 ##echo -e "${GREEN}[${BWHITE}chars.c${GREEN}] ${BWHITE}fix wcwidth${NC}"
@@ -262,7 +252,6 @@ for TRIPLET in "${TARGETS[@]}"; do
     SHORT=$(echo "$ARCH" | cut -d'-' -f1 | sed 's/aarch64/a64/;s/x86_64/w64/;s/i686/w32/')
 
     echo -e "${TEAL}Building for ${ARCH} (Target: ${TRIPLET})${NC}"
-done
 
     # Build PDCurses
     cd "$BUILDDIR/nano/curses/$PDTERM"
@@ -323,3 +312,4 @@ EOF
     upx --lzma --best nano.exe || true
     ls -als
     7z a -mx9 -mm=Deflate64 -mmt$(nproc) "${BASE_DIR}/dist/nano-for-windows_${ARCH}_$(date +%y%m%d_%H%M%S).zip" * .nanorc
+done

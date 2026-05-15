@@ -1,6 +1,7 @@
---- a/doc/nano.1	2026-05-01 02:59:35.174385001 -0400
-+++ b/doc/nano.1	2026-05-01 03:15:19.065256721 -0400
-@@ -375,6 +375,9 @@
+diff -ruN a/doc/nano.1 nano/doc/nano.1
+--- a/doc/nano.1	2026-05-15 05:36:18.685049385 -0400
++++ nano/doc/nano.1	2026-05-15 05:37:41.655048840 -0400
+@@ -372,6 +372,9 @@
  .BR \-x ", " \-\-nohelp
  Don't show the two help lines at the bottom of the screen.
  .TP
@@ -10,9 +11,10 @@
  .BR \-y ", " \-\-afterends
  Make Ctrl+Right and Ctrl+Delete stop at word ends instead of beginnings.
  .TP
---- a/doc/nanorc.5	2026-05-01 02:59:35.174385001 -0400
-+++ b/doc/nanorc.5	2026-05-01 03:15:19.065724001 -0400
-@@ -260,6 +260,9 @@
+diff -ruN a/doc/nanorc.5 nano/doc/nanorc.5
+--- a/doc/nanorc.5	2026-05-15 05:36:18.685049385 -0400
++++ nano/doc/nanorc.5	2026-05-15 05:38:42.335048441 -0400
+@@ -257,6 +257,9 @@
  Don't automatically add a newline when a text does not end with one.
  (This can cause you to save non-POSIX text files.)
  .TP
@@ -21,8 +23,8 @@
 +.TP
  .B set nowrap
  Deprecated option since it has become the default setting.
- When needed, use \fBunset breaklonglines\fR instead.
-@@ -745,6 +748,12 @@
+ When needed, use \fBunset \%breaklonglines\fR instead.
+@@ -742,6 +745,12 @@
  Counts and reports on the status bar the number of lines, words,
  and characters in the current buffer (or in the marked region).
  .TP
@@ -34,9 +36,10 @@
 +.TP
  .B execute
  Prompts for a program to execute.  The program's output is inserted
- into the current buffer \(em or into a new buffer when \fBM\-F\fR is toggled.
---- a/src/definitions.h	2026-05-01 02:59:35.198523441 -0400
-+++ b/src/definitions.h	2026-05-01 03:15:19.066253201 -0400
+ into the current buffer \[em] or into a new buffer when \fBM\-F\fR is toggled.
+diff -ruN a/src/definitions.h b/src/definitions.h
+--- a/src/definitions.h	2026-05-15 05:36:18.685049385 -0400
++++ b/src/definitions.h	2026-05-15 05:39:44.455048033 -0400
 @@ -322,6 +322,7 @@
  	PROMPT_BAR,
  	STATUS_BAR,
@@ -45,39 +48,41 @@
  	KEY_COMBO,
  	FUNCTION_TAG,
  	NUMBER_OF_ELEMENTS
---- a/src/global.c	2026-05-01 02:59:35.198523441 -0400
-+++ b/src/global.c	2026-05-01 03:12:00.440108801 -0400
-@@ -672,6 +672,8 @@
+diff -ruN a/src/global.c b/src/global.c
+--- a/src/global.c	2026-05-15 05:36:18.685049385 -0400
++++ b/src/global.c	2026-05-15 05:43:11.965046671 -0400
+@@ -671,6 +671,8 @@
  	const char *wordcount_gist =
  		N_("Count the number of lines, words, and characters");
  	const char *suspend_gist = N_("Suspend the editor (return to the shell)");
-+         const char *settabsize_gist = N_("Set new tabsize");
++	const char *settabsize_gist = N_("Set new tabsize");
 +	const char *setsyntax_gist = N_("Set new syntax highlighting");
  #endif
  	const char *refresh_gist = N_("Refresh (redraw) the current screen");
  #ifdef ENABLE_WORDCOMPLETION
-@@ -1028,6 +1030,10 @@
+@@ -1027,6 +1029,10 @@
  			N_("Delete"), WHENHELP(delete_gist), BLANKAFTER);
  
  #ifndef NANO_TINY
-+         add_to_funcs(do_set_tabsize, MMAIN,
-+                    N_("Set Tabsize"), WHENHELP(settabsize_gist), TOGETHER);
++	add_to_funcs(do_set_tabsize, MMAIN,
++			N_("Set Tabsize"), WHENHELP(settabsize_gist), TOGETHER);
 +	add_to_funcs(do_set_syntax, MMAIN,
-+		N_("Set Syntax"), WHENHELP(setsyntax_gist), TOGETHER);
++			N_("Set Syntax"), WHENHELP(setsyntax_gist), TOGETHER);
  	add_to_funcs(chop_previous_word, MMAIN,
  			/* TRANSLATORS: The next two strings refer to deleting words. */
  			N_("Chop Left"), WHENHELP(chopwordleft_gist), TOGETHER);
-@@ -1454,6 +1460,8 @@
+@@ -1446,6 +1452,8 @@
  	add_to_sclist(MEXECUTE, "^Z", 0, do_suspend, 0);
  	add_to_sclist(MMAIN, "^Z", 0, suggest_ctrlT_ctrlZ, 0);
  	add_to_sclist(MMAIN, "M-D", 0, count_lines_words_and_characters, 0);
-+         add_to_sclist(MMAIN, "M-4", 0, do_set_tabsize, 0);
++	add_to_sclist(MMAIN, "M-4", 0, do_set_tabsize, 0);
 +	add_to_sclist(MMAIN, "M-5", 0, do_set_syntax, 0);
  #else
  	add_to_sclist(MMAIN, "M-H", 0, do_help, 0);
  #endif
---- a/src/nano.c	2026-05-01 02:59:35.198523441 -0400
-+++ b/src/nano.c	2026-05-01 03:22:02.739199540 -0400
+diff -ruN a/src/nano.c b/src/nano.c
+--- a/src/nano.c	2026-05-15 05:36:18.685049385 -0400
++++ b/src/nano.c	2026-05-15 05:45:35.065045731 -0400
 @@ -638,6 +638,7 @@
  	print_opt("-w", "--nowrap", N_("Don't hard-wrap long lines [default]"));
  #endif
@@ -104,8 +109,9 @@
  			case '@':
  				SET(COLON_PARSING);
  				break;
---- a/src/prototypes.h	2026-05-01 02:59:35.198523441 -0400
-+++ b/src/prototypes.h	2026-05-01 03:13:02.139397161 -0400
+diff -ruN a/src/prototypes.h b/src/prototypes.h
+--- a/src/prototypes.h	2026-05-15 05:36:18.685049385 -0400
++++ b/src/prototypes.h	2026-05-15 05:46:09.685045504 -0400
 @@ -549,6 +549,8 @@
  #endif
  #ifndef NANO_TINY
@@ -115,8 +121,9 @@
  #endif
  void do_verbatim_input(void);
  #ifdef ENABLE_WORDCOMPLETION
---- a/src/rcfile.c	2026-05-01 02:59:35.198523441 -0400
-+++ b/src/rcfile.c	2026-05-01 03:15:19.067753041 -0400
+diff -ruN a/src/rcfile.c b/src/rcfile.c
+--- a/src/rcfile.c	2026-05-15 05:36:18.685049385 -0400
++++ b/src/rcfile.c	2026-05-15 05:48:07.105044733 -0400
 @@ -68,6 +68,7 @@
  #endif
  	{"nohelp", NO_HELP},
@@ -134,8 +141,7 @@
  	else if (!strcmp(input, "recordmacro"))
  		s->func = record_macro;
  	else if (!strcmp(input, "runmacro"))
-@@ -319,6 +322,8 @@
- 	else if (!strcmp(input, "prevanchor"))
+@@ -320,6 +323,8 @@
  		s->func = to_prev_anchor;
  	else if (!strcmp(input, "nextanchor"))
  		s->func = to_next_anchor;
@@ -143,9 +149,11 @@
 +		s->func = do_set_tabsize;
  	else if (!strcmp(input, "undo"))
  		s->func = do_undo;
---- a/src/search.c	2026-05-01 02:59:35.198523441 -0400
-+++ b/src/search.c	2026-05-01 03:22:49.443424626 -0400
-@@ -248,7 +248,7 @@
+ 	else if (!strcmp(input, "redo"))
+diff -ruN a/src/search.c b/src/search.c
+--- a/src/search.c	2026-05-15 05:36:18.685049385 -0400
++++ b/src/search.c	2026-05-15 05:49:04.205044358 -0400
+@@ -245,7 +245,7 @@
  		/* If we've reached the start or end of the buffer, wrap around;
  		 * but stop when spell-checking or replacing in a region. */
  		if (line == NULL) {
@@ -154,8 +162,9 @@
  				nodelay(midwin, FALSE);
  				return 0;
  			}
---- a/src/text.c	2026-05-01 02:59:35.198523441 -0400
-+++ b/src/text.c	2026-05-01 03:09:31.146596041 -0400
+diff -ruN a/src/text.c b/src/text.c
+--- a/src/text.c	2026-05-15 05:36:18.685049385 -0400
++++ b/src/text.c	2026-05-15 05:51:34.575043370 -0400
 @@ -3034,6 +3034,66 @@
  						words, P_("word", "words", words),
  						chars, P_("character", "characters", chars));
@@ -165,66 +174,67 @@
 + * it has no functions. */
 +void do_set_syntax(void)
 +{
-+	int response;
-+	const char *oldname, *newname;
-+	linestruct *line;
++         int response;
++         const char *oldname, *newname;
++         linestruct *line;
 +
-+	if (openfile->syntax) {
-+		response = do_prompt(MSPELL, "", NULL, edit_refresh, "Syntax Name [%s]", openfile->syntax->name);
-+	} else {
-+		response = do_prompt(MSPELL, "", NULL, edit_refresh, "Syntax Name");
-+	}
-+	if (response == -1) {
-+		statusbar(_("Cancelled"));
-+		return;
-+	} else if (response == -2) {  // blank input
-+		return;
-+	}
++         if (openfile->syntax) {
++                   response = do_prompt(MSPELL, "", NULL, edit_refresh, "Syntax Name [%s]", openfile->syntax->name);
++         } else {
++                   response = do_prompt(MSPELL, "", NULL, edit_refresh, "Syntax Name");
++         }
++         if (response == -1) {
++                   statusbar(_("Cancelled"));
++                   return;
++         } else if (response == -2) {  // blank input
++                   return;
++         }
 +
-+	syntaxstr = mallocstrcpy(syntaxstr, answer);
-+	oldname = openfile->syntax ? openfile->syntax->name : "";
-+	find_and_prime_applicable_syntax();
-+	newname = openfile->syntax ? openfile->syntax->name : "";
++         syntaxstr = mallocstrcpy(syntaxstr, answer);
++         oldname = openfile->syntax ? openfile->syntax->name : "";
++         find_and_prime_applicable_syntax();
++         newname = openfile->syntax ? openfile->syntax->name : "";
 +
-+	/* If the syntax changed, discard and recompute the multidata. */
-+	if (strcmp(oldname, newname) != 0) {
-+		for (line = openfile->filetop; line != NULL; line = line->next) {
-+			free(line->multidata);
-+			line->multidata = NULL;
-+		}
++         /* If the syntax changed, discard and recompute the multidata. */
++         if (strcmp(oldname, newname) != 0) {
++                   for (line = openfile->filetop; line != NULL; line = line->next) {
++                             free(line->multidata);
++                             line->multidata = NULL;
++                   }
 +
-+		precalc_multicolorinfo();
-+		have_palette = FALSE;
-+		refresh_needed = TRUE;
-+	}
++                   precalc_multicolorinfo();
++                   have_palette = FALSE;
++                   refresh_needed = TRUE;
++         }
 +}
 +
 +/* Prompt user to set the new tabsize. We use the spell menu because
 + * it has no functions. */
 +void do_set_tabsize(void)
 +{
-+	ssize_t new_tabsize = -1;
-+	int response = do_prompt(MSPELL, "", NULL, edit_refresh, "New tabsize");
++         ssize_t new_tabsize = -1;
++         int response = do_prompt(MSPELL, "", NULL, edit_refresh, "New tabsize");
 +
-+	/* Cancel if no answer provided. */
-+	if (response != 0) {
-+		statusbar(_("Cancelled"));
-+		return;
-+	}
++         /* Cancel if no answer provided. */
++         if (response != 0) {
++                   statusbar(_("Cancelled"));
++                   return;
++         }
 +
-+	if (!parse_num(answer, &new_tabsize) || new_tabsize <= 0) {
-+		statusline(AHEM, _("Requested tab size \"%s\" is invalid"), answer);
-+		return;
-+	}
++         if (!parse_num(answer, &new_tabsize) || new_tabsize <= 0) {
++                   statusline(AHEM, _("Requested tab size \"%s\" is invalid"), answer);
++                   return;
++         }
 +
-+	tabsize = new_tabsize;
-+	statusline(REMARK, _("Tabsize set to %d"), tabsize);
++         tabsize = new_tabsize;
++         statusline(REMARK, _("Tabsize set to %d"), tabsize);
 +}
  #endif /* !NANO_TINY */
  
  /* Get verbatim input. */
---- a/syntax/nanorc.nanorc	2026-05-01 02:59:35.205737001 -0400
-+++ b/syntax/nanorc.nanorc	2026-05-01 03:15:19.070664561 -0400
+diff -ruN a/syntax/nanorc.nanorc nano/syntax/nanorc.nanorc
+--- a/syntax/nanorc.nanorc	2026-05-15 05:36:18.685049385 -0400
++++ nano/syntax/nanorc.nanorc	2026-05-15 05:53:05.045042776 -0400
 @@ -14,7 +14,7 @@
  color lime "^[[:blank:]]*extendsyntax[[:blank:]]+[[:alpha:]]+[[:blank:]]+(i?color|header|magic|comment|formatter|linter|tabgives)[[:blank:]]+.*"
  

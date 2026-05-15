@@ -30,20 +30,13 @@ echo "Building for $1 with PDTERM=$PDTERM"
 BASE_DIR="$(pwd)"
 BUILDDIR="${BASE_DIR}/build"
 
-if [ ! -d "$BUILDDIR" ]; then
-  mkdir -p "${BUILDDIR}" && cd "${BUILDDIR}"
-else
-  cd "${BUILDDIR}"
-fi
+mkdir -p "${BUILDDIR}"
+cd "${BUILDDIR}"
 
 # Global variables from your workflow
-export PDC_WINCON="TRUE"
-export PDC_ANSI="TRUE"
-export PDC_FORCE_UTF8="1"
-export UNICODE="1"
-export HAVE_WCWIDTH="TRUE"
-export ENABLE_UTF8="TRUE"
 export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DCHTYPE_64 -DPDC_WIDE -DPDC_WINCON -DPDC_FORCE_UTF8 -D_GNU_SOURCE"
+export WT_SESSION="1"
+export ConEmuANSI="ON"
 
 # --- 3. Toolchain Setup (gfunkmonk/win-cross) ---
 echo -e "${TEAL}Setting up toolchain...${NC}"
@@ -51,16 +44,16 @@ TOOLCHAIN_RELEASE="BillsBastards" # Plug in release name here
 
 # Define a persistent toolchain directory outside the BUILDDIR if you want true persistence,
 # or just check if it's already in the BUILDDIR.
-#if [ ! -d "$BASE_DIR/toolchains/$1-mingw" ]; then
-#    echo -e "${YELLOW}Downloading toolchain release: ${TOOLCHAIN_RELEASE}${NC}"
-#    mkdir -p "$BASE_DIR/toolchains"
-#    curl -L -o "$BASE_DIR/toolchains/toolchain.tar.xz" "https://github.com/gfunkmonk/win-cross/releases/download/${TOOLCHAIN_RELEASE}/${1}-w64-mingw32.tar.xz"
-#    cd "$BASE_DIR/toolchains"
-#    tar -xJf toolchain.tar.xz && mv "$1"-* "$1"-mingw && rm toolchain.tar.xz
-#    cd "$BASE_DIR"
-#else
-#    echo -e "${GREEN}Toolchain cache hit: $1-mingw found.${NC}"
-#fi
+if [ ! -d "$BASE_DIR/toolchains/$1-mingw" ]; then
+    echo -e "${YELLOW}Downloading toolchain release: ${TOOLCHAIN_RELEASE}${NC}"
+    mkdir -p "$BASE_DIR/toolchains"
+    curl -L -o "$BASE_DIR/toolchains/toolchain.tar.xz" "https://github.com/gfunkmonk/win-cross/releases/download/${TOOLCHAIN_RELEASE}/${1}-w64-mingw32.tar.xz"
+    cd "$BASE_DIR/toolchains"
+    tar -xJf toolchain.tar.xz && mv "$1"-* "$1"-mingw && rm toolchain.tar.xz
+    cd "$BASE_DIR"
+else
+    echo -e "${GREEN}Toolchain cache hit: $1-mingw found.${NC}"
+fi
 
 export PATH="$BASE_DIR/toolchains/$1-mingw/bin:$PATH"
 
@@ -96,7 +89,7 @@ if [ -d "$BASE_DIR/patch/nano" ]; then
     for p in "$BASE_DIR/patch/nano"/*.patch; do
         if [ -f "$p" ]; then
             echo -e "${PURPLE}Applying $(basename "$p") to nano${NC}"
-            patch -p1 --fuzz=3 < "$p" || exit 1
+            patch -p1 --fuzz=1 < "$p" || exit 1
         fi
     done
 fi
@@ -106,19 +99,19 @@ if [ -d "$BASE_DIR/patch/curses" ]; then
     for p in "$BASE_DIR/patch/curses"/*.patch; do
         if [ -f "$p" ]; then
             echo -e "${YELLOW}Applying $(basename "$p") to curses${NC}"
-            patch -p1 --fuzz=3 < "$p" || exit 1
+            patch -p1 --fuzz=1 < "$p" || exit 1
         fi
     done
 fi
 
 # --- 5. A.I. Killer - Slayer of Giants ---
-echo -e "\n" >> src/definitions.h
-echo '#define PDC_WINCON 1' >> src/definitions.h
-echo '#define PDC_WIDE 1' >> src/definitions.h
-echo '#define CHTYPE_64 1' >> src/definitions.h
-echo '#define PDC_ANSI 1' >> src/definitions.h
-echo '#define PDC_FORCE_UTF8 1' >> src/definitions.h
-echo '#define UNICODE 1' >> src/definitions.h
+#echo -e "\n" >> src/definitions.h
+#echo '#define PDC_WINCON 1' >> src/definitions.h
+#echo '#define PDC_WIDE 1' >> src/definitions.h
+#echo '#define CHTYPE_64 1' >> src/definitions.h
+#echo '#define PDC_ANSI 1' >> src/definitions.h
+#echo '#define PDC_FORCE_UTF8 1' >> src/definitions.h
+#echo '#define UNICODE 1' >> src/definitions.h
 
 # realpath() workaround
 echo -e "${TEAL}PATCH: ${BWHITE}realpath() workaround applied.${NC}"
@@ -161,9 +154,6 @@ sed -i "/COLORS == 256/ {s/==/>=/}" src/rcfile.c
 echo -e "${GREEN}[${BWHITE}winio.c${GREEN}] ${BWHITE}Stripping halfdelay and kb_interrupt calls${NC}"
 sed -i "/halfdelay(ISSET(QUICK_BLANK)/,/disable_kb_interrupt/d" src/winio.c
 
-echo -e "${GREEN}[${BWHITE}nano.c${GREEN}] ${BWHITE}Removing vt220 string${NC}"
-sed -i 's|vt220||g' ./src/nano.c
-
 echo -e "${GREEN}[${BWHITE}nano.c${GREEN}] ${BWHITE}Mapping /dev/tty to CON${NC}"
 sed -i "s|/dev/tty|CON|" src/nano.c
 
@@ -199,6 +189,11 @@ sed -i "/initscr/i\\
 echo -e "${GREEN}[${BWHITE}browser.c${GREEN}] ${BWHITE}Zeroing selected status${NC}"
 sed -i 's/--selected/selected=0/' src/browser.c
 
+# GNUlib glob wraps opendir with its own gl_directory type, so dir is
+# struct gl_directory* by the time rewinddir is called. Cast it to DIR*.
+echo -e "${GREEN}[${BWHITE}browser.c${GREEN}] ${BWHITE}fix GNUlib glob DIR* conflict${NC}"
+sed -i 's/rewinddir(dir)/rewinddir((DIR *)dir)/' src/browser.c
+
 echo -e "${GREEN}[${BWHITE}nano.c${GREEN}] ${BWHITE}Updating modified buffer prompt text${NC}"
 sed -i "s|Save modified buffer|& (Y/N/^C)|" src/nano.c
 
@@ -217,101 +212,32 @@ sed -i '/prototypes.h/a#include "uniwidth.h"' src/chars.c
 echo -e "${GREEN}[${BWHITE}definitions.h${GREEN}] ${BWHITE}IDeleting 0x42 range${NC}"
 sed -i "/0x42[1234]/d" src/definitions.h
 
-echo -e "${GREEN}[${BWHITE}browser.c${GREEN}] ${BWHITE}fix GNUlib glob DIR* conflict in browser.c.${NC}"
-sed -i "s/rewinddir(dir)/rewinddir((DIR *)dir)/" src/browser.c
+# 1. Force nano to treat the character range for Emojis as double-width (2 columns)
+# This patches the wide-character width detection logic.
+##echo -e "${GREEN}[${BWHITE}chars.c${GREEN}] ${BWHITE}fix wcwidth${NC}"
+##sed -i 's/return wcwidth(wc);/if (wc >= 0x1F300 \&\& wc <= 0x1F9FF) return 2; return wcwidth(wc);/' src/chars.c
+# 2. Adjust winio.c to prevent PDCurses from truncating high-plane characters
+# This ensures that characters outside the BMP (Basic Multilingual Plane) aren't filtered.
+##echo -e "${GREEN}[${BWHITE}winio.c${GREEN}] ${BWHITE}fix wcwidth${NC}"
+##sed -i '/if (is_extended_char(wc))/i \    if (wc > 0xFFFF) return true;' src/winio.c
+# 3. Ensure the title bar and status bar allow for multi-column character spacing
+##sed -i 's/waddnwstr(window, \&widechar, 1);/waddnwstr(window, \&widechar, wcwidth(widechar));/' src/winio.c
 
 # PDCurses uses 64bit (chtype) for cell attributes instead of 32bit (int)
-echo -e "\n\nPATCH: Improving from 256colors to true color."
-sed -i "/interface_color_pair/ s/\bint\b/chtype/g" src/prototypes.h src/global.c
-sed -i "/int attributes/ s/\bint\b/chtype/g" src/definitions.h
-sed -i "/int attributes/ s/\bint\b/chtype/g" src/rcfile.c
-sed -i "/bool parse_combination/ s/\bint\b/chtype/g" src/rcfile.c
+#echo -e "\n\nPATCH: Improving from 256colors to true color."
+#sed -i "/interface_color_pair/ s/\bint\b/chtype/g" src/prototypes.h src/global.c
+#sed -i "/int attributes/ s/\bint\b/chtype/g" src/definitions.h
+#sed -i "/int attributes/ s/\bint\b/chtype/g" src/rcfile.c
+#sed -i "/bool parse_combination/ s/\bint\b/chtype/g" src/rcfile.c
 
-echo -e "\n\nPATCH: PDC_display_utf8 = TRUE"
-sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wincon/*.c
-sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/vt/*.c
+#echo -e "\n\nPATCH: PDC_display_utf8 = TRUE"
+#sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wincon/*.c
+#sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/vt/*.c
 
-echo -e "\n\nPATCH: Make MAX_UNICODE suck less."
-sed -i 's|MAX_UNICODE 0xffff|MAX_UNICODE 0x10ffff|g' curses/curspriv.h
+#echo -e "\n\nPATCH: Make MAX_UNICODE suck less."
+#sed -i 's|MAX_UNICODE 0xffff|MAX_UNICODE 0x10ffff|g' curses/curspriv.h
 
-# Fix folder access test
-echo -e "\n\nPATCH: Porting folder accessibility from executable to read access."
-sed -i "s/X_OK/R_OK/" src/files.c
+echo -e "${GREEN}[${BWHITE}pdckbd.c${GREEN}] ${BWHITE}Forced for 64-bit chtype${NC}"
+sed -i 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/vt/pdckbd.c
+sed -i 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/wincon/pdckbd.c
 
-# GNUlib glob wraps opendir with its own gl_directory type, so dir is
-# struct gl_directory* by the time rewinddir is called. Cast it to DIR*.
-echo -e "\n\nPATCH: fix GNUlib glob DIR* conflict in browser.c."
-sed -i 's/rewinddir(dir)/rewinddir((DIR *)dir)/' src/browser.c
-
-# --- 6. Build Binaries ---
-for TRIPLET in "${TARGETS[@]}"; do
-    # Now ARCH is actually the arch (e.g., x86_64)
-    ARCH=$(echo "$TRIPLET" | cut -d'-' -f1)
-    PREFIX="$BASE_DIR/dist/$ARCH"
-
-    # Mapping for your 'Win64/WinARM64' labels
-    NAME=$(echo "$ARCH" | sed 's/aarch64/WinARM64/;s/x86_64/Win64/;s/i686/Win32/')
-    SHORT=$(echo "$ARCH" | cut -d'-' -f1 | sed 's/aarch64/a64/;s/x86_64/w64/;s/i686/w32/')
-
-    echo -e "${TEAL}Building for ${ARCH} (Target: ${TRIPLET})${NC}"
-done
-
-    # Build PDCurses
-    cd "$BUILDDIR/nano/curses/$PDTERM"
-    make clean || true
-    unset NCURSESW_CFLAGS
-    make -j$(nproc) CC="$TRIPLET-gcc" AR="$TRIPLET-ar" STRIP="$TRIPLET-strip" \
-        WIDE=Y UTF8=Y DLL=N CHTYPE_64=Y _${SHORT}=Y \
-        CFLAGS="${CFLAGS} -I.." \
-        CXXFLAGS="${CFLAGS}"
-
-    # Nano Build
-    cd "$BUILDDIR/nano"
-
-    [ -d "build" ] && rm -rf build
-    mkdir build && cd build
-    ../configure --host="$TRIPLET" --prefix="$PREFIX" \
-        --enable-utf8 --enable-threads=windows --disable-nls --sysconfdir="C:\\\\ProgramData" --enable-extras --enable-color --enable-nanorc \
-        CFLAGS="${CFLAGS} -DPDC_NCMOUSE" \
-        CXXFLAGS="${CFLAGS}" \
-        LDFLAGS="-L${BUILDDIR}/nano/curses/$PDTERM -static -static-libgcc $BUILDDIR/nano/curses/$PDTERM/pdcurses.a" \
-        LIBS="-l:pdcurses.a -lwinmm -lbcrypt" \
-        NCURSESW_CFLAGS="-I${BUILDDIR}/nano/curses/ -DNCURSES_STATIC  -DENABLE_MOUSE" \
-        NCURSESW_LIBS="-l:pdcurses.a -lwinmm -lbcrypt"
-
-cat << EOF >> config.h
-#define HAVE_FREXP_IN_LIBC 1
-#define HAVE_FREXPL_IN_LIBC 1
-#define HAVE_SNPRINTF_RETVAL_C99 1
-#define HAVE_SNPRINTF_TRUNCATION_C99 1
-#define MBRTOWC_EMPTY_INPUT_BUG 1
-EOF
-
-    sed -i "/#define NEED_PRINTF_DIRECTIVE_A 1/d" config.h
-    sed -i "/#define NEED_PRINTF_DIRECTIVE_F 1/d" config.h
-    sed -i "/#define NEED_PRINTF_FLAG_GROUPING 1/d" config.h
-    sed -i "/#define NEED_PRINTF_FLAG_ZERO 1/d" config.h
-    sed -i "/#define NEED_PRINTF_INFINITE_DOUBLE 1/d" config.h
-    sed -i "/#define NEED_PRINTF_UNBOUNDED_PRECISION 1/d" config.h
-
-    NANOVER=$(grep -m1 "PACKAGE_VERSION =" Makefile | cut -d'=' -f2 | xargs)
-    echo "#define REVISION \"GNU nano $NANOVER for $NAME\"" > src/revision.h
-
-    make -j$(nproc) && make install
-    "$TRIPLET-strip" -s "$PREFIX/bin/nano.exe"
-    cd ${PREFIX}
-    cp ${BASE_DIR}/LICENSE .
-    cp ${BASE_DIR}/README.md .
-    mv bin/nano.exe share/doc/nano/* "${BUILDDIR}/nano/doc/sample.nanorc.in" .
-    if [ -d "syntax" ]; then
-        rm -fr syntax/
-    fi
-    git clone https://github.com/gfunkmonk/nanorc syntax
-    cd syntax
-    rm -fr .git/
-    cd ..
-    cp ${BASE_DIR}/.nanorc .
-    rm -rf bin share rnano*
-    upx --lzma --best nano.exe || true
-    ls -als
-    7z a -mx9 -mm=Deflate64 -mmt$(nproc) "${BASE_DIR}/dist/nano-for-windows_${ARCH}_$(date +%y%m%d_%H%M%S).zip" * .nanorc
