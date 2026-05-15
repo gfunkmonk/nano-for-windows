@@ -41,7 +41,7 @@
 +							(b0 >= 0xE0) ? (b0 & 0x0F) : (b0 & 0x1F);
 +			int k;
 +
-+			for (k = 1; k < seqlen; k++) {
++			for (k = 1; k < seqlen && text[k] != '\0'; k++) {
 +				unsigned char bx = (unsigned char)text[k];
 +				if (bx < 0x80 || bx > 0xBF)
 +					break;

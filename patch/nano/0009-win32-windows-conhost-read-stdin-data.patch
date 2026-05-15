@@ -17,7 +17,7 @@ index c11048e..72c25f4 100644
  void reconnect_and_store_state(void)
  {
 -	int thetty = open("/dev/tty", O_RDONLY);
-+	int thetty = open("CONIN$", O_RDONLY);
++	int thetty = open("CONIN$", O_RDWR);
  
  	if (thetty < 0 || dup2(thetty, STDIN_FILENO) < 0)
  		die(_("Could not reconnect stdin to keyboard\n"));
