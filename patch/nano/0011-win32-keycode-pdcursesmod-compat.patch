@@ -147,13 +147,17 @@ index 42225df..7818a7b 100644
  		return ERR;
  
  	if (escapes == 0) {
-+		/* Diambiguate some control keystrokes: ^H|BACKSPACE, ^M|ENTER */
++		/* Disambiguate some control keystrokes: ^H|BACKSPACE, ^M|ENTER. */
 +		if (!(modifiers & PDC_KEY_MODIFIER_CONTROL)) {
 +			switch (keycode) {
 +				case '\b': return KEY_BACKSPACE;
 +				case '\r': return KEY_ENTER;
 +			}
 +		}
++		/* Preserve ASCII control bytes (like ^C and ^X) even when
++		 * the backend also reports a Control modifier. */
++		if (keycode < ' ' && keycode != '\t')
++			return keycode;
  		/* Most key codes in byte range cannot be special keys. */
 -		if (keycode < 0xFF && keycode != '\t' && keycode != DEL_CODE)
 +		if (!modifiers && keycode < 0xFF && keycode != '\t' && keycode != DEL_CODE)
@@ -229,4 +233,3 @@ index 42225df..7818a7b 100644
  	if (keycode == mousefocusin || keycode == mousefocusout)
 -- 
 2.54.0.windows.1
-
