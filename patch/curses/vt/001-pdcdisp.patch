@@ -1,0 +1,62 @@
+diff -ruN curses/vt/pdcdisp.c cursesb/vt/pdcdisp.c
+--- a/curses/vt/pdcdisp.c	2026-05-15 06:33:11.555026972 -0400
++++ b/curses/vt/pdcdisp.c	2026-05-15 06:36:43.195025583 -0400
+@@ -180,6 +180,58 @@
+ 
+ #ifdef PDC_WIDE
+        assert( ch != MAX_UNICODE);
++#define IS_SUPPLEMENTAL_MULTILINGUAL_PLANE(c) ((c) >= 0x10000 && (c) <= 0x10FFFF)
++#ifdef USING_COMBINING_CHARACTER_SCHEME
++       /* Skip the placeholder cell that follows a fullwidth character.
++        * Writing the noncharacter U+10FFFF here would (a) display garbage
++        * in some terminals and (b) break ZWJ joining of adjacent emoji,
++        * because the cluster has to reach the terminal as an unbroken
++        * sequence of code points. */
++       if( ch == DUMMY_CHAR_NEXT_TO_FULLWIDTH)
++           continue;
++       /* Expand a combined-character cell (base + variation selector,
++        * base + ZWJ, multi-mark cluster, ...) into its component code
++        * points so the terminal can compose them.  added[] is filled
++        * outermost-first, so we emit root, then added[n_added] (oldest
++        * combiner), ..., added[0] (newest combiner). */
++       if( ch > MAX_UNICODE)
++       {
++           cchar_t added[10];
++           chtype  root = ch;
++           int     n_added = 0;
++           int     k;
++
++           while( (root = PDC_expand_combined_characters( root,
++                                  &added[n_added])) > MAX_UNICODE)
++               n_added++;
++
++           if( root <= MAX_UNICODE)
++           {
++               if( IS_SUPPLEMENTAL_MULTILINGUAL_PLANE( root))
++               {
++                   bytes_out += PDC_wc_to_utf8( obuff + bytes_out, (wchar_t)((root - 0x10000) >> 10 | 0xD800));
++                   bytes_out += PDC_wc_to_utf8( obuff + bytes_out, (wchar_t)((root & 0x3FF) | 0xDC00));
++               }
++               else
++                   bytes_out += PDC_wc_to_utf8( obuff + bytes_out, (wchar_t)root);
++           }
++           for( k = n_added; k >= 0; k--)
++           {
++               const chtype c = (chtype)added[k];
++
++               if( c == DUMMY_CHAR_NEXT_TO_FULLWIDTH)
++                   continue;
++               if( IS_SUPPLEMENTAL_MULTILINGUAL_PLANE( c))
++               {
++                   bytes_out += PDC_wc_to_utf8( obuff + bytes_out, (wchar_t)((c - 0x10000) >> 10 | 0xD800));
++                   bytes_out += PDC_wc_to_utf8( obuff + bytes_out, (wchar_t)((c & 0x3FF) | 0xDC00));
++               }
++               else
++                   bytes_out += PDC_wc_to_utf8( obuff + bytes_out, (wchar_t)c);
++           }
++           continue;
++       }
++#endif
+        assert( len == 1 || ch < MAX_UNICODE);
+ #endif
+
