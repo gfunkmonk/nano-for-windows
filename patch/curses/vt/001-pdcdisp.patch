@@ -1,7 +1,7 @@
 diff -ruN curses/vt/pdcdisp.c cursesb/vt/pdcdisp.c
 --- a/curses/vt/pdcdisp.c	2026-05-15 06:33:11.555026972 -0400
 +++ b/curses/vt/pdcdisp.c	2026-05-15 06:36:43.195025583 -0400
-@@ -180,6 +180,58 @@
+@@ -180,5 +180,43 @@
  
  #ifdef PDC_WIDE
         assert( ch != MAX_UNICODE);
@@ -31,32 +31,17 @@ diff -ruN curses/vt/pdcdisp.c cursesb/vt/pdcdisp.c
 +               n_added++;
 +
 +           if( root <= MAX_UNICODE)
-+           {
-+               if( IS_SUPPLEMENTAL_MULTILINGUAL_PLANE( root))
-+               {
-+                   bytes_out += PDC_wc_to_utf8( obuff + bytes_out, (wchar_t)((root - 0x10000) >> 10 | 0xD800));
-+                   bytes_out += PDC_wc_to_utf8( obuff + bytes_out, (wchar_t)((root & 0x3FF) | 0xDC00));
-+               }
-+               else
-+                   bytes_out += PDC_wc_to_utf8( obuff + bytes_out, (wchar_t)root);
-+           }
++               bytes_out += PDC_wc_to_utf8( obuff + bytes_out, (wchar_t)root);
 +           for( k = n_added; k >= 0; k--)
 +           {
 +               const chtype c = (chtype)added[k];
 +
 +               if( c == DUMMY_CHAR_NEXT_TO_FULLWIDTH)
 +                   continue;
-+               if( IS_SUPPLEMENTAL_MULTILINGUAL_PLANE( c))
-+               {
-+                   bytes_out += PDC_wc_to_utf8( obuff + bytes_out, (wchar_t)((c - 0x10000) >> 10 | 0xD800));
-+                   bytes_out += PDC_wc_to_utf8( obuff + bytes_out, (wchar_t)((c & 0x3FF) | 0xDC00));
-+               }
-+               else
-+                   bytes_out += PDC_wc_to_utf8( obuff + bytes_out, (wchar_t)c);
++               bytes_out += PDC_wc_to_utf8( obuff + bytes_out, (wchar_t)c);
 +           }
 +           continue;
 +       }
 +#endif
         assert( len == 1 || ch < MAX_UNICODE);
  #endif
-
