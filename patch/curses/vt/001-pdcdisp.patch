@@ -31,14 +31,14 @@ diff -ruN curses/vt/pdcdisp.c cursesb/vt/pdcdisp.c
 +               n_added++;
 +
 +           if( root <= MAX_UNICODE)
-+               bytes_out += PDC_wc_to_utf8( obuff + bytes_out, (wchar_t)root);
++               bytes_out += PDC_wc_to_utf8( obuff + bytes_out, (int32_t)root);
 +           for( k = n_added; k >= 0; k--)
 +           {
 +               const chtype c = (chtype)added[k];
 +
 +               if( c == DUMMY_CHAR_NEXT_TO_FULLWIDTH)
 +                   continue;
-+               bytes_out += PDC_wc_to_utf8( obuff + bytes_out, (wchar_t)c);
++               bytes_out += PDC_wc_to_utf8( obuff + bytes_out, (int32_t)c);
 +           }
 +           continue;
 +       }
