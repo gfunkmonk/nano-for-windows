@@ -1,9 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
-if [ $# -lt 1 ]; then
-    echo "Usage: $0 [x86_64|i686|aarch64]"
-    echo "Example: $0 i686"
+if [ $# -lt 2 ]; then
+    echo "Usage: $0 [x86_64|i686|aarch64] PDTERM"
+    echo "Example: $0 i686 wincon"
     exit 1
 fi
 
@@ -23,8 +23,8 @@ case "$1" in
 esac
 
 # Map PDTERM
-PDTERM="wincon"
-echo "Building for $1 with wincon"
+PDTERM="$2"
+echo "Building for $1 with PDTERM=$PDTERM"
 
 # --- 2. Configuration & Environment ---
 BASE_DIR="$(pwd)"
@@ -34,24 +34,35 @@ mkdir -p "${BUILDDIR}"
 cd "${BUILDDIR}"
 
 # Global variables from your workflow
-export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DCHTYPE_64 -DPDC_WIDE -DPDC_WINCON -DPDC_FORCE_UTF8 -D_GNU_SOURCE"
-export LDFLAGS="-L${BUILDDIR}/nano/curses/wincon -static -static-libgcc $BUILDDIR/nano/curses/wincon/pdcurses.a"
+export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DCHTYPE_64 -DPDC_WIDE -DPDC_FORCE_UTF8 -D_GNU_SOURCE"
+export LDFLAGS="-L${BUILDDIR}/nano/curses/$PDTERM -static -static-libgcc $BUILDDIR/nano/curses/$PDTERM/pdcurses.a"
 export LIBS="-l:pdcurses.a -lwinmm -lbcrypt"
-export NCURSESW_CFLAGS="-I${BUILDDIR}/nano/curses/ -DNCURSES_STATIC -DENABLE_MOUSE"
-export NCURSESW_LIBS="-l:pdcurses.a -lwinmm -lbcrypt"
+export NCURSES_CFLAGS="-I${BUILDDIR}/nano/curses/ -DNCURSES_STATIC -DENABLE_MOUSE"
+export NCURSES_LIBS="-l:pdcurses.a -lwinmm -lbcrypt"
 export WT_SESSION="1"
 export ConEmuANSI="ON"
 
+if [ "${PDTERM}" == "wincon" ]; then
+    export CFLAGS="${CFLAGS} -DPDC_WINCON"
+elif [ "${PDTERM}" == "vt" ]; then
+    export CFLAGS="${CFLAGS} -DPDC_VT=RGB"
+fi
+
 # --- 3. Toolchain Setup (gfunkmonk/win-cross) ---
 echo -e "${TEAL}Setting up toolchain...${NC}"
-TOOLCHAIN_RELEASE="BallmersBoyz"
+#TOOLCHAIN_RELEASE="BallmersBoyz"
+TOOLCHAIN_RELEASE="NT3.51"
 
 # Define a persistent toolchain directory outside the BUILDDIR if you want true persistence,
 # or just check if it's already in the BUILDDIR.
 if [ ! -d "$BASE_DIR/toolchains/$1-mingw" ]; then
     echo -e "${YELLOW}Downloading toolchain release: ${TOOLCHAIN_RELEASE}${NC}"
     mkdir -p "$BASE_DIR/toolchains"
-    curl -L -o "$BASE_DIR/toolchains/toolchain.tar.xz" "https://github.com/gfunkmonk/win-cross/releases/download/${TOOLCHAIN_RELEASE}/${1}-w64-mingw32.tar.xz"
+    if command -v axel >/dev/null 2>&1; then
+	axel -n 6 -o "$BASE_DIR/toolchains/toolchain.tar.xz" "https://github.com/gfunkmonk/win-cross/releases/download/${TOOLCHAIN_RELEASE}/${1}-w64-mingw32.tar.xz"
+    else
+	curl -L -o "$BASE_DIR/toolchains/toolchain.tar.xz" "https://github.com/gfunkmonk/win-cross/releases/download/${TOOLCHAIN_RELEASE}/${1}-w64-mingw32.tar.xz"
+    fi
     cd "$BASE_DIR/toolchains"
     tar -xJf toolchain.tar.xz && mv "$1"-* "$1"-mingw && rm toolchain.tar.xz
     cd "$BASE_DIR"
@@ -60,6 +71,10 @@ else
 fi
 
 export PATH="$BASE_DIR/toolchains/$1-mingw/bin:$PATH"
+
+#if command -v $BASE_DIR/toolchains/$1-mingw/$1-w64-mingw32/bin/mold >/dev/null 2>&1; then
+#    export LDFLAGS="${LDFLAGS} -fuse-ld=$BASE_DIR/toolchains/$1-mingw/$1-w64-mingw32/bin/mold"
+#fi
 
 # --- 4. Source Setup ---
 # Function to sync without redownloading the universe
@@ -98,12 +113,12 @@ if [ -d "$BASE_DIR/patch/nano" ]; then
 fi
 
 # Patch Curses
-if [ -d "$BASE_DIR/patch/curses" ]; then
+if [ -d "$BASE_DIR/patch/curses/$PDTERM" ]; then
     while IFS= read -r p; do
         [ -n "$p" ] || continue
         echo -e "${YELLOW}Applying $(basename "$p") to curses${NC}"
         patch -p1 < "$p" || exit 1
-    done < <(find "$BASE_DIR/patch/curses" -maxdepth 1 -type f -name '*.patch' | sort -V)
+    done < <(find "$BASE_DIR/patch/curses/$PDTERM" -maxdepth 1 -type f -name '*.patch' | sort -V)
 fi
 
 # realpath() workaround
@@ -247,11 +262,11 @@ for TRIPLET in "${TARGETS[@]}"; do
     echo -e "${TEAL}Building for ${ARCH} (Target: ${TRIPLET})${NC}"
 
     # Build PDCurses
-    cd "$BUILDDIR/nano/curses/wincon"
+    cd "$BUILDDIR/nano/curses/$PDTERM"
     make clean || true
     unset NCURSESW_CFLAGS
     make -j$(nproc) CC="$TRIPLET-gcc" AR="$TRIPLET-ar" STRIP="$TRIPLET-strip" \
-        WIDE=Y UTF8=Y DLL=N CHTYPE_64=Y WINCON=Y _${SHORT}=Y \
+        WIDE=Y UTF8=Y DLL=N CHTYPE_64=Y _${SHORT}=Y \
         CFLAGS="${CFLAGS} -I.." \
         CXXFLAGS="${CFLAGS}"
 
@@ -266,8 +281,8 @@ for TRIPLET in "${TARGETS[@]}"; do
         CXXFLAGS="${CFLAGS}" \
         LDFLAGS="${LDFLAGS}" \
         LIBS="${LIBS}" \
-        NCURSESW_CFLAGS="${NCURSESW_CFLAGS}" \
-        NCURSESW_LIBS="${NCURSESW_LIBS}"
+	NCURSESW_CFLAGS="${NCURSES_CFLAGS}" \
+	NCURSESW_LIBS="${NCURSES_LIBS}"
 
 cat << EOF >> config.h
 #define HAVE_FREXP_IN_LIBC 1

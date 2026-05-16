@@ -1,0 +1,20 @@
+--- a/curses/vt/Makefile	2026-05-15 06:29:11.805028547 -0400
++++ b/curses/vt/Makefile	2026-05-15 23:28:19.194626992 -0400
+@@ -19,7 +19,7 @@
+ 
+ RM		= rm -f
+ 
+-CFLAGS  = -Wall -Wextra -pedantic -Werror
++CFLAGS  = -Wall -Wextra -pedantic
+ ifeq ($(DEBUG),Y)
+ 	CFLAGS  += -g -DPDCDEBUG
+ else
+@@ -72,7 +72,7 @@
+ 	E = .exe
+ endif
+ 
+-LIBNAME=libpdcurses
++LIBNAME=pdcurses
+ DLLNAME=pdcurses
+ 
+ LIBFLAGS = rv
