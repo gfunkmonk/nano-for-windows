@@ -19,6 +19,7 @@ case "$1" in
     x86_64)  TARGETS=("x86_64-w64-mingw32") ;;
     i686)    TARGETS=("i686-w64-mingw32") ;;
     aarch64) TARGETS=("aarch64-w64-mingw32") ;;
+    armv7)     TARGETS=("armv7-w64-mingw32") ;;
     *) echo "Invalid architecture: $1"; exit 1 ;;
 esac
 
@@ -256,8 +257,8 @@ for TRIPLET in "${TARGETS[@]}"; do
     PREFIX="$BASE_DIR/dist/$ARCH"
 
     # Mapping for your 'Win64/WinARM' labels
-    NAME=$(echo "$ARCH" | sed 's/aarch64/WinARM/;s/x86_64/Win64/;s/i686/Win32/')
-    SHORT=$(echo "$ARCH" | cut -d'-' -f1 | sed 's/aarch64/a64/;s/x86_64/w64/;s/i686/w32/')
+    NAME=$(echo "$ARCH" | sed 's/aarch64/ARM64/;s/armv7/ARM32/;s/x86_64/Win64/;s/i686/Win32/')
+    SHORT=$(echo "$ARCH" | cut -d'-' -f1 | sed 's/aarch64/a64/;s/armv7/a32/;s/x86_64/w64/;s/i686/w32/')
 
     echo -e "${TEAL}Building for ${ARCH} (Target: ${TRIPLET})${NC}"
 

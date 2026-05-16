@@ -1,16 +1,48 @@
---- a/curses/wincon/Makefile	2026-05-15 06:29:11.805028547 -0400
-+++ b/curses/wincon/Makefile	2026-05-15 08:29:48.584981023 -0400
-@@ -56,7 +56,9 @@
+--- a/curses/wincon/Makefile	2026-05-16 04:38:18.654504849 -0400
++++ b/curses/wincon/Makefile	2026-05-16 04:58:46.284496787 -0400
+@@ -8,7 +8,6 @@
+ # [all|demos|pdcurses.a|testcurs.exe...]
+ 
+ O = o
+-E = .exe
+ 
+ ifndef PDCURSES_SRCDIR
+ 	PDCURSES_SRCDIR = ..
+@@ -23,7 +22,7 @@
+ 
+ CAT		= cat
+ PREFIX		=
+-PATH_SEP		= /
++PATH_SEP	= /
+ CP		= cp
+ RM		= rm -f
+ 
+@@ -56,12 +55,21 @@
  # Only decision is:  are we doing a 64-bit compile (_w64 defined)?
  
  ifndef ON_WINDOWS
+-	PREFIX  = i686-w64-mingw32-
 +	ifdef _w32
- 	PREFIX  = i686-w64-mingw32-
-+	endif
++		PREFIX = i686-w64-mingw32-
++		NOT_WIN = Y
++ 	endif
  	ifdef _w64
- 		PREFIX  = x86_64-w64-mingw32-
+-		PREFIX  = x86_64-w64-mingw32-
++		PREFIX = x86_64-w64-mingw32-
++		NOT_WIN = Y
  	endif
-@@ -77,16 +79,30 @@
+ 	ifdef _a64
+-		PREFIX  = aarch64-w64-mingw32-
++		PREFIX = aarch64-w64-mingw32-
++		NOT_WIN = Y
++	endif
++	ifdef _a32
++		PREFIX = armv7-w64-mingw32-
++		NOT_WIN = Y
+ 	endif
+ endif
+ 
+@@ -77,16 +84,36 @@
  	CFLAGS  += -g -DPDCDEBUG
  	LDFLAGS = -g
  else
@@ -19,6 +51,18 @@
  	LDFLAGS =
  endif
  
++ifeq ($(DOS),Y)
++	CFLAGS += -DDOS
++	E = .exe
++	RM = del
++endif
++
++ifeq ($(NOT_WIN),Y)
++	CFLAGS += -fPIC
++       EXELIBS = -lwinmm
++	E = .exe
++endif
++
  CFLAGS += -I$(PDCURSES_SRCDIR)
  
 +ifdef CHTYPE_64
@@ -30,16 +74,18 @@
  endif
  
 +ifdef CHTYPE_16
-+          CFLAGS += -DCHTYPE_16
-+endif
-+
-+ifeq ($(DOS),Y)
-+          CFLAGS    += -DDOS
-+          E = .exe
-+          RM = del
++	CFLAGS += -DCHTYPE_16
 +endif
 +
  ifeq ($(UTF8),Y)
  	CFLAGS += -DPDC_FORCE_UTF8
  else
-
+@@ -99,7 +126,7 @@
+ 	PDCCFLAGS += -DHAVE_NO_INFOEX
+ endif
+ 
+-LINK	   = $(CC)
++LINK	 = $(CC)
+ LIBNAME = pdcurses
+ DLLNAME = pdcurses
+ 

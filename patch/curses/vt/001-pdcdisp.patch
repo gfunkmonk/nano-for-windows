@@ -1,11 +1,18 @@
 diff -ruN curses/vt/pdcdisp.c cursesb/vt/pdcdisp.c
 --- a/curses/vt/pdcdisp.c	2026-05-15 06:33:11.555026972 -0400
 +++ b/curses/vt/pdcdisp.c	2026-05-15 06:36:43.195025583 -0400
-@@ -180,5 +180,43 @@
+@@ -180,5 +180,50 @@
  
  #ifdef PDC_WIDE
         assert( ch != MAX_UNICODE);
 +#define IS_SUPPLEMENTAL_MULTILINGUAL_PLANE(c) ((c) >= 0x10000 && (c) <= 0x10FFFF)
++        /* Raw SMP codepoints stored by the addch emoji bypass are NOT combined-char
++         * indices — output them directly rather than feeding them into the expansion
++         * loop, which would produce garbage or spin forever on an unknown index. */
++        if (IS_SUPPLEMENTAL_MULTILINGUAL_PLANE(ch)) {
++            bytes_out += PDC_wc_to_utf8(obuff + bytes_out, (int32_t)ch);
++            continue;
++        }
 +#ifdef USING_COMBINING_CHARACTER_SCHEME
 +       /* Skip the placeholder cell that follows a fullwidth character.
 +        * Writing the noncharacter U+10FFFF here would (a) display garbage
