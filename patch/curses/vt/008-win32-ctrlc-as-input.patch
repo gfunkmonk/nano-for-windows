@@ -57,7 +57,7 @@
     SP->_trap_mbe = 0;
     PDC_mouse_set( );          /* clear any mouse event captures */
  #ifdef _WIN32
-+   SetConsoleCtrlHandler( pdc_ctrl_handler, FALSE);
++   SetConsoleCtrlHandler(NULL, FALSE);
     set_win10_for_vt_codes( FALSE);
  #else
     #if !defined( DOS)
