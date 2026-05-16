@@ -24,7 +24,7 @@ esac
 
 # Map PDTERM
 PDTERM="wincon"
-echo "Building for $1 with PDTERM=$PDTERM"
+echo "Building for $1 with wincon"
 
 # --- 2. Configuration & Environment ---
 BASE_DIR="$(pwd)"
@@ -35,12 +35,16 @@ cd "${BUILDDIR}"
 
 # Global variables from your workflow
 export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DCHTYPE_64 -DPDC_WIDE -DPDC_WINCON -DPDC_FORCE_UTF8 -D_GNU_SOURCE"
+export LDFLAGS="-L${BUILDDIR}/nano/curses/wincon -static -static-libgcc $BUILDDIR/nano/curses/wincon/pdcurses.a"
+export LIBS="-l:pdcurses.a -lwinmm -lbcrypt"
+export NCURSESW_CFLAGS="-I${BUILDDIR}/nano/curses/ -DNCURSES_STATIC -DENABLE_MOUSE"
+export NCURSESW_LIBS="-l:pdcurses.a -lwinmm -lbcrypt"
 export WT_SESSION="1"
 export ConEmuANSI="ON"
 
 # --- 3. Toolchain Setup (gfunkmonk/win-cross) ---
 echo -e "${TEAL}Setting up toolchain...${NC}"
-TOOLCHAIN_RELEASE="BillsBastards" # Plug in release name here
+TOOLCHAIN_RELEASE="BallmersBoyz"
 
 # Define a persistent toolchain directory outside the BUILDDIR if you want true persistence,
 # or just check if it's already in the BUILDDIR.
@@ -243,7 +247,7 @@ for TRIPLET in "${TARGETS[@]}"; do
     echo -e "${TEAL}Building for ${ARCH} (Target: ${TRIPLET})${NC}"
 
     # Build PDCurses
-    cd "$BUILDDIR/nano/curses/$PDTERM"
+    cd "$BUILDDIR/nano/curses/wincon"
     make clean || true
     unset NCURSESW_CFLAGS
     make -j$(nproc) CC="$TRIPLET-gcc" AR="$TRIPLET-ar" STRIP="$TRIPLET-strip" \
@@ -260,10 +264,10 @@ for TRIPLET in "${TARGETS[@]}"; do
         --enable-utf8 --enable-threads=windows --disable-nls --sysconfdir="C:\\\\ProgramData" --enable-extras --enable-color --enable-nanorc --disable-dependency-tracking \
         CFLAGS="${CFLAGS} -DPDC_NCMOUSE" \
         CXXFLAGS="${CFLAGS}" \
-        LDFLAGS="-L${BUILDDIR}/nano/curses/$PDTERM -static -static-libgcc $BUILDDIR/nano/curses/$PDTERM/pdcurses.a" \
-        LIBS="-l:pdcurses.a -lwinmm -lbcrypt" \
-        NCURSESW_CFLAGS="-I${BUILDDIR}/nano/curses/ -DNCURSES_STATIC  -DENABLE_MOUSE" \
-        NCURSESW_LIBS="-l:pdcurses.a -lwinmm -lbcrypt"
+        LDFLAGS="${LDFLAGS}" \
+        LIBS="${LIBS}" \
+        NCURSESW_CFLAGS="${NCURSESW_CFLAGS}" \
+        NCURSESW_LIBS="${NCURSESW_LIBS}"
 
 cat << EOF >> config.h
 #define HAVE_FREXP_IN_LIBC 1
