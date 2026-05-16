@@ -1,0 +1,75 @@
+diff --git a/vt/pdckbd.c b/vt/pdckbd.c
+index 9b66eea..066d62a 100644
+--- a/curses/vt/pdckbd.c
++++ b/curses/vt/pdckbd.c
+@@ -11,6 +11,13 @@
+    #include <unistd.h>
+ #endif
+ 
++#ifdef _WIN32
++#define WIN32_LEAN_AND_MEAN
++#include <windows.h>
++
++extern int PDC_n_ctrl_c;
++#endif
++
+ /* Digital Mars and DJGPP for DOS each implement getch() and/or _getch().
+ The following,  declared _before_ curses.h is #included,  enable us to
+ evade conflicts with the PDCursesMod getch().   */
+@@ -95,6 +102,17 @@ static bool check_key( int *c)
+     else
+        rval = FALSE;
+ #else
++#ifdef _WIN32
++    if( PDC_n_ctrl_c > 0)
++       {
++       if( c)
++          {
++          PDC_n_ctrl_c--;
++          *c = 3;
++          }
++       return( TRUE);
++       }
++#endif
+     if( WINDOWS_VERSION_OF_KBHIT( ))
+        {
+        rval = TRUE;
+diff --git a/vt/pdcscrn.c b/vt/pdcscrn.c
+index 238cd6e..6119389 100644
+--- a/curses/vt/pdcscrn.c
++++ b/curses/vt/pdcscrn.c
+@@ -34,6 +34,18 @@ bool PDC_resize_occurred = FALSE;
+ 
+ #ifdef _WIN32
+ 
++int PDC_n_ctrl_c = 0;
++
++static BOOL WINAPI pdc_ctrl_handler( DWORD event_type)
++{
++    if( event_type == CTRL_C_EVENT && SP && SP->raw_inp)
++    {
++        PDC_n_ctrl_c++;
++        return TRUE;
++    }
++    return FALSE;
++}
++
+ #ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
+ #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
+ #endif
+@@ -274,6 +286,7 @@ void PDC_scr_close( void)
+    SP->_trap_mbe = 0;
+    PDC_mouse_set( );          /* clear any mouse event captures */
+ #ifdef _WIN32
++   SetConsoleCtrlHandler( pdc_ctrl_handler, FALSE);
+    set_win10_for_vt_codes( FALSE);
+ #else
+    #if !defined( DOS)
+@@ -346,6 +359,7 @@ int PDC_scr_open(void)
+ #endif
+ #ifdef _WIN32
+     set_win10_for_vt_codes( TRUE);
++    SetConsoleCtrlHandler( pdc_ctrl_handler, TRUE);
+ #endif
+ 
+     PDC_LOG(("PDC_scr_open called\n"));
