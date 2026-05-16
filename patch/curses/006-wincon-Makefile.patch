@@ -1,0 +1,45 @@
+--- a/curses/wincon/Makefile	2026-05-15 06:29:11.805028547 -0400
++++ b/curses/wincon/Makefile	2026-05-15 08:29:48.584981023 -0400
+@@ -56,7 +56,9 @@
+ # Only decision is:  are we doing a 64-bit compile (_w64 defined)?
+ 
+ ifndef ON_WINDOWS
++	ifdef _w32
+ 	PREFIX  = i686-w64-mingw32-
++	endif
+ 	ifdef _w64
+ 		PREFIX  = x86_64-w64-mingw32-
+ 	endif
+@@ -77,16 +79,30 @@
+ 	CFLAGS  += -g -DPDCDEBUG
+ 	LDFLAGS = -g
+ else
+-	CFLAGS  += -O3
++	CFLAGS  += -O2
+ 	LDFLAGS =
+ endif
+ 
+ CFLAGS += -I$(PDCURSES_SRCDIR)
+ 
++ifdef CHTYPE_64
++	CFLAGS += -DCHTYPE_64
++endif
++
+ ifdef CHTYPE_32
+ 	CFLAGS += -DCHTYPE_32
+ endif
+ 
++ifdef CHTYPE_16
++          CFLAGS += -DCHTYPE_16
++endif
++
++ifeq ($(DOS),Y)
++          CFLAGS    += -DDOS
++          E = .exe
++          RM = del
++endif
++
+ ifeq ($(UTF8),Y)
+ 	CFLAGS += -DPDC_FORCE_UTF8
+ else
+
