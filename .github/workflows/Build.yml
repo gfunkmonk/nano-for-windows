@@ -33,6 +33,7 @@ env:
   WT_SESSION: "1"        # This triggers pdc_wt = TRUE
   ConEmuANSI: "ON"      # This is a fallback if WT_SESSION isn't found
   CFLAGS: "-O2 -fno-math-errno -flto -std=c17 -Wno-error -DCHTYPE_64 -DPDC_WIDE -DPDC_FORCE_UTF8 -D_GNU_SOURCE"
+  CPPFLAGS: "-D__USE_MINGW_ANSI_STDIO"
 
 jobs:
   ## PRECHECK ##############################################################################

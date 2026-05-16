@@ -37,11 +37,16 @@ cd "${BUILDDIR}"
 # Global variables from your workflow
 export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DCHTYPE_64 -DPDC_WIDE -DPDC_FORCE_UTF8 -D_GNU_SOURCE"
 export LDFLAGS="-L${BUILDDIR}/nano/curses/$PDTERM -static -static-libgcc $BUILDDIR/nano/curses/$PDTERM/pdcurses.a"
-export LIBS="-l:pdcurses.a -lwinmm -lbcrypt"
+export LIBS="-l:pdcurses.a -lwinmm -lbcrypt -lshlwapi"
 export NCURSES_CFLAGS="-I${BUILDDIR}/nano/curses/ -DNCURSES_STATIC -DENABLE_MOUSE"
 export NCURSES_LIBS="-l:pdcurses.a -lwinmm -lbcrypt"
+export CPPFLAGS="-D__USE_MINGW_ANSI_STDIO -DHAVE_NCURSESW_NCURSES_H -DNCURSES_STATIC"
 export WT_SESSION="1"
 export ConEmuANSI="ON"
+
+if [ "$PDTERM" == "vt" ]; then
+    export PDC_VT=RGB UNDERLINE BLINK DIM STANDOUT
+fi
 
 # --- 3. Toolchain Setup (gfunkmonk/win-cross) ---
 echo -e "${TEAL}Setting up toolchain...${NC}"
@@ -155,6 +160,11 @@ sed -i "/COLORS == 256/ {s/==/>=/}" src/rcfile.c
 
 echo -e "${GREEN}[${BWHITE}winio.c${GREEN}] ${BWHITE}Stripping halfdelay and kb_interrupt calls${NC}"
 sed -i "/halfdelay(ISSET(QUICK_BLANK)/,/disable_kb_interrupt/d" src/winio.c
+
+if [ "${PDTERM}" == "vt" ]; then
+    echo -e "${GREEN}[${BWHITE}nano.c${GREEN}] ${BWHITE}Re-install SIGINT handler after nano sets SIG_IGN (VT/ConPTY fix)${NC}"
+    sed -i '/set_up_signal_handlers();/a\\n#if defined(__PDCURSESMOD__) \&\& defined(_WIN32)\n\t{ extern void PDC_install_ctrl_c_handler(void); PDC_install_ctrl_c_handler(); }\n#endif' src/nano.c
+fi
 
 echo -e "${GREEN}[${BWHITE}nano.c${GREEN}] ${BWHITE}Mapping /dev/tty to CON${NC}"
 sed -i "s|/dev/tty|CON|" src/nano.c

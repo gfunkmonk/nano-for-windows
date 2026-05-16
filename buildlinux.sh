@@ -19,7 +19,7 @@ case "$1" in
     x86_64)  TARGETS=("x86_64-w64-mingw32") ;;
     i686)    TARGETS=("i686-w64-mingw32") ;;
     aarch64) TARGETS=("aarch64-w64-mingw32") ;;
-    armv7)     TARGETS=("armv7-w64-mingw32") ;;
+    armv7)   TARGETS=("armv7-w64-mingw32") ;;
     *) echo "Invalid architecture: $1"; exit 1 ;;
 esac
 
@@ -37,11 +37,16 @@ cd "${BUILDDIR}"
 # Global variables from your workflow
 export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DCHTYPE_64 -DPDC_WIDE -DPDC_FORCE_UTF8 -D_GNU_SOURCE"
 export LDFLAGS="-L${BUILDDIR}/nano/curses/$PDTERM -static -static-libgcc $BUILDDIR/nano/curses/$PDTERM/pdcurses.a"
-export LIBS="-l:pdcurses.a -lwinmm -lbcrypt"
+export LIBS="-l:pdcurses.a -lwinmm -lbcrypt -lshlwapi"
 export NCURSES_CFLAGS="-I${BUILDDIR}/nano/curses/ -DNCURSES_STATIC -DENABLE_MOUSE"
 export NCURSES_LIBS="-l:pdcurses.a -lwinmm -lbcrypt"
+export CPPFLAGS="-D__USE_MINGW_ANSI_STDIO -DHAVE_NCURSESW_NCURSES_H -DNCURSES_STATIC"
 export WT_SESSION="1"
 export ConEmuANSI="ON"
+
+if [ "$PDTERM" == "vt" ]; then
+    export PDC_VT=RGB UNDERLINE BLINK DIM STANDOUT
+fi
 
 # --- 3. Toolchain Setup (gfunkmonk/win-cross) ---
 echo -e "${TEAL}Setting up toolchain...${NC}"
@@ -54,9 +59,9 @@ if [ ! -d "$BASE_DIR/toolchains/$1-mingw" ]; then
     echo -e "${YELLOW}Downloading toolchain release: ${TOOLCHAIN_RELEASE}${NC}"
     mkdir -p "$BASE_DIR/toolchains"
     if command -v axel >/dev/null 2>&1; then
-	axel -n 6 -o "$BASE_DIR/toolchains/toolchain.tar.xz" "https://github.com/gfunkmonk/win-cross/releases/download/${TOOLCHAIN_RELEASE}/${1}-w64-mingw32.tar.xz"
+        axel -n 6 -o "$BASE_DIR/toolchains/toolchain.tar.xz" "https://github.com/gfunkmonk/win-cross/releases/download/${TOOLCHAIN_RELEASE}/${1}-w64-mingw32.tar.xz"
     else
-	curl -L -o "$BASE_DIR/toolchains/toolchain.tar.xz" "https://github.com/gfunkmonk/win-cross/releases/download/${TOOLCHAIN_RELEASE}/${1}-w64-mingw32.tar.xz"
+        curl -L -o "$BASE_DIR/toolchains/toolchain.tar.xz" "https://github.com/gfunkmonk/win-cross/releases/download/${TOOLCHAIN_RELEASE}/${1}-w64-mingw32.tar.xz"
     fi
     cd "$BASE_DIR/toolchains"
     tar -xJf toolchain.tar.xz && mv "$1"-* "$1"-mingw && rm toolchain.tar.xz
@@ -156,6 +161,9 @@ sed -i "/COLORS == 256/ {s/==/>=/}" src/rcfile.c
 
 echo -e "${GREEN}[${BWHITE}winio.c${GREEN}] ${BWHITE}Stripping halfdelay and kb_interrupt calls${NC}"
 sed -i "/halfdelay(ISSET(QUICK_BLANK)/,/disable_kb_interrupt/d" src/winio.c
+
+echo -e "${GREEN}[${BWHITE}nano.c${GREEN}] ${BWHITE}Re-install SIGINT handler after nano sets SIG_IGN (VT/ConPTY fix)${NC}"
+sed -i '/set_up_signal_handlers();/a\\n#if defined(__PDCURSESMOD__) \&\& defined(_WIN32)\n\t{ extern void PDC_install_ctrl_c_handler(void); PDC_install_ctrl_c_handler(); }\n#endif' src/nano.c
 
 echo -e "${GREEN}[${BWHITE}nano.c${GREEN}] ${BWHITE}Mapping /dev/tty to CON${NC}"
 sed -i "s|/dev/tty|CON|" src/nano.c
@@ -258,7 +266,7 @@ for TRIPLET in "${TARGETS[@]}"; do
     make clean || true
     unset NCURSESW_CFLAGS
     make -j$(nproc) CC="$TRIPLET-gcc" AR="$TRIPLET-ar" STRIP="$TRIPLET-strip" \
-        WIDE=Y UTF8=Y DLL=N CHTYPE_64=Y _${SHORT}=Y \
+        WIDE=Y UTF8=Y DLL=N CHTYPE_64=Y HAVE_MOUSE=Y _${SHORT}=Y \
         CFLAGS="${CFLAGS} -I.." \
         CXXFLAGS="${CFLAGS}"
 
@@ -273,8 +281,8 @@ for TRIPLET in "${TARGETS[@]}"; do
         CXXFLAGS="${CFLAGS}" \
         LDFLAGS="${LDFLAGS}" \
         LIBS="${LIBS}" \
-	NCURSESW_CFLAGS="${NCURSES_CFLAGS}" \
-	NCURSESW_LIBS="${NCURSES_LIBS}"
+        NCURSESW_CFLAGS="${NCURSES_CFLAGS}" \
+        NCURSESW_LIBS="${NCURSES_LIBS}"
 
 cat << EOF >> config.h
 #define HAVE_FREXP_IN_LIBC 1
@@ -313,3 +321,4 @@ EOF
     ls -als
     7z a -mx9 -mm=Deflate64 -mmt$(nproc) "${BASE_DIR}/dist/nano-for-windows_${ARCH}_$(date +%y%m%d_%H%M%S).zip" * .nanorc
 done
+
