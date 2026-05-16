@@ -53,6 +53,15 @@
  #ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
  #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
  #endif
+@@ -133,7 +145,7 @@ static int set_win10_for_vt_codes( const bool setting_mode)
+     if( setting_mode)
+         {
+         GetConsoleMode( hIn, &old_input_mode);
+-        dwMode = ENABLE_VIRTUAL_TERMINAL_INPUT;
++        dwMode = old_input_mode | ENABLE_VIRTUAL_TERMINAL_INPUT;
+ #ifdef PDC_WIDE
+         old_code_page = SetConsoleOutputCP( 65001);
+ #else
 @@ -274,6 +286,8 @@ void PDC_scr_close( void)
     SP->_trap_mbe = 0;
     PDC_mouse_set( );          /* clear any mouse event captures */
