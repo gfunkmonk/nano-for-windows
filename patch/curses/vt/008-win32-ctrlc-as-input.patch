@@ -1,5 +1,3 @@
-diff --git a/vt/pdckbd.c b/vt/pdckbd.c
-index 9b66eea..066d62a 100644
 --- a/curses/vt/pdckbd.c
 +++ b/curses/vt/pdckbd.c
 @@ -11,6 +11,13 @@
@@ -34,8 +32,6 @@ index 9b66eea..066d62a 100644
      if( WINDOWS_VERSION_OF_KBHIT( ))
         {
         rval = TRUE;
-diff --git a/vt/pdcscrn.c b/vt/pdcscrn.c
-index 238cd6e..6119389 100644
 --- a/curses/vt/pdcscrn.c
 +++ b/curses/vt/pdcscrn.c
 @@ -34,6 +34,18 @@ bool PDC_resize_occurred = FALSE;
