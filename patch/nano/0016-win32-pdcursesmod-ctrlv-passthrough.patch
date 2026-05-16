@@ -16,17 +16,17 @@ index b751566..a5bba98 100644
  	 */
  	_set_fmode(_O_BINARY);
  
- +#ifdef __PDCURSESMOD__
- +	/* When using PDCursesMod, we want to disable the default Ctrl+V behavior of
- +	 * pasting text from the system clipboard, so that Ctrl+V behaves as a normal
- +	 * keystroke that paste text from nano's cutbuffer instead. */
- +	PDC_set_function_key(FUNCTION_KEY_PASTE, 0);
++#ifdef __PDCURSESMOD__
++	/* When using PDCursesMod, we want to disable the default Ctrl+V behavior of
++	 * pasting text from the system clipboard, so that Ctrl+V behaves as a normal
++	 * keystroke that paste text from nano's cutbuffer instead. */
++	PDC_set_function_key(FUNCTION_KEY_PASTE, 0);
 +	/* In VT mode, PDCursesMod can map Ctrl+C to FUNCTION_KEY_ABORT and raise
 +	 * SIGINT before nano can process it as the dialog cancel key.  Disable
 +	 * that abort mapping so Ctrl+C is passed through as a normal keypress. */
 +	PDC_set_function_key(FUNCTION_KEY_ABORT, 0);
- +#endif
- +
++#endif
++
  #ifdef __linux__
  	struct vt_stat dummy;
  
