@@ -1,13 +1,5 @@
 --- a/curses/wincon/Makefile	2026-05-16 04:38:18.654504849 -0400
 +++ b/curses/wincon/Makefile	2026-05-16 04:58:46.284496787 -0400
-@@ -8,7 +8,6 @@
- # [all|demos|pdcurses.a|testcurs.exe...]
- 
- O = o
--E = .exe
- 
- ifndef PDCURSES_SRCDIR
- 	PDCURSES_SRCDIR = ..
 @@ -23,7 +22,7 @@
  
  CAT		= cat
@@ -42,25 +34,23 @@
  	endif
  endif
  
-@@ -77,16 +84,36 @@
+@@ -77,16 +84,34 @@
  	CFLAGS  += -g -DPDCDEBUG
  	LDFLAGS = -g
  else
 -	CFLAGS  += -O3
-+	CFLAGS  += -O2
++	CFLAGS  += -O2 -DPDC_WINCON
  	LDFLAGS =
  endif
  
 +ifeq ($(DOS),Y)
 +	CFLAGS += -DDOS
-+	E = .exe
 +	RM = del
 +endif
 +
 +ifeq ($(NOT_WIN),Y)
 +	CFLAGS += -fPIC
 +       EXELIBS = -lwinmm
-+	E = .exe
 +endif
 +
  CFLAGS += -I$(PDCURSES_SRCDIR)

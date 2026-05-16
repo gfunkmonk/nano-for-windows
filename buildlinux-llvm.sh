@@ -19,7 +19,7 @@ case "$1" in
     x86_64)  TARGETS=("x86_64-w64-mingw32") ;;
     i686)    TARGETS=("i686-w64-mingw32") ;;
     aarch64) TARGETS=("aarch64-w64-mingw32") ;;
-    armv7)     TARGETS=("armv7-w64-mingw32") ;;
+    armv7)   TARGETS=("armv7-w64-mingw32") ;;
     *) echo "Invalid architecture: $1"; exit 1 ;;
 esac
 
@@ -45,27 +45,26 @@ export ConEmuANSI="ON"
 
 # --- 3. Toolchain Setup (gfunkmonk/win-cross) ---
 echo -e "${TEAL}Setting up toolchain...${NC}"
-#TOOLCHAIN_RELEASE="BallmersBoyz"
-TOOLCHAIN_RELEASE="NT3.51"
+TOOLCHAIN_RELEASE="20260505"
 
 # Define a persistent toolchain directory outside the BUILDDIR if you want true persistence,
 # or just check if it's already in the BUILDDIR.
-if [ ! -d "$BASE_DIR/toolchains/$1-mingw" ]; then
+if [ ! -d "$BASE_DIR/llvm/bin" ]; then
     echo -e "${YELLOW}Downloading toolchain release: ${TOOLCHAIN_RELEASE}${NC}"
-    mkdir -p "$BASE_DIR/toolchains"
+    mkdir -p "$BASE_DIR/llvm"
     if command -v axel >/dev/null 2>&1; then
-	axel -n 6 -o "$BASE_DIR/toolchains/toolchain.tar.xz" "https://github.com/gfunkmonk/win-cross/releases/download/${TOOLCHAIN_RELEASE}/${1}-w64-mingw32.tar.xz"
+	axel -n 6 -o "$BASE_DIR/llvm.tar.xz" "https://github.com/mstorsjo/llvm-mingw/releases/download/${TOOLCHAIN_RELEASE}/llvm-mingw-${TOOLCHAIN_RELEASE}-ucrt-ubuntu-22.04-x86_64.tar.xz"
     else
-	curl -L -o "$BASE_DIR/toolchains/toolchain.tar.xz" "https://github.com/gfunkmonk/win-cross/releases/download/${TOOLCHAIN_RELEASE}/${1}-w64-mingw32.tar.xz"
+	curl -L -o "$BASE_DIR/llvm.tar.xz" "https://github.com/mstorsjo/llvm-mingw/releases/download/${TOOLCHAIN_RELEASE}/llvm-mingw-${TOOLCHAIN_RELEASE}-ucrt-ubuntu-22.04-x86_64.tar.xz"
     fi
-    cd "$BASE_DIR/toolchains"
-    tar -xJf toolchain.tar.xz && mv "$1"-* "$1"-mingw && rm toolchain.tar.xz
     cd "$BASE_DIR"
+    tar -xJf llvm.tar.xz --strip-components=1 -C llvm/
+    rm llvm.tar.xz
 else
-    echo -e "${GREEN}Toolchain cache hit: $1-mingw found.${NC}"
+    echo -e "${GREEN}Toolchain cache hit: llvm found.${NC}"
 fi
 
-export PATH="$BASE_DIR/toolchains/$1-mingw/bin:$PATH"
+export PATH="$BASE_DIR/llvm/bin:$PATH"
 
 #if command -v $BASE_DIR/toolchains/$1-mingw/$1-w64-mingw32/bin/mold >/dev/null 2>&1; then
 #    export LDFLAGS="${LDFLAGS} -fuse-ld=$BASE_DIR/toolchains/$1-mingw/$1-w64-mingw32/bin/mold"
@@ -227,18 +226,15 @@ sed -i "/0x42[1234]/d" src/definitions.h
 ##sed -i 's/waddnwstr(window, \&widechar, 1);/waddnwstr(window, \&widechar, wcwidth(widechar));/' src/winio.c
 
 # PDCurses uses 64bit (chtype) for cell attributes instead of 32bit (int)
-#echo -e "\n\nPATCH: Improving from 256colors to true color."
-#sed -i "/interface_color_pair/ s/\bint\b/chtype/g" src/prototypes.h src/global.c
-#sed -i "/int attributes/ s/\bint\b/chtype/g" src/definitions.h
-#sed -i "/int attributes/ s/\bint\b/chtype/g" src/rcfile.c
-#sed -i "/bool parse_combination/ s/\bint\b/chtype/g" src/rcfile.c
+echo -e "${GREEN}[${BWHITE}various${GREEN}] ${BWHITE}Improving from 256colors to true color${NC}"
+sed -i "/interface_color_pair/ s/\bint\b/chtype/g" src/prototypes.h src/global.c
+sed -i "/int attributes/ s/\bint\b/chtype/g" src/definitions.h
+sed -i "/int attributes/ s/\bint\b/chtype/g" src/rcfile.c
+sed -i "/bool parse_combination/ s/\bint\b/chtype/g" src/rcfile.c
 
-#echo -e "\n\nPATCH: PDC_display_utf8 = TRUE"
-#sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wincon/*.c
-#sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/vt/*.c
-
-#echo -e "\n\nPATCH: Make MAX_UNICODE suck less."
-#sed -i 's|MAX_UNICODE 0xffff|MAX_UNICODE 0x10ffff|g' curses/curspriv.h
+echo -e "${GREEN}[${BWHITE}wincon & vt${GREEN}] ${BWHITE}PDC_display_utf8 = TRUE${NC}"
+sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wincon/*.c
+sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/vt/*.c
 
 echo -e "${GREEN}[${BWHITE}pdckbd.c${GREEN}] ${BWHITE}Forced for 64-bit chtype${NC}"
 sed -i 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/vt/pdckbd.c
@@ -261,7 +257,7 @@ for TRIPLET in "${TARGETS[@]}"; do
     make clean || true
     unset NCURSESW_CFLAGS
     make -j$(nproc) CC="$TRIPLET-gcc" AR="$TRIPLET-ar" STRIP="$TRIPLET-strip" \
-        WIDE=Y UTF8=Y DLL=N CHTYPE_64=Y _${SHORT}=Y \
+        WIDE=Y UTF8=Y DLL=N CHTYPE_64=Y VT=Y HAVE_MOUSE=Y _${SHORT}=Y \
         CFLAGS="${CFLAGS} -I.." \
         CXXFLAGS="${CFLAGS}"
 

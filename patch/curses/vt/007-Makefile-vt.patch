@@ -1,11 +1,11 @@
---- a/curses/vt/Makefile	2026-05-16 00:56:20.234592311 -0400
-+++ b/curses/vt/Makefile	2026-05-16 00:56:12.314592363 -0400
+--- a/curses/vt/Makefile	2026-05-16 07:15:22.454442963 -0400
++++ b/curses/vt/Makefile	2026-05-16 07:19:00.714441530 -0400
 @@ -19,7 +19,7 @@
  
  RM		= rm -f
  
 -CFLAGS  = -Wall -Wextra -pedantic -Werror
-+CFLAGS  = -Wall -Wextra -pedantic
++CFLAGS  += -Wall -Wextra -pedantic -DPDC_VT=RGB
  ifeq ($(DEBUG),Y)
  	CFLAGS  += -g -DPDCDEBUG
  else
@@ -20,7 +20,19 @@
  ifdef CHTYPE_32
  	CFLAGS += -DCHTYPE_32
  endif
-@@ -72,7 +76,7 @@
+@@ -63,6 +67,11 @@
+ 	IS_WIN = Y
+ endif
+ 
++ifdef _a32
++	PREFIX  = armv7-w64-mingw32-
++	IS_WIN = Y
++endif
++
+ ifeq ($(OS),Windows_NT)
+ 	IS_WIN = Y
+ 	RM = cmd /c del
+@@ -72,7 +81,7 @@
  	E = .exe
  endif
  
