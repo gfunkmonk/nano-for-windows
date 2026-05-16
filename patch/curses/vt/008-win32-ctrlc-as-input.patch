@@ -62,12 +62,11 @@
  #ifdef PDC_WIDE
          old_code_page = SetConsoleOutputCP( 65001);
  #else
-@@ -274,6 +286,8 @@ void PDC_scr_close( void)
+@@ -274,6 +286,7 @@ void PDC_scr_close( void)
     SP->_trap_mbe = 0;
     PDC_mouse_set( );          /* clear any mouse event captures */
  #ifdef _WIN32
 +   SetConsoleCtrlHandler( pdc_ctrl_handler, FALSE);
-+   SetConsoleCtrlHandler(NULL, FALSE);
     set_win10_for_vt_codes( FALSE);
  #else
     #if !defined( DOS)
