@@ -8,7 +8,7 @@
 +#define WIN32_LEAN_AND_MEAN
 +#include <windows.h>
 +
-+extern int PDC_n_ctrl_c;
++extern volatile LONG PDC_n_ctrl_c;
 +#endif
 +
  /* Digital Mars and DJGPP for DOS each implement getch() and/or _getch().
@@ -19,11 +19,11 @@
         rval = FALSE;
  #else
 +#ifdef _WIN32
-+    if( PDC_n_ctrl_c > 0)
++    if( InterlockedCompareExchange( &PDC_n_ctrl_c, 0, 0) > 0)
 +       {
 +       if( c)
 +          {
-+          PDC_n_ctrl_c--;
++          InterlockedDecrement( &PDC_n_ctrl_c);
 +          *c = 3;
 +          }
 +       return( TRUE);
@@ -38,13 +38,13 @@
  
  #ifdef _WIN32
  
-+int PDC_n_ctrl_c = 0;
++volatile LONG PDC_n_ctrl_c = 0;
 +
 +static BOOL WINAPI pdc_ctrl_handler( DWORD event_type)
 +{
 +    if( event_type == CTRL_C_EVENT && SP && SP->raw_inp)
 +    {
-+        PDC_n_ctrl_c++;
++        InterlockedIncrement( &PDC_n_ctrl_c);
 +        return TRUE;
 +    }
 +    return FALSE;
