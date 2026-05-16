@@ -9,8 +9,8 @@
 -            modifiers = CTL;
 +         if( rval < 32 && rval != 13 && rval != 10 && rval != 9)
 +            /* Control bytes already encode Ctrl in the value itself
-+             * (e.g. ^C=3, ^X=24), so don't also report CTL modifier. */
-+            modifiers = 0;
++             * (e.g. ^C=3, ^X=24), so clear only CTL and keep other flags. */
++            modifiers &= ~CTL;
           if( shifted_keys[rval >> 4] & (1 << (rval & 0xf)))
              modifiers = SHF;
           }
