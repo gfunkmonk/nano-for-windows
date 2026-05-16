@@ -71,10 +71,6 @@ fi
 
 export PATH="$BASE_DIR/llvm/bin:$PATH"
 
-#if command -v $BASE_DIR/toolchains/$1-mingw/$1-w64-mingw32/bin/mold >/dev/null 2>&1; then
-#    export LDFLAGS="${LDFLAGS} -fuse-ld=$BASE_DIR/toolchains/$1-mingw/$1-w64-mingw32/bin/mold"
-#fi
-
 # --- 4. Source Setup ---
 # Function to sync without redownloading the universe
 sync_repo() {
@@ -160,11 +156,6 @@ sed -i "/COLORS == 256/ {s/==/>=/}" src/rcfile.c
 
 echo -e "${GREEN}[${BWHITE}winio.c${GREEN}] ${BWHITE}Stripping halfdelay and kb_interrupt calls${NC}"
 sed -i "/halfdelay(ISSET(QUICK_BLANK)/,/disable_kb_interrupt/d" src/winio.c
-
-if [ "${PDTERM}" == "vt" ]; then
-    echo -e "${GREEN}[${BWHITE}nano.c${GREEN}] ${BWHITE}Re-install SIGINT handler after nano sets SIG_IGN (VT/ConPTY fix)${NC}"
-    sed -i '/set_up_signal_handlers();/a\\n#if defined(__PDCURSESMOD__) \&\& defined(_WIN32)\n\t{ extern void PDC_install_ctrl_c_handler(void); PDC_install_ctrl_c_handler(); }\n#endif' src/nano.c
-fi
 
 echo -e "${GREEN}[${BWHITE}nano.c${GREEN}] ${BWHITE}Mapping /dev/tty to CON${NC}"
 sed -i "s|/dev/tty|CON|" src/nano.c

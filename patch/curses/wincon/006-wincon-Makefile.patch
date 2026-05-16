@@ -50,7 +50,7 @@
 +
 +ifeq ($(NOT_WIN),Y)
 +	CFLAGS += -fPIC
-+       EXELIBS = -lwinmm
++	EXELIBS = -lwinmm
 +	RM = rm
 +endif
 +

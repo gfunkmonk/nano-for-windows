@@ -50,7 +50,6 @@ fi
 
 # --- 3. Toolchain Setup (gfunkmonk/win-cross) ---
 echo -e "${TEAL}Setting up toolchain...${NC}"
-#TOOLCHAIN_RELEASE="BallmersBoyz"
 TOOLCHAIN_RELEASE="NT3.51"
 
 # Define a persistent toolchain directory outside the BUILDDIR if you want true persistence,
@@ -71,10 +70,6 @@ else
 fi
 
 export PATH="$BASE_DIR/toolchains/$1-mingw/bin:$PATH"
-
-#if command -v $BASE_DIR/toolchains/$1-mingw/$1-w64-mingw32/bin/mold >/dev/null 2>&1; then
-#    export LDFLAGS="${LDFLAGS} -fuse-ld=$BASE_DIR/toolchains/$1-mingw/$1-w64-mingw32/bin/mold"
-#fi
 
 # --- 4. Source Setup ---
 # Function to sync without redownloading the universe
@@ -161,9 +156,6 @@ sed -i "/COLORS == 256/ {s/==/>=/}" src/rcfile.c
 
 echo -e "${GREEN}[${BWHITE}winio.c${GREEN}] ${BWHITE}Stripping halfdelay and kb_interrupt calls${NC}"
 sed -i "/halfdelay(ISSET(QUICK_BLANK)/,/disable_kb_interrupt/d" src/winio.c
-
-echo -e "${GREEN}[${BWHITE}nano.c${GREEN}] ${BWHITE}Re-install SIGINT handler after nano sets SIG_IGN (VT/ConPTY fix)${NC}"
-sed -i '/set_up_signal_handlers();/a\\n#if defined(__PDCURSESMOD__) \&\& defined(_WIN32)\n\t{ extern void PDC_install_ctrl_c_handler(void); PDC_install_ctrl_c_handler(); }\n#endif' src/nano.c
 
 echo -e "${GREEN}[${BWHITE}nano.c${GREEN}] ${BWHITE}Mapping /dev/tty to CON${NC}"
 sed -i "s|/dev/tty|CON|" src/nano.c
