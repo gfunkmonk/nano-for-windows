@@ -42,7 +42,7 @@
 +
 +static BOOL WINAPI pdc_ctrl_handler( DWORD event_type)
 +{
-+    if( event_type == CTRL_C_EVENT && SP && SP->raw_inp)
++    if( event_type == CTRL_C_EVENT && SP)
 +    {
 +        InterlockedIncrement( &PDC_n_ctrl_c);
 +        return TRUE;
