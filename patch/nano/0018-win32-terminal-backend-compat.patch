@@ -171,7 +171,7 @@
  			return KEY_CANCEL;
 --- /dev/null
 +++ b/src/win32term.h
-@@ -0,0 +1,87 @@
+@@ -0,0 +1,62 @@
 +/**************************************************************************
 + *   win32term.h  --  This file is part of GNU nano.                       *
 + *                                                                        *
@@ -193,9 +193,7 @@
 +#ifndef NANO_WIN32TERM_H
 +#define NANO_WIN32TERM_H
 +
-+#ifdef _WIN32
-+
-+#if defined(__PDCURSESMOD__)
++#if defined(_WIN32) && defined(__PDCURSESMOD__)
 +#define NANO_KEY_CONTROL_LEFT    CTL_LEFT
 +#define NANO_KEY_CONTROL_RIGHT   CTL_RIGHT
 +#define NANO_KEY_CONTROL_UP      CTL_UP
@@ -233,29 +231,6 @@
 +#define NANO_WIN32_MOD_ALT       0x08UL
 +#define nano_win32_get_key_modifiers() 0UL
 +#define nano_win32_disable_terminal_paste() ((void)0)
-+#endif
-+
-+#else
-+
-+#define NANO_KEY_CONTROL_LEFT    0x401
-+#define NANO_KEY_CONTROL_RIGHT   0x402
-+#define NANO_KEY_CONTROL_UP      0x403
-+#define NANO_KEY_CONTROL_DOWN    0x404
-+#define NANO_KEY_CONTROL_HOME    0x405
-+#define NANO_KEY_CONTROL_END     0x406
-+#define NANO_KEY_CONTROL_DELETE  0x40D
-+#define NANO_KEY_ALT_PAGEUP      0x427
-+#define NANO_KEY_ALT_PAGEDOWN    0x428
-+#define NANO_KEY_ALT_INSERT      0x42C
-+#define NANO_KEY_ALT_DELETE      0x42D
-+#define NANO_KEY_ALT_BACKSPACE   0x42E
-+#define NANO_KEY_SHIFT_DELETE    0x41E
-+#define NANO_WIN32_MOD_SHIFT     0x01UL
-+#define NANO_WIN32_MOD_CONTROL   0x04UL
-+#define NANO_WIN32_MOD_ALT       0x08UL
-+#define nano_win32_get_key_modifiers() 0UL
-+#define nano_win32_disable_terminal_paste() ((void)0)
-+
 +#endif
 +
 +#endif /* NANO_WIN32TERM_H */
