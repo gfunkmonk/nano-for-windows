@@ -1,14 +1,19 @@
---- a/curses/vt/Makefile	2026-05-16 07:15:22.454442963 -0400
-+++ b/curses/vt/Makefile	2026-05-16 07:19:00.714441530 -0400
-@@ -19,7 +19,7 @@
+--- a/curses/vt/Makefile	2026-05-16 16:52:34.304215536 -0400
++++ b/curses/vt/Makefile	2026-05-16 17:07:02.544209834 -0400
+@@ -19,11 +19,11 @@
  
  RM		= rm -f
  
 -CFLAGS  = -Wall -Wextra -pedantic -Werror
-+CFLAGS  += -DVT -DPDC_VT=RGB -DPDC_RGB
++CFLAGS  += -Wall -Wextra -pedantic
  ifeq ($(DEBUG),Y)
  	CFLAGS  += -g -DPDCDEBUG
  else
+-	CFLAGS  += -O2
++	CFLAGS  += -DVT -DPDC_VT=RGB -DPDC_RGB
+ endif
+ 
+ ifeq ($(DOS),Y)
 @@ -40,6 +40,10 @@
  	endif
  endif
@@ -20,13 +25,30 @@
  ifdef CHTYPE_32
  	CFLAGS += -DCHTYPE_32
  endif
-@@ -63,6 +67,11 @@
+@@ -49,20 +53,25 @@
+ endif
+ 
+ ifdef _w64
+-	PREFIX  = x86_64-w64-mingw32-
++	PREFIX = x86_64-w64-mingw32-
+ 	IS_WIN = Y
+ endif
+ 
+ ifdef _w32
+-	PREFIX  = i686-w64-mingw32-
++	PREFIX = i686-w64-mingw32-
+ 	IS_WIN = Y
+ endif
+ 
+ ifdef _a64
+-	PREFIX  = aarch64-w64-mingw32-
++	PREFIX = aarch64-w64-mingw32-
  	IS_WIN = Y
  endif
  
 +ifdef _a32
-+	PREFIX  = armv7-w64-mingw32-
-+	IS_WIN = Y
++      PREFIX = armv7-w64-mingw32-
++      IS_WIN = Y
 +endif
 +
  ifeq ($(OS),Windows_NT)
