@@ -227,18 +227,15 @@ sed -i "/0x42[1234]/d" src/definitions.h
 ##sed -i 's/waddnwstr(window, \&widechar, 1);/waddnwstr(window, \&widechar, wcwidth(widechar));/' src/winio.c
 
 # PDCurses uses 64bit (chtype) for cell attributes instead of 32bit (int)
-#echo -e "\n\nPATCH: Improving from 256colors to true color."
-#sed -i "/interface_color_pair/ s/\bint\b/chtype/g" src/prototypes.h src/global.c
-#sed -i "/int attributes/ s/\bint\b/chtype/g" src/definitions.h
-#sed -i "/int attributes/ s/\bint\b/chtype/g" src/rcfile.c
-#sed -i "/bool parse_combination/ s/\bint\b/chtype/g" src/rcfile.c
+echo -e "${GREEN}[${BWHITE}various${GREEN}] ${BWHITE}Improving from 256colors to true color${NC}"
+sed -i "/interface_color_pair/ s/\bint\b/chtype/g" src/prototypes.h src/global.c
+sed -i "/int attributes/ s/\bint\b/chtype/g" src/definitions.h
+sed -i "/int attributes/ s/\bint\b/chtype/g" src/rcfile.c
+sed -i "/bool parse_combination/ s/\bint\b/chtype/g" src/rcfile.c
 
-#echo -e "\n\nPATCH: PDC_display_utf8 = TRUE"
-#sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wincon/*.c
-#sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/vt/*.c
-
-#echo -e "\n\nPATCH: Make MAX_UNICODE suck less."
-#sed -i 's|MAX_UNICODE 0xffff|MAX_UNICODE 0x10ffff|g' curses/curspriv.h
+echo -e "${GREEN}[${BWHITE}wincon & vt${GREEN}] ${BWHITE}PDC_display_utf8 = TRUE${NC}"
+sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wincon/*.c
+sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/vt/*.c
 
 echo -e "${GREEN}[${BWHITE}pdckbd.c${GREEN}] ${BWHITE}Forced for 64-bit chtype${NC}"
 sed -i 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/vt/pdckbd.c

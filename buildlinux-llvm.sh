@@ -257,7 +257,7 @@ for TRIPLET in "${TARGETS[@]}"; do
     make clean || true
     unset NCURSESW_CFLAGS
     make -j$(nproc) CC="$TRIPLET-gcc" AR="$TRIPLET-ar" STRIP="$TRIPLET-strip" \
-        WIDE=Y UTF8=Y DLL=N CHTYPE_64=Y VT=Y HAVE_MOUSE=Y _${SHORT}=Y \
+        WIDE=Y UTF8=Y DLL=N CHTYPE_64=Y HAVE_MOUSE=Y _${SHORT}=Y \
         CFLAGS="${CFLAGS} -I.." \
         CXXFLAGS="${CFLAGS}"
 
