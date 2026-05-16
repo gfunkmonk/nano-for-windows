@@ -1,7 +1,7 @@
 From d498ac53f5da64aaf5f9681f1723fd6db0179c63 Mon Sep 17 00:00:00 2001
 From: Chawye Hsu <su+git@chawyehsu.com>
 Date: Thu, 16 Apr 2026 00:44:02 +0800
-Subject: [PATCH 12/17] win32: colortype pdcursesmod compat
+Subject: [PATCH 12/17] win32: terminal backend colortype compat
 
 Signed-off-by: Chawye Hsu <su+git@chawyehsu.com>
 ---
@@ -101,10 +101,8 @@ index 2531959..23055b9 100644
  	static const short gray[] = { 1, 2, 3, 4, 5, 6, 7, 9, 11, 13, 15, 18, 21, 23 };
  
 -	if (COLORS != 256)
-+	/* PDCursesMod maximum possible COLORS is 768, see:
-+	 *  curspriv.h - PDC_MAXCOL
-+	 *  https://github.com/Bill-Gray/PDCursesMod/blob/master/docs/HISTORY.md#pdcurses-39---2019-09-04
-+	 */
++	/* Some Windows terminal backends can advertise more than 256 colors, but
++	 * anything at or above 256 should still use the 256-color translation. */
 +	if (COLORS < 256)
  		return THE_DEFAULT;
  	else if (red == green && green == blue && 0 < red && red < 0xF)

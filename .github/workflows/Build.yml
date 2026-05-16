@@ -77,7 +77,7 @@ jobs:
         if [[ $LAST_CURSES > $LAST_RELEASE ]]; then
           echo "NEW CURSES SOURCE!!!!"
           [ -f body.txt ] && echo >> body.txt
-          echo "# PDCursesMod CHANGES" >> body.txt
+          echo "# Terminal backend CHANGES" >> body.txt
           echo >> body.txt
           echo "$CHANGES_CURSES" >> body.txt
         fi
@@ -240,7 +240,7 @@ jobs:
           fi
         done
 
-    - name: ❤️‍🩹 PDCurses Patches
+    - name: ❤️‍🩹 Terminal backend patches
       run: |
         CWD=$(pwd)
         cd nano
@@ -393,7 +393,7 @@ jobs:
         # This patches the wide-character width detection logic.
         #echo -e "\n\nPATCH: fix wcwidth"
         #sed -i.bak 's/return wcwidth(wc);/if (wc >= 0x1F300 \&\& wc <= 0x1F9FF) return 2; return wcwidth(wc);/' src/chars.c
-        # 2. Adjust winio.c to prevent PDCurses from truncating high-plane characters
+        # 2. Adjust winio.c to prevent the terminal backend from truncating high-plane characters
         # This ensures that characters outside the BMP (Basic Multilingual Plane) aren't filtered.
         #sed -i.bak '/if (is_extended_char(wc))/i \    if (wc > 0xFFFF) return true;' src/winio.c
         # 3. Ensure the title bar and status bar allow for multi-column character spacing
@@ -401,15 +401,15 @@ jobs:
         #_diff
 
         ####                               ####
-        #### PDCursesMod especific patches ####
+        #### Terminal backend specific patches ####
         ####                               ####
 
-        # Solve duplicated definitions ALT-ARROWS already in PDCursesMod
+        # Solve duplicated ALT-ARROWS definitions already exposed by the current terminal backend
         echo -e "\n\nPATCH: remove duplicated definitions."
         sed -i.bak "/0x42[1234]/d" src/definitions.h
         _diff
 
-        # PDCurses uses 64bit (chtype) for cell attributes instead of 32bit (int)
+        # The current terminal backend uses 64bit (chtype) cell attributes instead of 32bit (int)
         #echo -e "\n\nPATCH: Improving from 256colors to true color."
         #sed -i.bak "/interface_color_pair/ s/\bint\b/chtype/g" src/prototypes.h src/global.c
         #_diff
@@ -453,12 +453,12 @@ jobs:
             " src/definitions.h
         _diff
 
-        # Fix ALT+[NUMBER|LETTER] not working with PDCursesMod
+        # Fix ALT+[NUMBER|LETTER] not working with the current terminal backend
         echo -e "\n\nPATCH: ALT+[NUMBER|LETTER] not working."
         sed -i.bak "s/char)keystring\[2])/&\+\(\(unsigned char)keystring\[2]>\='9' \? ALT_A-\(int)'a' \: ALT_0-\(int)'0')/" src/global.c
         _diff
 
-        # Fix Shifted metas SHIFT+ALT+[LETTER] not working with PDCursesMod
+        # Fix Shifted metas SHIFT+ALT+[LETTER] not working with the current terminal backend
         echo -e "\n\nPATCH: Shifted metas SHIFT+ALT+[LETTER] not working."
         sed -i.bak "/(escapes == 0)/a\
             meta_key\=PDC_get_key_modifiers\() \& PDC_KEY_MODIFIER_ALT;" src/winio.c
@@ -504,7 +504,7 @@ jobs:
         CURSES="${CURSES}.$( sed -nE 's/^.*PDC_VER_MINOR\s*([0-9]+)/\1/p' curses.h )"
         CURSES="${CURSES}.$( sed -nE 's/^.*PDC_VER_CHANGE\s*([0-9]+)/\1/p' curses.h )"
         CURSES_DATE=$(TZ=UTC git show --quiet --date='format-local:%Y.%m.%d' --format="%cd")
-        CURSES="PDCursesMod ${CURSES} build $(git rev-list --count HEAD), ${CURSES_DATE}"
+        CURSES="Windows curses backend ${CURSES} build $(git rev-list --count HEAD), ${CURSES_DATE}"
         echo -e "\n\nBRANDING: NANO VER DISPLAY."
         cd ..
         sed -i.bak 's/ GNU nano from git,//' src/nano.c

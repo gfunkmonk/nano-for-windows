@@ -18,7 +18,7 @@ index 762001b..6d90e57 100644
  			input = wgetch(frame);
 +
 +		/* SIGWINCH is not available on Windows, so we simulate the effect of
-+		 * the handler by checking for PDCurses's KEY_RESIZE. */
++		 * the handler by checking for the terminal backend's KEY_RESIZE. */
 +		if (input == KEY_RESIZE) {
 +			handle_sigwinch(0);
 +		}

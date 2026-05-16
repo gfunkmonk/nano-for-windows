@@ -224,14 +224,14 @@ sed -i "/0x42[1234]/d" src/definitions.h
 # This patches the wide-character width detection logic.
 ##echo -e "${GREEN}[${BWHITE}chars.c${GREEN}] ${BWHITE}fix wcwidth${NC}"
 ##sed -i 's/return wcwidth(wc);/if (wc >= 0x1F300 \&\& wc <= 0x1F9FF) return 2; return wcwidth(wc);/' src/chars.c
-# 2. Adjust winio.c to prevent PDCurses from truncating high-plane characters
+# 2. Adjust winio.c to prevent the terminal backend from truncating high-plane characters
 # This ensures that characters outside the BMP (Basic Multilingual Plane) aren't filtered.
 ##echo -e "${GREEN}[${BWHITE}winio.c${GREEN}] ${BWHITE}fix wcwidth${NC}"
 ##sed -i '/if (is_extended_char(wc))/i \    if (wc > 0xFFFF) return true;' src/winio.c
 # 3. Ensure the title bar and status bar allow for multi-column character spacing
 ##sed -i 's/waddnwstr(window, \&widechar, 1);/waddnwstr(window, \&widechar, wcwidth(widechar));/' src/winio.c
 
-# PDCurses uses 64bit (chtype) for cell attributes instead of 32bit (int)
+# The current terminal backend uses 64bit (chtype) cell attributes instead of 32bit (int)
 #echo -e "\n\nPATCH: Improving from 256colors to true color."
 #sed -i "/interface_color_pair/ s/\bint\b/chtype/g" src/prototypes.h src/global.c
 #sed -i "/int attributes/ s/\bint\b/chtype/g" src/definitions.h
@@ -261,7 +261,7 @@ for TRIPLET in "${TARGETS[@]}"; do
 
     echo -e "${TEAL}Building for ${ARCH} (Target: ${TRIPLET})${NC}"
 
-    # Build PDCurses
+    # Build terminal backend
     cd "$BUILDDIR/nano/curses/$PDTERM"
     make clean || true
     unset NCURSESW_CFLAGS

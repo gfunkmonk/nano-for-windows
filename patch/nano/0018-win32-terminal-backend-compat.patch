@@ -1,0 +1,261 @@
+--- a/src/definitions.h
++++ b/src/definitions.h
+@@ -66,6 +66,8 @@
+ #include <curses.h>
+ #endif
+ 
++#include "win32term.h"
++
+ /* Native language support. */
+ #ifdef ENABLE_NLS
+ #ifdef HAVE_LIBINTL_H
+@@ -177,13 +179,13 @@
+ #define DEL_CODE  0x7F
+ 
+ /* Codes for "modified" Arrow keys, beyond KEY_MAX of ncurses. */
+-#define CONTROL_LEFT    CTL_LEFT
+-#define CONTROL_RIGHT   CTL_RIGHT
+-#define CONTROL_UP      CTL_UP
+-#define CONTROL_DOWN    CTL_DOWN
+-#define CONTROL_HOME    CTL_HOME
+-#define CONTROL_END     CTL_END
+-#define CONTROL_DELETE  CTL_DEL
++#define CONTROL_LEFT    NANO_KEY_CONTROL_LEFT
++#define CONTROL_RIGHT   NANO_KEY_CONTROL_RIGHT
++#define CONTROL_UP      NANO_KEY_CONTROL_UP
++#define CONTROL_DOWN    NANO_KEY_CONTROL_DOWN
++#define CONTROL_HOME    NANO_KEY_CONTROL_HOME
++#define CONTROL_END     NANO_KEY_CONTROL_END
++#define CONTROL_DELETE  NANO_KEY_CONTROL_DELETE
+ #define SHIFT_CONTROL_LEFT    0x411
+ #define SHIFT_CONTROL_RIGHT   0x412
+ #define SHIFT_CONTROL_UP      0x413
+@@ -191,10 +193,10 @@
+ #define SHIFT_CONTROL_HOME    0x415
+ #define SHIFT_CONTROL_END     0x416
+ #define CONTROL_SHIFT_DELETE  0x41D
+-#define ALT_PAGEUP    ALT_PGUP
+-#define ALT_PAGEDOWN  ALT_PGDN
+-#define ALT_INSERT    ALT_INS
+-#define ALT_DELETE    ALT_DEL
++#define ALT_PAGEUP    NANO_KEY_ALT_PAGEUP
++#define ALT_PAGEDOWN  NANO_KEY_ALT_PAGEDOWN
++#define ALT_INSERT    NANO_KEY_ALT_INSERT
++#define ALT_DELETE    NANO_KEY_ALT_DELETE
+ #define SHIFT_ALT_LEFT   0x431
+ #define SHIFT_ALT_RIGHT  0x432
+ #define SHIFT_ALT_UP     0x433
+--- a/src/global.c
++++ b/src/global.c
+@@ -1371,7 +1371,7 @@
+ 	add_to_sclist(MMAIN, "M-;", 0, run_macro, 0);
+ 	add_to_sclist(MMAIN, "M-U", 0, do_undo, 0);
+ 	add_to_sclist(MMAIN, "M-E", 0, do_redo, 0);
+-	add_to_sclist(MMAIN, "M-Bsp", ALT_BKSP, chop_previous_word, 0);
++	add_to_sclist(MMAIN, "M-Bsp", NANO_KEY_ALT_BACKSPACE, chop_previous_word, 0);
+ 	add_to_sclist(MMAIN, "Sh-^Del", CONTROL_SHIFT_DELETE, chop_previous_word, 0);
+ 	add_to_sclist(MMAIN, "^Del", CONTROL_DELETE, chop_next_word, 0);
+ 	add_to_sclist(MMAIN, "M-Del", ALT_DELETE, zap_text, 0);
+--- a/src/nano.c
++++ b/src/nano.c
+@@ -1858,11 +1858,10 @@
+ 	 */
+ 	_set_fmode(_O_BINARY);
+ 
+-#ifdef __PDCURSESMOD__
+-	/* When using PDCursesMod, we want to disable the default Ctrl+V behavior of
+-	 * pasting text from the system clipboard, so that Ctrl+V behaves as a normal
+-	 * keystroke that paste text from nano's cutbuffer instead. */
+-	PDC_set_function_key(FUNCTION_KEY_PASTE, 0);
++#ifdef _WIN32
++	/* Disable any terminal-level Ctrl+V override so nano handles the keystroke
++	 * itself and pastes from its own cutbuffer. */
++	nano_win32_disable_terminal_paste();
+ #endif
+ 
+ #ifdef __linux__
+--- a/src/rcfile.c
++++ b/src/rcfile.c
+@@ -1022,10 +1022,8 @@
+ 	/* Translation table, from 14 intended gray levels to 24 available levels. */
+ 	static const short gray[] = { 1, 2, 3, 4, 5, 6, 7, 9, 11, 13, 15, 18, 21, 23 };
+ 
+-	/* PDCursesMod maximum possible COLORS is 768, see:
+-	 *  curspriv.h - PDC_MAXCOL
+-	 *  https://github.com/Bill-Gray/PDCursesMod/blob/master/docs/HISTORY.md#pdcurses-39---2019-09-04
+-	 */
++	/* Some Windows terminal backends can advertise more than 256 colors, but
++	 * anything at or above 256 should still use the 256-color translation. */
+ 	if (COLORS < 256)
+ 		return THE_DEFAULT;
+ 	else if (red == green && green == blue && 0 < red && red < 0xF)
+--- a/src/winio.c
++++ b/src/winio.c
+@@ -1033,7 +1033,7 @@
+ 
+ 	/* Get one code from the input stream. */
+ 	keycode = get_input(frame);
+-	unsigned long modifiers = PDC_get_key_modifiers();
++	unsigned long modifiers = nano_win32_get_key_modifiers();
+ 
+ 	/* For an Esc, remember whether the last two arrived by themselves.
+ 	 * Then increment the counter, rolling around on three escapes. */
+@@ -1051,7 +1051,7 @@
+ 
+ 	if (escapes == 0) {
+ 		/* Diambiguate some control keystrokes: ^H|BACKSPACE, ^M|ENTER */
+-		if (!(modifiers & PDC_KEY_MODIFIER_CONTROL)) {
++		if (!(modifiers & NANO_WIN32_MOD_CONTROL)) {
+ 			switch (keycode) {
+ 				case '\b': return KEY_BACKSPACE;
+ 				case '\r': return KEY_ENTER;
+@@ -1236,20 +1236,20 @@
+ 	if (!mute_modifiers) {
+ #ifndef NANO_TINY
+ 		/* Is Shift being held? */
+-		if (modifiers & PDC_KEY_MODIFIER_SHIFT) {
++		if (modifiers & NANO_WIN32_MOD_SHIFT) {
+ 			if (keycode == '\t')
+ 				return SHIFT_TAB;
+-			if (keycode == KEY_SDC && modifiers == PDC_KEY_MODIFIER_SHIFT)
++			if (keycode == NANO_KEY_SHIFT_DELETE && modifiers == NANO_WIN32_MOD_SHIFT)
+ 				return SHIFT_DELETE;
+-			if (keycode == KEY_SDC && modifiers & PDC_KEY_MODIFIER_CONTROL)
++			if (keycode == NANO_KEY_SHIFT_DELETE && modifiers & NANO_WIN32_MOD_CONTROL)
+ 				return CONTROL_SHIFT_DELETE;
+-			if (modifiers == (PDC_KEY_MODIFIER_SHIFT | PDC_KEY_MODIFIER_CONTROL))
++			if (modifiers == (NANO_WIN32_MOD_SHIFT | NANO_WIN32_MOD_CONTROL))
+ 				keycode = convert_to_control(keycode);
+-			if (!meta_key && !(modifiers & PDC_KEY_MODIFIER_CONTROL))
++			if (!meta_key && !(modifiers & NANO_WIN32_MOD_CONTROL))
+ 				shift_held = TRUE;
+ 		}
+ 		/* Is only Alt being held? */
+-		if (modifiers == PDC_KEY_MODIFIER_ALT) {
++		if (modifiers == NANO_WIN32_MOD_ALT) {
+ 			switch (keycode) {
+ 				case KEY_UP:    return ALT_UP;
+ 				case KEY_DOWN:  return ALT_DOWN;
+@@ -1263,7 +1263,7 @@
+ 		}
+ #endif
+ 		/* Is Ctrl being held? */
+-		if (modifiers & PDC_KEY_MODIFIER_CONTROL) {
++		if (modifiers & NANO_WIN32_MOD_CONTROL) {
+ 			switch (keycode) {
+ 				case KEY_UP:    return CONTROL_UP;
+ 				case KEY_DOWN:  return CONTROL_DOWN;
+@@ -1273,12 +1273,12 @@
+ 				case KEY_END:   return CONTROL_END;
+ 				case KEY_DC:    return CONTROL_DELETE;
+ 			}
+-			if (modifiers == PDC_KEY_MODIFIER_CONTROL)
++			if (modifiers == NANO_WIN32_MOD_CONTROL)
+ 				keycode = convert_to_control(keycode);
+ 		}
+ #ifndef NANO_TINY
+ 		/* Are both Shift and Alt being held? */
+-		if (modifiers == (PDC_KEY_MODIFIER_SHIFT | PDC_KEY_MODIFIER_ALT)) {
++		if (modifiers == (NANO_WIN32_MOD_SHIFT | NANO_WIN32_MOD_ALT)) {
+ 			switch (keycode) {
+ 				case KEY_UP:    return KEY_PPAGE;
+ 				case KEY_DOWN:  return KEY_NPAGE;
+@@ -1358,7 +1358,7 @@
+ 			return (ISSET(REBIND_DELETE) ? KEY_DC : KEY_BACKSPACE);
+ 		case KEY_DC:
+ 			return (ISSET(REBIND_DELETE) ? KEY_BACKSPACE : KEY_DC);
+-		case KEY_SDC:
++		case NANO_KEY_SHIFT_DELETE:
+ 			return SHIFT_DELETE;
+ 		case KEY_SCANCEL:
+ 			return KEY_CANCEL;
+--- /dev/null
++++ b/src/win32term.h
+@@ -0,0 +1,87 @@
++/**************************************************************************
++ *   win32term.h  --  This file is part of GNU nano.                       *
++ *                                                                        *
++ *   GNU nano is free software: you can redistribute it and/or modify     *
++ *   it under the terms of the GNU General Public License as published    *
++ *   by the Free Software Foundation, either version 3 of the License,    *
++ *   or (at your option) any later version.                               *
++ *                                                                        *
++ *   GNU nano is distributed in the hope that it will be useful,          *
++ *   but WITHOUT ANY WARRANTY; without even the implied warranty          *
++ *   of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.              *
++ *   See the GNU General Public License for more details.                 *
++ *                                                                        *
++ *   You should have received a copy of the GNU General Public License    *
++ *   along with this program.  If not, see https://gnu.org/licenses/.     *
++ *                                                                        *
++ **************************************************************************/
++
++#ifndef NANO_WIN32TERM_H
++#define NANO_WIN32TERM_H
++
++#ifdef _WIN32
++
++#if defined(__PDCURSESMOD__)
++#define NANO_KEY_CONTROL_LEFT    CTL_LEFT
++#define NANO_KEY_CONTROL_RIGHT   CTL_RIGHT
++#define NANO_KEY_CONTROL_UP      CTL_UP
++#define NANO_KEY_CONTROL_DOWN    CTL_DOWN
++#define NANO_KEY_CONTROL_HOME    CTL_HOME
++#define NANO_KEY_CONTROL_END     CTL_END
++#define NANO_KEY_CONTROL_DELETE  CTL_DEL
++#define NANO_KEY_ALT_PAGEUP      ALT_PGUP
++#define NANO_KEY_ALT_PAGEDOWN    ALT_PGDN
++#define NANO_KEY_ALT_INSERT      ALT_INS
++#define NANO_KEY_ALT_DELETE      ALT_DEL
++#define NANO_KEY_ALT_BACKSPACE   ALT_BKSP
++#define NANO_KEY_SHIFT_DELETE    KEY_SDC
++#define NANO_WIN32_MOD_SHIFT     PDC_KEY_MODIFIER_SHIFT
++#define NANO_WIN32_MOD_CONTROL   PDC_KEY_MODIFIER_CONTROL
++#define NANO_WIN32_MOD_ALT       PDC_KEY_MODIFIER_ALT
++#define nano_win32_get_key_modifiers() PDC_get_key_modifiers()
++#define nano_win32_disable_terminal_paste() PDC_set_function_key(FUNCTION_KEY_PASTE, 0)
++#else
++#define NANO_KEY_CONTROL_LEFT    0x401
++#define NANO_KEY_CONTROL_RIGHT   0x402
++#define NANO_KEY_CONTROL_UP      0x403
++#define NANO_KEY_CONTROL_DOWN    0x404
++#define NANO_KEY_CONTROL_HOME    0x405
++#define NANO_KEY_CONTROL_END     0x406
++#define NANO_KEY_CONTROL_DELETE  0x40D
++#define NANO_KEY_ALT_PAGEUP      0x427
++#define NANO_KEY_ALT_PAGEDOWN    0x428
++#define NANO_KEY_ALT_INSERT      0x42C
++#define NANO_KEY_ALT_DELETE      0x42D
++#define NANO_KEY_ALT_BACKSPACE   0x41D
++#define NANO_KEY_SHIFT_DELETE    KEY_SDC
++#define NANO_WIN32_MOD_SHIFT     0x01UL
++#define NANO_WIN32_MOD_CONTROL   0x04UL
++#define NANO_WIN32_MOD_ALT       0x08UL
++#define nano_win32_get_key_modifiers() 0UL
++#define nano_win32_disable_terminal_paste() ((void)0)
++#endif
++
++#else
++
++#define NANO_KEY_CONTROL_LEFT    0x401
++#define NANO_KEY_CONTROL_RIGHT   0x402
++#define NANO_KEY_CONTROL_UP      0x403
++#define NANO_KEY_CONTROL_DOWN    0x404
++#define NANO_KEY_CONTROL_HOME    0x405
++#define NANO_KEY_CONTROL_END     0x406
++#define NANO_KEY_CONTROL_DELETE  0x40D
++#define NANO_KEY_ALT_PAGEUP      0x427
++#define NANO_KEY_ALT_PAGEDOWN    0x428
++#define NANO_KEY_ALT_INSERT      0x42C
++#define NANO_KEY_ALT_DELETE      0x42D
++#define NANO_KEY_ALT_BACKSPACE   0x41D
++#define NANO_KEY_SHIFT_DELETE    KEY_SDC
++#define NANO_WIN32_MOD_SHIFT     0x01UL
++#define NANO_WIN32_MOD_CONTROL   0x04UL
++#define NANO_WIN32_MOD_ALT       0x08UL
++#define nano_win32_get_key_modifiers() 0UL
++#define nano_win32_disable_terminal_paste() ((void)0)
++
++#endif
++
++#endif /* NANO_WIN32TERM_H */
