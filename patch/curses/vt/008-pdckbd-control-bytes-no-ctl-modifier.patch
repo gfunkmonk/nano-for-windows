@@ -1,0 +1,16 @@
+--- a/curses/vt/pdckbd.c
++++ b/curses/vt/pdckbd.c
+@@ -513,8 +513,10 @@ int PDC_get_key( void)
+                   0x0f7e, 0xd400,         /* keys 32-63 */
+                   0xffff, 0xc7ff,         /* keys 64-95 */
+                   0, 0x7800 };            /* keys 96-127 */
+ 
+-         if( rval < 32 && rval != 13 && rval != 10 && rval != 9)
+-            modifiers = CTL;
++         if( rval < 32 && rval != 13 && rval != 10 && rval != 9)
++            /* Control bytes already encode Ctrl in the value itself
++             * (e.g. ^C=3, ^X=24), so don't also report CTL modifier. */
++            modifiers = 0;
+          if( shifted_keys[rval >> 4] & (1 << (rval & 0xf)))
+             modifiers = SHF;
+          }
