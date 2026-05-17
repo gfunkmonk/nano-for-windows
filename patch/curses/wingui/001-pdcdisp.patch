@@ -13,7 +13,7 @@
          wcscpy( PDC_font_name, _T("Courier New"));
      if( font_idx & 4)
 -        wcscpy( lf.lfFaceName, _T("Unifont"));
-+        wcscpy( lf.lfFaceName, _T("Segoe UI Emoji"));
++        wcscpy( lf.lfFaceName, _T("Segoe UI Symbol"));
      else
          wcscpy( lf.lfFaceName, PDC_font_name );
  /*  wprintf( L"New font: %s\n", PDC_font_name); */
@@ -23,7 +23,7 @@
          strcpy( PDC_font_name, "Courier New");
      if( font_idx & 4)
 -        strcpy( lf.lfFaceName, "Unifont");
-+        strcpy( lf.lfFaceName, "Segoe UI Emoji");
++        strcpy( lf.lfFaceName, "Segoe UI Symbol");
      else
          strcpy( lf.lfFaceName, PDC_font_name);
  #endif
