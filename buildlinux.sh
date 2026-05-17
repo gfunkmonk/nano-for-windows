@@ -2,7 +2,7 @@
 set -euo pipefail
 
 if [ $# -lt 2 ]; then
-    echo "Usage: $0 [x86_64|i686|aarch64] PDTERM"
+    echo "Usage: $0 [x86_64|i686|aarch64|armv7] [wincon|vt]"
     echo "Example: $0 i686 wincon"
     exit 1
 fi
@@ -25,6 +25,10 @@ esac
 
 # Map PDTERM
 PDTERM="$2"
+case "$PDTERM" in
+    wincon|vt) ;;
+    *) echo "Invalid PDTERM: $PDTERM (expected wincon or vt)"; exit 1 ;;
+esac
 echo "Building for $1 with PDTERM=$PDTERM"
 
 # --- 2. Configuration & Environment ---
@@ -317,4 +321,3 @@ EOF
     ls -als
     7z a -mx9 -mm=Deflate64 -mmt$(nproc) "${BASE_DIR}/dist/nano-for-windows_${ARCH}_$(date +%y%m%d_%H%M%S).zip" * .nanorc
 done
-
