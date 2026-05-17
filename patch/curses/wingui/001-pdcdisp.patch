@@ -12,7 +12,7 @@
 +    lf.lfCharSet = DEFAULT_CHARSET;
      lf.lfQuality = PROOF_QUALITY;
 -    lf.lfOutPrecision = OUT_RASTER_PRECIS;
-+    /* Prefer TrueType fonts, which have better emoji glyph coverage. */
++    /* Require TrueType fonts, which have better emoji glyph coverage. */
 +    lf.lfOutPrecision = OUT_TT_ONLY_PRECIS;
      return( lf);
 @@ -327,6 +329,18 @@
