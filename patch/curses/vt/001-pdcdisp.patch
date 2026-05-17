@@ -4,12 +4,12 @@
          len--;
  #endif
      PDC_gotoyx( lineno, x);
-+    /* Clear the line before drawing to prevent ghosting when scrolling
-+     * with wide characters (emojis take 2 columns). This is especially
-+     * important when paging down where old content may remain visible. */
++    /* Clear with neutral attrs and force fresh attrs on first cell. */
 +    if( x == 0)
 +    {
-+        PDC_puts_to_stdout( CSI "2K");  /* clear entire line */
++        PDC_puts_to_stdout( RESET_ATTRS CSI "2K");
++        reset_color( NULL, 0);
++        prev_ch = ~*srcp;
 +    }
      if( force_reset_all_attribs || (!x && !lineno))
      {
@@ -50,3 +50,4 @@
  #endif
                 if( bytes_out > OBUFF_SIZE - 6)
                    {
+
