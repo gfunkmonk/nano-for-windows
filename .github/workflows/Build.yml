@@ -563,7 +563,7 @@ jobs:
         export NCURSESW_LIBS="-l:pdcurses.a -lwinmm -lbcrypt"
         export LIBS="-lbcrypt"
         if [ "${PDTERM}" = "wingui" ]; then
-          export LIBS="${LIBS} -luuid -lole32 -lgdi32 -lcomdlg32 -ldwrite -ld2d1"
+          export LIBS="${LIBS} -lole32 -lgdi32 -lcomdlg32"
         fi
         # Configure nano
         mkdir -p nano/build

@@ -52,7 +52,7 @@ export ConEmuANSI="ON"
 if [ "$PDTERM" == "vt" ]; then
     export PDC_VT=RGB UNDERLINE BLINK DIM STANDOUT
 elif [ "$PDTERM" == "wingui" ]; then
-    export LIBS="${LIBS} -luuid -lole32 -lgdi32 -lcomdlg32 -ldwrite -ld2d1"
+    export LIBS="${LIBS} -lole32 -lgdi32 -lcomdlg32"
 fi
 
 # --- 3. Toolchain Setup (gfunkmonk/win-cross) ---
