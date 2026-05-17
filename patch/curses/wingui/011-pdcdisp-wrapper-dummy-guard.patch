@@ -1,7 +1,6 @@
 --- a/curses/wingui/pdcdisp.c
 +++ b/curses/wingui/pdcdisp.c
-@@ -589,7 +589,13 @@
-         const HDC hdc = (override_hdc ? override_hdc : GetDC( PDC_hWnd)) ;
+@@ -588,6 +588,13 @@
  
          assert( len);
  #ifdef PDC_WIDE
