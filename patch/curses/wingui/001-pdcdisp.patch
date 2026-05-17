@@ -185,25 +185,27 @@
 -        ExtTextOutW( hdc, clip_rect.left, clip_rect.top,
 -                           ETO_CLIPPED | ETO_OPAQUE, &clip_rect,
 -                           buff, olen, (olen > 1 ? lpDx : NULL));
-+        /* Keep emoji rendering on the active selected font path. */
-+        if( has_emoji_or_joiner)
-+            ExtTextOutW( hdc, clip_rect.left, clip_rect.top,
-+                        ETO_CLIPPED | ETO_OPAQUE, &clip_rect,
-+                        buff, olen, (olen > 1 ? lpDx : NULL));
-+        else if( olen > 1)
++        /* Use Uniscribe for complex text shaping, fall back to GDI for simple text */
++        if( has_emoji_or_joiner || olen > 1)
 +        {
-+            /* Use Uniscribe for non-emoji complex script shaping. */
++            /* Try Uniscribe first for proper shaping of complex scripts and emoji */
 +            if( !PDC_draw_text_uniscribe( hdc, buff, olen,
 +                                          clip_rect.left, clip_rect.top,
 +                                          clip_rect.right - clip_rect.left))
++            {
++                /* Fallback to GDI if Uniscribe fails */
 +                ExtTextOutW( hdc, clip_rect.left, clip_rect.top,
 +                            ETO_CLIPPED | ETO_OPAQUE, &clip_rect,
 +                            buff, olen, lpDx);
++            }
 +        }
 +        else
++        {
++            /* Simple single character - use GDI directly */
 +            ExtTextOutW( hdc, clip_rect.left, clip_rect.top,
 +                        ETO_CLIPPED | ETO_OPAQUE, &clip_rect,
 +                        buff, olen, NULL);
++        }
 +
  #ifdef WA_TOP
          if( *srcp & (WA_UNDERLINE | WA_RIGHT | WA_LEFT | WA_TOP | WA_STRIKEOUT))
