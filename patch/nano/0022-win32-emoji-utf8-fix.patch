@@ -60,11 +60,13 @@
  
  		/* Represent an invalid character with the Replacement Character. */
  		if (charlength < 0) {
-@@ -1919,7 +1955,47 @@
+@@ -1919,7 +1955,49 @@
  		}
  
  		/* Determine whether the character takes zero, one, or two columns. */
 -		charwidth = uc_width(wc, "UTF-8");
++		if (wc == 0xFFFD)
++			true_cp = 0xFFFD;
 +		charwidth = uc_width(true_cp, "UTF-8");
 +
 +#ifdef _WIN32
