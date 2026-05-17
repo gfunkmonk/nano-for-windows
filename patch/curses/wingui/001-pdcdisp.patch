@@ -1,7 +1,9 @@
 --- a/curses/wingui/pdcdisp.c
 +++ b/curses/wingui/pdcdisp.c
-@@ -220,7 +220,9 @@
-     lf.lfPitchAndFamily = DEFAULT_PITCH | FF_DONTCARE;
+@@ -220,7 +220,11 @@
+-    lf.lfPitchAndFamily = FF_MODERN;
++    /* Relax family filtering so emoji-capable fonts can be selected. */
++    lf.lfPitchAndFamily = DEFAULT_PITCH | FF_DONTCARE;
      lf.lfWeight = ((font_idx & 1) ? FW_EXTRABOLD : FW_NORMAL);
      lf.lfItalic = ((font_idx & 2) ? TRUE : FALSE);
 -    lf.lfCharSet = ANSI_CHARSET;
@@ -9,7 +11,9 @@
 +       restricting font matching to ANSI code pages. */
 +    lf.lfCharSet = DEFAULT_CHARSET;
      lf.lfQuality = PROOF_QUALITY;
-     lf.lfOutPrecision = OUT_TT_ONLY_PRECIS;
+-    lf.lfOutPrecision = OUT_RASTER_PRECIS;
++    /* Prefer TrueType fonts, which have better emoji glyph coverage. */
++    lf.lfOutPrecision = OUT_TT_ONLY_PRECIS;
      return( lf);
 @@ -327,6 +329,18 @@
  
