@@ -52,7 +52,7 @@ export ConEmuANSI="ON"
 if [ "$PDTERM" == "vt" ]; then
     export PDC_VT=RGB UNDERLINE BLINK DIM STANDOUT
 elif [ "$PDTERM" == "wingui" ]; then
-    export LIBS="${LIBS} -lole32 -lgdi32 -lcomdlg32"
+    export LIBS="-l:pdcurses.a -lgdi32 -lcomdlg32 -lwinmm -lusp10"
 fi
 
 # --- 3. Toolchain Setup (gfunkmonk/win-cross) ---
@@ -249,6 +249,9 @@ echo -e "${GREEN}[${BWHITE}pdckbd.c${GREEN}] ${BWHITE}Forced for 64-bit chtype${
 sed -i 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/vt/pdckbd.c
 sed -i 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/wincon/pdckbd.c
 sed -i 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/wingui/pdckbd.c
+
+echo -e "${GREEN}[${BWHITE}curspriv.h${GREEN}] ${BWHITE}Fix MAX_UNICODE${NC}"
+sed -i 's|MAX_UNICODE 0x110000|MAX_UNICODE 0x10ffff|g' curses/curspriv.h
 
 # --- 6. Build Binaries ---
 for TRIPLET in "${TARGETS[@]}"; do

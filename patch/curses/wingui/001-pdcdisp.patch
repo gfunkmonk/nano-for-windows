@@ -1,6 +1,14 @@
---- a/curses/wingui/pdcdisp.c
-+++ b/curses/wingui/pdcdisp.c
-@@ -220,7 +220,9 @@
+--- a/curses/wingui/pdcdisp.c	2026-05-17 10:50:15.683790904 -0400
++++ b/curses/wingui/pdcdisp.c	2026-05-17 10:58:25.313787689 -0400
+@@ -9,6 +9,7 @@
+ #include <stdlib.h>
+ #include <string.h>
+ #include <tchar.h>
++#include <usp10.h>
+ #include "../common/pdccolor.h"
+ #include "../common/pdccolor.c"
+ #ifdef WIN32_LEAN_AND_MEAN
+@@ -220,7 +221,9 @@
      lf.lfPitchAndFamily = FF_MODERN;
      lf.lfWeight = ((font_idx & 1) ? FW_EXTRABOLD : FW_NORMAL);
      lf.lfItalic = ((font_idx & 2) ? TRUE : FALSE);
@@ -11,10 +19,134 @@
      lf.lfQuality = PROOF_QUALITY;
      lf.lfOutPrecision = OUT_RASTER_PRECIS;
      return( lf);
-@@ -327,6 +329,18 @@
+@@ -327,6 +330,142 @@
  
  #define BUFFSIZE 50
  
++/* Uniscribe cache for text shaping performance */
++static SCRIPT_CACHE script_cache = NULL;
++
++/* Initialize or reset the Uniscribe script cache */
++static void PDC_init_script_cache( void)
++{
++    if( script_cache)
++    {
++        ScriptFreeCache( &script_cache);
++        script_cache = NULL;
++    }
++}
++
++/* Draw text using Uniscribe for proper complex script shaping */
++static BOOL PDC_draw_text_uniscribe( HDC hdc, const wchar_t *text, int len,
++                                      int x, int y, int width)
++{
++    HRESULT hr;
++    SCRIPT_ITEM *items = NULL;
++    SCRIPT_ANALYSIS *sa = NULL;
++    WORD *glyphs = NULL;
++    WORD *log_clusters = NULL;
++    SCRIPT_VISATTR *sva = NULL;
++    int *advances = NULL;
++    GOFFSET *offsets = NULL;
++    ABC *abc = NULL;
++    int max_items = 0, max_glyphs = 0;
++    int i, num_items, num_glyphs;
++    int total_width = 0;
++    
++    if( !text || len <= 0)
++        return FALSE;
++    
++    /* Allocate buffers for Uniscribe processing */
++    max_items = len + 1;
++    items = (SCRIPT_ITEM *)calloc( max_items, sizeof( SCRIPT_ITEM));
++    if( !items)
++        goto cleanup;
++    
++    /* Itemize the text into shaping runs */
++    hr = ScriptItemize( text, len, max_items, NULL, NULL, items, &num_items);
++    if( FAILED( hr) || num_items <= 0)
++        goto cleanup;
++    
++    /* Process each item */
++    for( i = 0; i < num_items; i+)
++    {
++        int item_len = items[i + 1].iCharPos - items[i].iCharPos;
++        SCRIPT_ANALYSIS *psa = &items[i].a;
++        
++        /* Allocate glyph buffers for this item */
++        max_glyphs = item_len * 2;  /* Worst case: 2 glyphs per char */
++        glyphs = (WORD *)calloc( max_glyphs, sizeof( WORD));
++        log_clusters = (WORD *)calloc( item_len, sizeof( WORD));
++        sva = (SCRIPT_VISATTR *)calloc( max_glyphs, sizeof( SCRIPT_VISATTR));
++        
++        if( !glyphs || !log_clusters || !sva)
++            goto cleanup;
++        
++        /* Shape the glyphs */
++        hr = ScriptShape( hdc, &script_cache, text + items[i].iCharPos,
++                          item_len, max_glyphs, psa, glyphs,
++                          log_clusters, sva, &num_glyphs);
++        
++        if( hr == USP_E_SCRIPT_NOT_IN_FONT)
++        {
++            /* Fallback: disable shaping for this script */
++            psa->eScript = SCRIPT_UNDEFINED;
++            hr = ScriptShape( hdc, &script_cache, text + items[i].iCharPos,
++                              item_len, max_glyphs, psa, glyphs,
++                              log_clusters, sva, &num_glyphs);
++        }
++        
++        if( FAILED( hr))
++            goto cleanup;
++        
++        /* Get glyph positions */
++        advances = (int *)calloc( num_glyphs, sizeof( int));
++        offsets = (GOFFSET *)calloc( num_glyphs, sizeof( GOFFSET));
++        abc = (ABC *)calloc( 1, sizeof( ABC));
++        
++        if( !advances || !offsets || !abc)
++            goto cleanup;
++        
++        hr = ScriptPlace( hdc, &script_cache, glyphs, num_glyphs,
++                          sva, psa, advances, offsets, abc);
++        
++        if( FAILED( hr))
++            goto cleanup;
++        
++        /* Render the shaped text */
++        hr = ScriptTextOut( hdc, &script_cache, x + total_width, y,
++                           0, NULL, text + items[i].iCharPos,
++                           item_len, num_glyphs, glyphs, advances,
++                           offsets, psa);
++        
++        if( FAILED( hr))
++            goto cleanup;
++        
++        total_width += abc->abcA + abc->abcB + abc->abcC;
++        
++        /* Free item-specific buffers */
++        free( glyphs); glyphs = NULL;
++        free( log_clusters); log_clusters = NULL;
++        free( sva); sva = NULL;
++        free( advances); advances = NULL;
++        free( offsets); offsets = NULL;
++        free( abc); abc = NULL;
++    }
++    
++    free( items);
++    return TRUE;
++    
++cleanup:
++    if( items) free( items);
++    if( glyphs) free( glyphs);
++    if( log_clusters) free( log_clusters);
++    if( sva) free( sva);
++    if( advances) free( advances);
++    if( offsets) free( offsets);
++    if( abc) free( abc);
++    return FALSE;
++}
++
 +static bool PDC_has_emoji_or_joiner( const chtype ch)
 +{
 +    const uint32_t c = (uint32_t)(ch & A_CHARTEXT);
@@ -30,7 +162,7 @@
  static void PDC_transform_line_given_hdc( const HDC hdc, const int lineno,
                               int x, int len, const chtype *srcp)
  {
-@@ -369,6 +383,7 @@
+@@ -369,6 +508,7 @@
          RECT clip_rect;
          wchar_t buff[BUFFSIZE];
          int lpDx[BUFFSIZE + 1];
@@ -38,7 +170,7 @@
          int olen = 0;
  #ifdef USE_FALLBACK_FONT
          const bool in_font = character_is_in_font( *srcp);
-@@ -383,6 +398,8 @@
+@@ -383,6 +523,8 @@
          {
              chtype ch = srcp[i] & A_CHARTEXT;
  
@@ -47,15 +179,35 @@
  #ifdef USING_COMBINING_CHARACTER_SCHEME
              if( ch > 0xffff && ch < MAX_UNICODE)  /* use Unicode surrogates to fit */
              {               /* >64K values into 16-bit wchar_t: */
-@@ -485,7 +502,10 @@
+@@ -483,9 +625,28 @@
+             clip_rect.right += PDC_cxChar;        /* space for a fullwidth char */
+ #endif
          clip_rect.bottom = clip_rect.top + PDC_cyChar;
-         ExtTextOutW( hdc, clip_rect.left, clip_rect.top,
-                            ETO_CLIPPED | ETO_OPAQUE, &clip_rect,
+-        ExtTextOutW( hdc, clip_rect.left, clip_rect.top,
+-                           ETO_CLIPPED | ETO_OPAQUE, &clip_rect,
 -                           buff, olen, (olen > 1 ? lpDx : NULL));
-+                           buff, olen,
-+                           /* Let GDI shape emoji/ZWJ clusters naturally. */
-+                           (olen > 1 && !has_emoji_or_joiner ?
-+                                            lpDx : NULL));
++        /* Use Uniscribe for complex text shaping, fall back to GDI for simple text */
++        if( has_emoji_or_joiner || olen > 1)
++        {
++            /* Try Uniscribe first for proper shaping of complex scripts and emoji */
++            if( !PDC_draw_text_uniscribe( hdc, buff, olen,
++                                          clip_rect.left, clip_rect.top,
++                                          clip_rect.right - clip_rect.left))
++            {
++                /* Fallback to GDI if Uniscribe fails */
++                ExtTextOutW( hdc, clip_rect.left, clip_rect.top,
++                            ETO_CLIPPED | ETO_OPAQUE, &clip_rect,
++                            buff, olen, lpDx);
++            }
++        }
++        else
++        {
++            /* Simple single character - use GDI directly */
++            ExtTextOutW( hdc, clip_rect.left, clip_rect.top,
++                        ETO_CLIPPED | ETO_OPAQUE, &clip_rect,
++                        buff, olen, NULL);
++        }
++
  #ifdef WA_TOP
          if( *srcp & (WA_UNDERLINE | WA_RIGHT | WA_LEFT | WA_TOP | WA_STRIKEOUT))
  #else

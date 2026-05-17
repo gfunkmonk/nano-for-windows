@@ -472,9 +472,9 @@ jobs:
         sed -i.bak 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wingui/*.c
         _diff
 
-        #echo -e "\n\nPATCH: Make MAX_UNICODE suck less."
-        #sed -i.bak 's|MAX_UNICODE 0xffff|MAX_UNICODE 0x10ffff|g' curses/curspriv.h
-        #_diff
+        echo -e "\n\nPATCH: Make MAX_UNICODE suck less."
+        sed -i.bak 's|MAX_UNICODE 0x110000|MAX_UNICODE 0x10ffff|g' curses/curspriv.h
+        _diff
 
         # Force the UTF-8 decoder to process 4-byte sequences (emojis)
         # even if the system defines a small WCHAR_MAX
@@ -563,7 +563,7 @@ jobs:
         export NCURSESW_LIBS="-l:pdcurses.a -lwinmm -lbcrypt"
         export LIBS="-lbcrypt"
         if [ "${PDTERM}" = "wingui" ]; then
-          export LIBS="${LIBS} -lole32 -lgdi32 -lcomdlg32"
+          export LIBS="-l:pdcurses.a -lgdi32 -lcomdlg32 -lwinmm -lusp10"
         fi
         # Configure nano
         mkdir -p nano/build
