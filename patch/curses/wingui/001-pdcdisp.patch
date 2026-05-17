@@ -33,7 +33,7 @@
  
  #define BUFFSIZE 50
  
-+static bool PDC_is_emoji_or_joiner( const chtype ch)
++static bool PDC_has_emoji_or_joiner( const chtype ch)
 +{
 +    const uint32_t c = (uint32_t)(ch & A_CHARTEXT);
 +
@@ -41,7 +41,7 @@
 +         || (c >= 0xfe00 && c <= 0xfe0f)    /* variation selectors */
 +         || (c >= 0x1f3fb && c <= 0x1f3ff)  /* skin tone modifiers */
 +         || (c >= 0x1f1e6 && c <= 0x1f1ff)  /* regional indicators */
-+         || (c >= 0x1f300 && c <= 0x1faff)  /* emoji blocks */
++         || (c >= 0x1f300 && c <= 0x1faff)  /* emoji blocks: update as Unicode grows */
 +         || (c >= 0x2600 && c <= 0x27bf));  /* misc symbols/dingbats */
 +}
 +
@@ -76,7 +76,7 @@
          {
              chtype ch = srcp[i] & A_CHARTEXT;
  
-+            has_emoji_or_joiner |= PDC_is_emoji_or_joiner( srcp[i]);
++            has_emoji_or_joiner |= PDC_has_emoji_or_joiner( srcp[i]);
 +
  #ifdef USING_COMBINING_CHARACTER_SCHEME
              if( ch > 0xffff && ch < MAX_UNICODE)  /* use Unicode surrogates to fit */
