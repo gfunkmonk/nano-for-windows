@@ -2,7 +2,7 @@
 set -euo pipefail
 
 if [ $# -lt 2 ]; then
-    echo "Usage: $0 [x86_64|i686|aarch64|armv7] [wincon|vt]"
+    echo "Usage: $0 [x86_64|i686|aarch64|armv7] [wincon|wingui|vt]"
     echo "Example: $0 i686 wincon"
     exit 1
 fi
@@ -28,7 +28,7 @@ esac
 PDTERM="$2"
 case "$PDTERM" in
     wincon|vt|wingui) ;;
-    *) echo "Invalid PDTERM: $PDTERM (expected wincon or vt)"; exit 1 ;;
+    *) echo "Invalid PDTERM: $PDTERM (expected wincon, wingui, or vt)"; exit 1 ;;
 esac
 echo "Building for $1 with PDTERM=$PDTERM"
 

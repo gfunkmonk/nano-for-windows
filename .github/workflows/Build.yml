@@ -20,6 +20,7 @@ on:
         type: choice
         options:
           - wincon
+          - wingui
           - vt
       debugssh:
         description: SSH Server
@@ -466,9 +467,10 @@ jobs:
         _diff
 
         #echo -e "\n\nPATCH: PDC_display_utf8 = TRUE"
-        #sed -i.bak 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wincon/*.c
-        #sed -i.bak 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/vt/*.c
-        #_diff
+        sed -i.bak 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wincon/*.c
+        sed -i.bak 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/vt/*.c
+        sed -i.bak 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wingui/*.c
+        _diff
 
         #echo -e "\n\nPATCH: Make MAX_UNICODE suck less."
         #sed -i.bak 's|MAX_UNICODE 0xffff|MAX_UNICODE 0x10ffff|g' curses/curspriv.h
@@ -479,6 +481,7 @@ jobs:
         echo -e "\n\nPATCH: Force 4-byte UTF-8 emoji input in VT keyboard driver."
         sed -i.bak 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/vt/pdckbd.c
         sed -i.bak 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/wincon/pdckbd.c
+        sed -i.bak 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/wingui/pdckbd.c
         _diff
 
         ####                               ####
@@ -535,6 +538,11 @@ jobs:
 
     - name: "🔧 Configure Nano Build"
       run: |
+        if [ "$PDTERM" == "vt" ]; then
+            export PDC_VT=RGB UNDERLINE BLINK DIM STANDOUT
+        elif [ "$PDTERM" == "wingui" ]; then
+            export LIBS="${LIBS} -luuid -lole32 -lgdi32 -lcomdlg32 -ldwrite -ld2d1"
+        fi
         ##########################
         ##                        ##
         ##     CONFIGURE BUILD    ##
@@ -580,6 +588,11 @@ jobs:
 
     - name: "⚙️ Build for Windows ${{ matrix.pretty }}"
       run: |
+        if [ "$PDTERM" == "vt" ]; then
+            export PDC_VT=RGB UNDERLINE BLINK DIM STANDOUT
+        elif [ "$PDTERM" == "wingui" ]; then
+            export LIBS="${LIBS} -luuid -lole32 -lgdi32 -lcomdlg32 -ldwrite -ld2d1"
+        fi
         ##########################
         ##                        ##
         ##     BUILD NANO         ##

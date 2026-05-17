@@ -34,7 +34,7 @@
          RECT clip_rect;
          wchar_t buff[BUFFSIZE];
          int lpDx[BUFFSIZE + 1];
-+        bool has_emoji_or_joiner = FALSE
++        bool has_emoji_or_joiner = FALSE;
          int olen = 0;
  #ifdef USE_FALLBACK_FONT
          const bool in_font = character_is_in_font( *srcp);
@@ -42,7 +42,7 @@
          {
              chtype ch = srcp[i] & A_CHARTEXT;
  
-+            has_emoji_or_joiner |= PDC_has_emoji_or_joiner( srcp[i])
++            has_emoji_or_joiner |= PDC_has_emoji_or_joiner( srcp[i]);
 +
  #ifdef USING_COMBINING_CHARACTER_SCHEME
              if( ch > 0xffff && ch < MAX_UNICODE)  /* use Unicode surrogates to fit */
