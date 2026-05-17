@@ -466,7 +466,7 @@ jobs:
             meta_key\=PDC_get_key_modifiers\() \& PDC_KEY_MODIFIER_ALT;" src/winio.c
         _diff
 
-        #echo -e "\n\nPATCH: PDC_display_utf8 = TRUE"
+        echo -e "\n\nPATCH: PDC_display_utf8 = TRUE"
         sed -i.bak 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wincon/*.c
         sed -i.bak 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/vt/*.c
         sed -i.bak 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wingui/*.c
@@ -618,10 +618,6 @@ jobs:
           cd ..
           #mv sample.nanorc.in .nanorc
           cp ${CWD}/.nanorc .
-          if [ "$PDTERM" == "vt" ]; then
-              echo -e "\n" .nanorc
-              sed '$a\bind ^/ cancel all' .nanorc
-          fi
           rm -rf bin share rnano*
           llvm-strip -s nano.exe
           upx nano.exe || true

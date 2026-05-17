@@ -1,6 +1,6 @@
 --- a/curses/pdcurses/refresh.c
 +++ b/curses/pdcurses/refresh.c
-@@ -184,12 +184,22 @@
+@@ -184,10 +184,20 @@
      }
  #ifdef PDC_WIDE
 -    if( x && (*srcp & A_CHARTEXT) == DUMMY_CHAR_NEXT_TO_FULLWIDTH)
@@ -26,7 +26,7 @@
      }
  #endif
      while( len)
-@@ -201,9 +211,11 @@
+@@ -201,11 +211,15 @@
                       && (ch = (srcp[i - 1] & A_CHARTEXT)) < MAX_UNICODE
                       && i < len)
             i++;
