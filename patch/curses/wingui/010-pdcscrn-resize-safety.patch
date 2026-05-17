@@ -23,10 +23,11 @@
  
  
      PDC_hWnd = hwnd;
-@@ -1621,8 +1626,8 @@
+@@ -1621,9 +1626,9 @@
  
              pt.x = LOWORD( lParam);
              pt.y = HIWORD( lParam);
+             ScreenToClient( hwnd, &pt);
 -            pt.x /= PDC_cxChar;
 -            pt.y /= PDC_cyChar;
 +            pt.x = (PDC_cxChar ? pt.x / PDC_cxChar : 0);
