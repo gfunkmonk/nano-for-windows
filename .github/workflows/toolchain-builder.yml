@@ -77,8 +77,6 @@ jobs:
           ccache-llvm-
 
     - name: "⚙️ Build LLVM-MinGW Master"
-      # FIX: skip rebuild if cache was fully restored
-      if: steps.cache-toolchain.outputs.cache-hit != 'true'
       shell: bash
       run: |
         # Create ccache symlinks for Alpine if they don't exist
@@ -105,8 +103,7 @@ jobs:
 
     - name: "🚮 Delete stale caches"
       # Only prune old caches after a successful fresh build.
-      # FIX: was running even on cache-hit (pointless); now gated on fresh build.
-      if: steps.cache-toolchain.outputs.cache-hit != 'true' && success()
+      if: success()
       uses: snnaplab/delete-branch-cache-action@v1
 
     - name: "📦 Upload Toolchain Artifact"
