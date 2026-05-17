@@ -19,7 +19,7 @@
      lf.lfQuality = PROOF_QUALITY;
      lf.lfOutPrecision = OUT_RASTER_PRECIS;
      return( lf);
-@@ -327,6 +330,141 @@
+@@ -327,6 +330,135 @@
  
  #define BUFFSIZE 50
  
