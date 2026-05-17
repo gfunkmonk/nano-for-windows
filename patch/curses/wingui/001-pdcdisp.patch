@@ -1,5 +1,5 @@
---- a/curses/wingui/pdcdisp.c
-+++ b/curses/wingui/pdcdisp.c
+--- pdcdisp.c.orig	2026-05-17 18:07:09.643618757 -0400
++++ pdcdisp.c.p	2026-05-17 18:07:35.503618587 -0400
 @@ -220,7 +220,9 @@
      lf.lfPitchAndFamily = FF_MODERN;
      lf.lfWeight = ((font_idx & 1) ? FW_EXTRABOLD : FW_NORMAL);
@@ -30,7 +30,18 @@
  static void PDC_transform_line_given_hdc( const HDC hdc, const int lineno,
                               int x, int len, const chtype *srcp)
  {
-@@ -369,6 +383,7 @@
+@@ -358,6 +372,10 @@
+     assert( len <= SP->cols - x);
+     assert( lineno < SP->lines && len > 0 && lineno >= 0);
+ #ifdef PDC_WIDE
++    while( len && (srcp[len - 1] & A_CHARTEXT) == MAX_UNICODE)
++        len--;
++    if( !len)
++        return;
+     assert( (srcp[len - 1] & A_CHARTEXT) != MAX_UNICODE);
+ #endif
+ 
+@@ -369,6 +387,7 @@
          RECT clip_rect;
          wchar_t buff[BUFFSIZE];
          int lpDx[BUFFSIZE + 1];
@@ -38,7 +49,7 @@
          int olen = 0;
  #ifdef USE_FALLBACK_FONT
          const bool in_font = character_is_in_font( *srcp);
-@@ -383,6 +398,8 @@
+@@ -383,6 +402,8 @@
          {
              chtype ch = srcp[i] & A_CHARTEXT;
  
@@ -47,7 +58,7 @@
  #ifdef USING_COMBINING_CHARACTER_SCHEME
              if( ch > 0xffff && ch < MAX_UNICODE)  /* use Unicode surrogates to fit */
              {               /* >64K values into 16-bit wchar_t: */
-@@ -494,7 +494,17 @@
+@@ -477,7 +498,17 @@
          prev_ch = *srcp;
          clip_rect.left = x * PDC_cxChar;
          clip_rect.top = lineno * PDC_cyChar;
@@ -66,4 +77,17 @@
  #ifdef PDC_WIDE
          if( 2 == PDC_wcwidth( (uint32_t)( *srcp & A_CHARTEXT)))  /* allow extra */
              clip_rect.right += PDC_cxChar;        /* space for a fullwidth char */
-
+@@ -557,6 +588,13 @@
+ 
+         assert( len);
+ #ifdef PDC_WIDE
++        while( len && (srcp[len - 1] & A_CHARTEXT) == MAX_UNICODE)
++            len--;
++        if( !len)
++        {
++            ReleaseDC( PDC_hWnd, hdc);
++            return;
++        }
+         assert( (srcp[len - 1] & A_CHARTEXT) != MAX_UNICODE);
+ #endif
+         PDC_transform_line_given_hdc( hdc, lineno, x, len, srcp);
