@@ -19,7 +19,7 @@
      lf.lfQuality = PROOF_QUALITY;
      lf.lfOutPrecision = OUT_RASTER_PRECIS;
      return( lf);
-@@ -327,6 +330,142 @@
+@@ -327,6 +330,141 @@
  
  #define BUFFSIZE 50
  
@@ -116,7 +116,7 @@
 +        /* Render the shaped text */
 +        hr = ScriptTextOut( hdc, &script_cache, x + total_width, y,
 +                           0, NULL, psa, NULL, 0, glyphs,
-+                           num_glyphs, advances, offsets, 0);
++                           num_glyphs, advances, NULL, offsets);
 +        
 +        if( FAILED( hr))
 +            goto cleanup;
