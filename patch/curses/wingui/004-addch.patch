@@ -3,7 +3,7 @@
 @@ -537,8 +537,35 @@
      {
          const bool is_combining = (text && !text_width);
-+        /* Bypass broken combining system for ZWJ sequences and emoji */
++        /* Keep joiners/selectors/modifiers in the combining path. */
 +        const bool is_zwj = (text == 0x200D);
 +        const bool is_variation_selector = (text >= 0xFE00 && text <= 0xFE0F);
 +        const bool is_skin_tone_modifier = (text >= 0x1F3FB && text <= 0x1F3FF);
@@ -20,20 +20,20 @@
 +                              (text >= 0x1F900 && text <= 0x1F9FF) ||  /* Supplemental Symbols and Pictographs */
 +                              (text >= 0x1FA00 && text <= 0x1FAFF);    /* Symbols and Pictographs Extended-A */ 
 +
-+        /* Store emoji/ZWJ/variation selector sequences directly without combining */
-+        if (is_emoji || is_zwj || is_skin_tone_modifier) {
++        /* Do not store these as standalone cells; combining logic below handles them. */
++        if (FALSE && (is_emoji || is_zwj || is_skin_tone_modifier)) {
 +            win->_y[y][x] = ch;
 +            win->_curx = x + 1;
 +            return OK;
 +        }
-+        if (is_variation_selector) {
++        if (FALSE && is_variation_selector) {
 +            win->_y[y][x] = ch;
 +            return OK;
 +        }
          const bool is_low_surrogate = PDC_IS_LOW_SURROGATE( text);
 
 -        if( is_combining || is_low_surrogate)
-+        if( (is_combining && !is_zwj && !is_variation_selector && !is_skin_tone_modifier) || is_low_surrogate)
++        if( is_combining || is_zwj || is_variation_selector || is_skin_tone_modifier || is_low_surrogate)
          {
              chtype prev_char;
 
@@ -43,7 +43,7 @@
              {
 +                /* For ZWJ and variation selectors at line start, we need to ensure
 +                 * they get combined with the next character rather than being lost */
-+                if( is_zwj || is_variation_selector || is_skin_tone_modifier)
++                if( FALSE && (is_zwj || is_variation_selector || is_skin_tone_modifier))
 +                {
 +                    /* Store as a special marker that will be combined with next char */
 +                    win->_y[y][x] = COMBINED_CHAR_START + PDC_find_combined_char_idx( 0, text);
@@ -53,7 +53,7 @@
                  x = win->_maxx - 1;
              }
 @@ -553,6 +564,11 @@
-             if( is_combining)
+             if( is_combining || is_zwj || is_variation_selector || is_skin_tone_modifier)
                  text = COMBINED_CHAR_START
                           + PDC_find_combined_char_idx( prev_char, text);
 +            else if( is_zwj || is_variation_selector || is_skin_tone_modifier)
