@@ -1,0 +1,13 @@
+--- a/curses/vt/pdcscrn.c
++++ b/curses/vt/pdcscrn.c
+@@ -376,6 +376,10 @@ int PDC_scr_open(void)
+         return ERR;
+ 
+     setbuf( SP->input_fd, NULL);
++#ifdef _WIN32
++    /* Let applications handle Ctrl+C (for example nano's prompt cancel). */
++    PDC_set_function_key( FUNCTION_KEY_COPY, 0);
++#endif
+ #ifdef USE_TERMIOS
+     sigemptyset(&sa.sa_mask);
+     sa.sa_flags = 0;
