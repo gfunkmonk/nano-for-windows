@@ -68,7 +68,7 @@
 +        goto cleanup;
 +    
 +    /* Process each item */
-+    for( i = 0; i < num_items; i+)
++    for( i = 0; i < num_items; i++)
 +    {
 +        int item_len = items[i + 1].iCharPos - items[i].iCharPos;
 +        SCRIPT_ANALYSIS *psa = &items[i].a;
@@ -115,9 +115,8 @@
 +        
 +        /* Render the shaped text */
 +        hr = ScriptTextOut( hdc, &script_cache, x + total_width, y,
-+                           0, NULL, text + items[i].iCharPos,
-+                           item_len, num_glyphs, glyphs, advances,
-+                           offsets, psa);
++                           0, NULL, psa, NULL, 0, glyphs,
++                           num_glyphs, advances, offsets, 0);
 +        
 +        if( FAILED( hr))
 +            goto cleanup;
