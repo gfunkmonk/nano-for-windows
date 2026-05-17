@@ -42,7 +42,7 @@ cd "$(pwd)"/build
 # Global variables from your workflow
 export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DCHTYPE_64 -DPDC_WIDE -DPDC_FORCE_UTF8 -D_GNU_SOURCE"
 export LDFLAGS="-L${BUILDDIR}/nano/curses/$PDTERM -static -static-libgcc $BUILDDIR/nano/curses/$PDTERM/pdcurses.a"
-export LIBS="-l:pdcurses.a -lwinmm -lbcrypt -lshlwapi"
+export LIBS="-l:pdcurses.a -lwinmm -lbcrypt"
 export NCURSES_CFLAGS="-I${BUILDDIR}/nano/curses/ -DNCURSES_STATIC -DENABLE_MOUSE"
 export NCURSES_LIBS="-l:pdcurses.a -lwinmm -lbcrypt"
 export CPPFLAGS="-D__USE_MINGW_ANSI_STDIO -DHAVE_NCURSESW_NCURSES_H -DNCURSES_STATIC"
@@ -52,7 +52,7 @@ export ConEmuANSI="ON"
 if [ "$PDTERM" == "vt" ]; then
     export PDC_VT=RGB UNDERLINE BLINK DIM STANDOUT
 elif [ "$PDTERM" == "wingui" ]; then
-    export LIBS="${LIBS} -lgdi32 -lcomdlg32"
+    export LIBS="${LIBS} -luuid -lole32 -lgdi32 -lcomdlg32 -ldwrite -ld2d1"
 fi
 
 # --- 3. Toolchain Setup (gfunkmonk/win-cross) ---
@@ -243,10 +243,12 @@ sed -i "/bool parse_combination/ s/\bint\b/chtype/g" src/rcfile.c
 echo -e "${GREEN}[${BWHITE}wincon & vt${GREEN}] ${BWHITE}PDC_display_utf8 = TRUE${NC}"
 sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wincon/*.c
 sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/vt/*.c
+sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wingui/*.c
 
 echo -e "${GREEN}[${BWHITE}pdckbd.c${GREEN}] ${BWHITE}Forced for 64-bit chtype${NC}"
 sed -i 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/vt/pdckbd.c
 sed -i 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/wincon/pdckbd.c
+sed -i 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/wingui/pdckbd.c
 
 # --- 6. Build Binaries ---
 for TRIPLET in "${TARGETS[@]}"; do
