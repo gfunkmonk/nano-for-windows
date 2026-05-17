@@ -5,7 +5,7 @@
  
      setbuf( SP->input_fd, NULL);
 +#ifdef _WIN32
-+    /* Let applications handle Ctrl+C (for example nano's prompt cancel). */
++    /* Let applications handle Ctrl+C (such as nano's prompt cancel). */
 +    PDC_set_function_key( FUNCTION_KEY_COPY, 0);
 +#endif
  #ifdef USE_TERMIOS
