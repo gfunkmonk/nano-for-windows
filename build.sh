@@ -12,6 +12,7 @@ YELLOW="\x1b[1;33m"
 TEAL="\x1b[2;36m"
 BWHITE="\x1b[1;37m"
 GREEN="\x1b[1;32m"
+RED="\x1b[1;31m"
 NC="\x1b[0m"
 
 # Map the input to the full triplet
@@ -26,7 +27,7 @@ esac
 # Map PDTERM
 PDTERM="$2"
 case "$PDTERM" in
-    wincon|vt) ;;
+    wincon|vt|wingui) ;;
     *) echo "Invalid PDTERM: $PDTERM (expected wincon or vt)"; exit 1 ;;
 esac
 echo "Building for $1 with PDTERM=$PDTERM"
@@ -41,7 +42,7 @@ cd "$(pwd)"/build
 # Global variables from your workflow
 export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DCHTYPE_64 -DPDC_WIDE -DPDC_FORCE_UTF8 -D_GNU_SOURCE"
 export LDFLAGS="-L${BUILDDIR}/nano/curses/$PDTERM -static -static-libgcc $BUILDDIR/nano/curses/$PDTERM/pdcurses.a"
-export LIBS="-l:pdcurses.a -lwinmm -lbcrypt -lshlwapi -lwinpthread"
+export LIBS="-l:pdcurses.a -lwinmm -lbcrypt -lshlwapi"
 export NCURSES_CFLAGS="-I${BUILDDIR}/nano/curses/ -DNCURSES_STATIC -DENABLE_MOUSE"
 export NCURSES_LIBS="-l:pdcurses.a -lwinmm -lbcrypt"
 export CPPFLAGS="-D__USE_MINGW_ANSI_STDIO -DHAVE_NCURSESW_NCURSES_H -DNCURSES_STATIC"
@@ -50,6 +51,8 @@ export ConEmuANSI="ON"
 
 if [ "$PDTERM" == "vt" ]; then
     export PDC_VT=RGB UNDERLINE BLINK DIM STANDOUT
+elif [ "$PDTERM" == "wingui" ]; then
+    export LIBS="${LIBS} -lgdi32 -lcomdlg32"
 fi
 
 # --- 3. Toolchain Setup (gfunkmonk/win-cross) ---
@@ -319,5 +322,5 @@ EOF
     rm -rf bin share rnano*
     upx --lzma --best nano.exe || true
     ls -als
-    7z a -mx9 -mm=Deflate64 -mmt$(nproc) "${BASE_DIR}/dist/nano-for-windows_${ARCH}_$(date +%y%m%d_%H%M%S).zip" * .nanorc
+    7z a -mx9 -mm=Deflate64 -mmt$(nproc) "${BASE_DIR}/dist/nano-for-windows_${ARCH}_${PDTERM}_$(date +%y%m%d_%H%M%S).zip" * .nanorc
 done
