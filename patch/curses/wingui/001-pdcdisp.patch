@@ -88,13 +88,7 @@
 +                          log_clusters, sva, &num_glyphs);
 +        
 +        if( hr == USP_E_SCRIPT_NOT_IN_FONT)
-+        {
-+            /* Fallback: disable shaping for this script */
-+            psa->eScript = SCRIPT_UNDEFINED;
-+            hr = ScriptShape( hdc, &script_cache, text + items[i].iCharPos,
-+                              item_len, max_glyphs, psa, glyphs,
-+                              log_clusters, sva, &num_glyphs);
-+        }
++            goto cleanup;
 +        
 +        if( FAILED( hr))
 +            goto cleanup;
@@ -186,7 +180,7 @@
 -                           ETO_CLIPPED | ETO_OPAQUE, &clip_rect,
 -                           buff, olen, (olen > 1 ? lpDx : NULL));
 +        /* Use Uniscribe for complex text shaping, fall back to GDI for simple text */
-+        if( has_emoji_or_joiner || olen > 1)
++        if( has_emoji_or_joiner)
 +        {
 +            /* Try Uniscribe first for proper shaping of complex scripts and emoji */
 +            if( !PDC_draw_text_uniscribe( hdc, buff, olen,
