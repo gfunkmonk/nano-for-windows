@@ -614,12 +614,12 @@ jobs:
           llvm-strip -s nano.exe
           upx nano.exe || true
           ls -als
-          7z a -mx9 -mm=Deflate64 -mmt$(nproc) "${CWD}/nano-for-windows_${{matrix.name}}_${{ needs.checks.outputs.build }}.zip" * .nanorc
+          7z a -mx9 -mm=Deflate64 -mmt$(nproc) "${CWD}/nano-for-windows_${{matrix.name}}_${{ needs.checks.outputs.build }}-${{ inputs.pdterm }}.zip" * .nanorc
 
-    - name: "👍 Upload Artifact nano-for-windows_${{ matrix.name }}_${{ needs.checks.outputs.build }}.zip"
+    - name: "👍 Upload Artifact nano-for-windows_${{ matrix.name }}_${{ needs.checks.outputs.build }}-${{ inputs.pdterm }}.zip"
       uses: actions/upload-artifact@v7
       with:
-        name: nano-for-windows_${{ matrix.name }}_${{ needs.checks.outputs.build }}
+        name: nano-for-windows_${{ matrix.name }}_${{ needs.checks.outputs.build }}-${{ inputs.pdterm }}
         path: |
           *.zip
 
@@ -629,7 +629,7 @@ jobs:
     needs:
     - checks
     - build
-    name: "📨 Publish ${{ github.event.inputs.release }}"
+    name: "📨 Publish ${{ github.event.inputs.release }}-${{ inputs.pdterm }}"
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -651,16 +651,16 @@ jobs:
         sha256sum *.zip > hashes.txt
         echo "${{ needs.checks.outputs.body }}" | base64 -d > body.txt
 
-    - name: "👍 Upload nano-for-windows_${{ needs.checks.outputs.build }} as Artifact"
+    - name: "👍 Upload nano-for-windows_${{ needs.checks.outputs.build }}-${{ inputs.pdterm }} as Artifact"
       uses: actions/upload-artifact@v7
       if: github.event.inputs.release == 'Artifact'
       with:
-        name: nano-for-windows_${{ needs.checks.outputs.build }}
+        name: nano-for-windows_${{ needs.checks.outputs.build }}-${{ inputs.pdterm }}
         path: |
           *.zip
           *.txt
 
-    - name: "🎉 Publish Release ${{ needs.checks.outputs.build }}"
+    - name: "🎉 Publish Release ${{ needs.checks.outputs.build }}-${{ inputs.pdterm }}"
       uses: softprops/action-gh-release@v3
       # WARNING: before using this action go to https://github.com/OWNER/REPO/settings/actions
       # and in **Workflow Permissions** section give actions **Read and Write permissions**.
@@ -671,7 +671,7 @@ jobs:
         prerelease: false
         draft: false
         make_latest: true
-        tag_name: ${{ needs.checks.outputs.build }}
+        tag_name: ${{ needs.checks.outputs.build }}-${{ inputs.pdterm }}
         body_path: body.txt
         files: |
           ./*.zip
