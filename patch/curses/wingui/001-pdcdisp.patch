@@ -8,25 +8,6 @@
  #include "../common/pdccolor.h"
  #include "../common/pdccolor.c"
  #ifdef WIN32_LEAN_AND_MEAN
-@@ -208,7 +209,7 @@
-     if( !*PDC_font_name)
-         wcscpy( PDC_font_name, _T("Courier New"));
-     if( font_idx & 4)
--        wcscpy( lf.lfFaceName, _T("Unifont"));
-+        wcscpy( lf.lfFaceName, _T("Segoe UI Symbol"));
-     else
-         wcscpy( lf.lfFaceName, PDC_font_name );
- /*  wprintf( L"New font: %s\n", PDC_font_name); */
-@@ -214,7 +215,7 @@
- #else
-     if( !*PDC_font_name)
-         strcpy( PDC_font_name, "Courier New");
-     if( font_idx & 4)
--        strcpy( lf.lfFaceName, "Unifont");
-+        strcpy( lf.lfFaceName, "Segoe UI Symbol");
-     else
-         strcpy( lf.lfFaceName, PDC_font_name);
- #endif
 @@ -220,7 +221,9 @@
      lf.lfPitchAndFamily = FF_MODERN;
      lf.lfWeight = ((font_idx & 1) ? FW_EXTRABOLD : FW_NORMAL);
