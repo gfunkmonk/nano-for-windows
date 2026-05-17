@@ -1,5 +1,23 @@
 --- a/curses/wingui/pdcdisp.c
 +++ b/curses/wingui/pdcdisp.c
+@@ -204,14 +204,14 @@
+     if( !*PDC_font_name)
+         wcscpy( PDC_font_name, _T("Courier New"));
+     if( font_idx & 4)
+-        wcscpy( lf.lfFaceName, _T("Unifont"));
++        wcscpy( lf.lfFaceName, _T("Segoe UI Emoji"));
+     else
+         wcscpy( lf.lfFaceName, PDC_font_name );
+ /*  wprintf( L"New font: %s\n", PDC_font_name); */
+ #else
+     if( !*PDC_font_name)
+         strcpy( PDC_font_name, "Courier New");
+     if( font_idx & 4)
+-        strcpy( lf.lfFaceName, "Unifont");
++        strcpy( lf.lfFaceName, "Segoe UI Emoji");
+     else
+         strcpy( lf.lfFaceName, PDC_font_name);
+ #endif
 @@ -220,7 +220,9 @@
      lf.lfPitchAndFamily = FF_MODERN;
      lf.lfWeight = ((font_idx & 1) ? FW_EXTRABOLD : FW_NORMAL);
@@ -11,7 +29,26 @@
      lf.lfQuality = PROOF_QUALITY;
      lf.lfOutPrecision = OUT_RASTER_PRECIS;
      return( lf);
-@@ -358,7 +360,14 @@
+@@ -329,6 +331,20 @@
+ 
+ #define BUFFSIZE 50
+ 
++static bool PDC_is_emoji_or_joiner( const chtype ch)
++{
++    const uint32_t c = (uint32_t)(ch & A_CHARTEXT);
++
++    return( c == 0x200d                      /* ZWJ */
++         || (c >= 0xfe00 && c <= 0xfe0f)    /* variation selectors */
++         || (c >= 0x1f3fb && c <= 0x1f3ff)  /* skin tone modifiers */
++         || (c >= 0x1f1e6 && c <= 0x1f1ff)  /* regional indicators */
++         || (c >= 0x1f300 && c <= 0x1faff)  /* emoji blocks */
++         || (c >= 0x2600 && c <= 0x27bf));  /* misc symbols/dingbats */
++}
++
+ static void PDC_transform_line_given_hdc( const HDC hdc, const int lineno,
+                              int x, int len, const chtype *srcp)
+ {
+@@ -358,7 +374,14 @@
      assert( len <= SP->cols - x);
      assert( lineno < SP->lines && len > 0 && lineno >= 0);
  #ifdef PDC_WIDE
@@ -27,7 +64,36 @@
  #endif
  
      while( len)
-@@ -557,7 +566,10 @@
+@@ -378,6 +401,7 @@
+         RECT clip_rect;
+         wchar_t buff[BUFFSIZE];
+         int lpDx[BUFFSIZE + 1];
++        bool has_emoji_or_joiner = FALSE;
+         int olen = 0;
+ #ifdef USE_FALLBACK_FONT
+         const bool in_font = character_is_in_font( *srcp);
+@@ -391,6 +415,8 @@
+         {
+             chtype ch = srcp[i] & A_CHARTEXT;
+ 
++            has_emoji_or_joiner |= PDC_is_emoji_or_joiner( srcp[i]);
++
+ #ifdef USING_COMBINING_CHARACTER_SCHEME
+             if( ch > 0xffff && ch < MAX_UNICODE)  /* use Unicode surrogates to fit */
+             {               /* >64K values into 16-bit wchar_t: */
+@@ -495,7 +521,10 @@
+         clip_rect.bottom = clip_rect.top + PDC_cyChar;
+         ExtTextOutW( hdc, clip_rect.left, clip_rect.top,
+                            ETO_CLIPPED | ETO_OPAQUE, &clip_rect,
+-                           buff, olen, (olen > 1 ? lpDx : NULL));
++                           buff, olen,
++                           /* Let GDI shape emoji/ZWJ clusters naturally. */
++                           (olen > 1 && !has_emoji_or_joiner ?
++                                            lpDx : NULL));
+ #ifdef WA_TOP
+         if( *srcp & (WA_UNDERLINE | WA_RIGHT | WA_LEFT | WA_TOP | WA_STRIKEOUT))
+ #else
+@@ -557,7 +586,10 @@
  
          assert( len);
  #ifdef PDC_WIDE
