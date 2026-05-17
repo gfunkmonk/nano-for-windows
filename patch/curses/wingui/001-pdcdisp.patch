@@ -20,9 +20,9 @@
      lf.lfOutPrecision = OUT_RASTER_PRECIS;
      return( lf);
 @@ -327,6 +330,135 @@
- 
+
  #define BUFFSIZE 50
- 
+
 +/* Uniscribe cache for text shaping performance */
 +static SCRIPT_CACHE script_cache = NULL;
 +
@@ -52,71 +52,71 @@
 +    int max_items = 0, max_glyphs = 0;
 +    int i, num_items, num_glyphs;
 +    int total_width = 0;
-+    
++
 +    if( !text || len <= 0)
 +        return FALSE;
-+    
++
 +    /* Allocate buffers for Uniscribe processing */
 +    max_items = len + 1;
 +    items = (SCRIPT_ITEM *)calloc( max_items, sizeof( SCRIPT_ITEM));
 +    if( !items)
 +        goto cleanup;
-+    
++
 +    /* Itemize the text into shaping runs */
 +    hr = ScriptItemize( text, len, max_items, NULL, NULL, items, &num_items);
 +    if( FAILED( hr) || num_items <= 0)
 +        goto cleanup;
-+    
++
 +    /* Process each item */
 +    for( i = 0; i < num_items; i++)
 +    {
 +        int item_len = items[i + 1].iCharPos - items[i].iCharPos;
 +        SCRIPT_ANALYSIS *psa = &items[i].a;
-+        
++
 +        /* Allocate glyph buffers for this item */
 +        max_glyphs = item_len * 2;  /* Worst case: 2 glyphs per char */
 +        glyphs = (WORD *)calloc( max_glyphs, sizeof( WORD));
 +        log_clusters = (WORD *)calloc( item_len, sizeof( WORD));
 +        sva = (SCRIPT_VISATTR *)calloc( max_glyphs, sizeof( SCRIPT_VISATTR));
-+        
++
 +        if( !glyphs || !log_clusters || !sva)
 +            goto cleanup;
-+        
++
 +        /* Shape the glyphs */
 +        hr = ScriptShape( hdc, &script_cache, text + items[i].iCharPos,
 +                          item_len, max_glyphs, psa, glyphs,
 +                          log_clusters, sva, &num_glyphs);
-+        
++
 +        if( hr == USP_E_SCRIPT_NOT_IN_FONT)
 +            goto cleanup;
-+        
++
 +        if( FAILED( hr))
 +            goto cleanup;
-+        
++
 +        /* Get glyph positions */
 +        advances = (int *)calloc( num_glyphs, sizeof( int));
 +        offsets = (GOFFSET *)calloc( num_glyphs, sizeof( GOFFSET));
 +        abc = (ABC *)calloc( 1, sizeof( ABC));
-+        
++
 +        if( !advances || !offsets || !abc)
 +            goto cleanup;
-+        
++
 +        hr = ScriptPlace( hdc, &script_cache, glyphs, num_glyphs,
 +                          sva, psa, advances, offsets, abc);
-+        
++
 +        if( FAILED( hr))
 +            goto cleanup;
-+        
++
 +        /* Render the shaped text */
 +        hr = ScriptTextOut( hdc, &script_cache, x + total_width, y,
 +                           0, NULL, psa, NULL, 0, glyphs,
 +                           num_glyphs, advances, NULL, offsets);
-+        
++
 +        if( FAILED( hr))
 +            goto cleanup;
-+        
++
 +        total_width += abc->abcA + abc->abcB + abc->abcC;
-+        
++
 +        /* Free item-specific buffers */
 +        free( glyphs); glyphs = NULL;
 +        free( log_clusters); log_clusters = NULL;
@@ -125,10 +125,10 @@
 +        free( offsets); offsets = NULL;
 +        free( abc); abc = NULL;
 +    }
-+    
++
 +    free( items);
 +    return TRUE;
-+    
++
 +cleanup:
 +    if( items) free( items);
 +    if( glyphs) free( glyphs);
@@ -166,7 +166,7 @@
  @@ -383,6 +523,8 @@
           {
               chtype ch = srcp[i] & A_CHARTEXT;
-  
+
 +            has_emoji_or_joiner |= PDC_has_emoji_or_joiner( srcp[i]);
 +
   #ifdef USING_COMBINING_CHARACTER_SCHEME
