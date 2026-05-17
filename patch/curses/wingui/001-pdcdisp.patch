@@ -2,7 +2,7 @@
 +++ b/curses/wingui/pdcdisp.c
 @@ -220,7 +220,11 @@
 -    lf.lfPitchAndFamily = FF_MODERN;
-+    /* Relax family filtering so emoji-capable fonts can be selected. */
++    /* Intentionally allow non-fixed families so emoji-capable fonts can be selected. */
 +    lf.lfPitchAndFamily = DEFAULT_PITCH | FF_DONTCARE;
      lf.lfWeight = ((font_idx & 1) ? FW_EXTRABOLD : FW_NORMAL);
      lf.lfItalic = ((font_idx & 2) ? TRUE : FALSE);
