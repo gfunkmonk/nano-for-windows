@@ -47,15 +47,23 @@
  #ifdef USING_COMBINING_CHARACTER_SCHEME
              if( ch > 0xffff && ch < MAX_UNICODE)  /* use Unicode surrogates to fit */
              {               /* >64K values into 16-bit wchar_t: */
-@@ -485,7 +502,10 @@
-         clip_rect.bottom = clip_rect.top + PDC_cyChar;
-         ExtTextOutW( hdc, clip_rect.left, clip_rect.top,
-                            ETO_CLIPPED | ETO_OPAQUE, &clip_rect,
--                           buff, olen, (olen > 1 ? lpDx : NULL));
-+                           buff, olen,
-+                           /* Let GDI shape emoji/ZWJ clusters naturally. */
-+                           (olen > 1 && !has_emoji_or_joiner ?
-+                                            lpDx : NULL));
- #ifdef WA_TOP
-         if( *srcp & (WA_UNDERLINE | WA_RIGHT | WA_LEFT | WA_TOP | WA_STRIKEOUT))
- #else
+@@ -494,7 +494,17 @@
+         prev_ch = *srcp;
+         clip_rect.left = x * PDC_cxChar;
+         clip_rect.top = lineno * PDC_cyChar;
+-        clip_rect.right = clip_rect.left + i * PDC_cxChar;
++        /* Calculate actual width by summing character widths, not just count.
++         * This prevents emoji truncation when multiple fullwidth chars are present. */
++        clip_rect.right = clip_rect.left;
++#ifdef PDC_WIDE
++        for (int j = 0; j < i; j++) {
++            int width = PDC_wcwidth((uint32_t)(srcp[j] & A_CHARTEXT));
++            clip_rect.right += (width == 2) ? 2 * PDC_cxChar : PDC_cxChar;
++        }
++#else
++        clip_rect.right += i * PDC_cxChar;
++#endif
+ #ifdef PDC_WIDE
+         if( 2 == PDC_wcwidth( (uint32_t)( *srcp & A_CHARTEXT)))  /* allow extra */
+             clip_rect.right += PDC_cxChar;        /* space for a fullwidth char */
+
