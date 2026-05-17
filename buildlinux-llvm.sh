@@ -32,12 +32,13 @@ BASE_DIR="$(pwd)"
 BUILDDIR="${BASE_DIR}/build"
 
 mkdir -p "${BUILDDIR}"
-cd "${BUILDDIR}"
+cd "$(pwd)"/build
 
 # Global variables from your workflow
 export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DCHTYPE_64 -DPDC_WIDE -DPDC_FORCE_UTF8 -D_GNU_SOURCE"
 export LDFLAGS="-L${BUILDDIR}/nano/curses/$PDTERM -static -static-libgcc $BUILDDIR/nano/curses/$PDTERM/pdcurses.a"
-export LIBS="-l:pdcurses.a -lwinmm -lbcrypt -lshlwapi"
+export LIBS="-l:pdcurses.a -lwinmm -lbcrypt"
+#-lshlwapi"
 export NCURSES_CFLAGS="-I${BUILDDIR}/nano/curses/ -DNCURSES_STATIC -DENABLE_MOUSE"
 export NCURSES_LIBS="-l:pdcurses.a -lwinmm -lbcrypt"
 export CPPFLAGS="-D__USE_MINGW_ANSI_STDIO -DHAVE_NCURSESW_NCURSES_H -DNCURSES_STATIC"
@@ -308,6 +309,10 @@ EOF
     rm -fr .git/
     cd ..
     cp ${BASE_DIR}/.nanorc .
+    if [ "$PDTERM" == "vt" ]; then
+        echo -e "\n" .nanorc
+        sed '$a\bind ^/ cancel all' .nanorc
+    fi
     rm -rf bin share rnano*
     upx --lzma --best nano.exe || true
     ls -als

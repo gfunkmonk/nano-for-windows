@@ -308,6 +308,10 @@ EOF
     rm -fr .git/
     cd ..
     cp ${BASE_DIR}/.nanorc .
+    if [ "$PDTERM" == "vt" ]; then
+        echo -e "\n" .nanorc
+        sed '$a\bind ^/ cancel all' .nanorc
+    fi
     rm -rf bin share rnano*
     upx --lzma --best nano.exe || true
     ls -als

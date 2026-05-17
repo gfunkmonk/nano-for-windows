@@ -606,6 +606,10 @@ jobs:
           cd ..
           #mv sample.nanorc.in .nanorc
           cp ${CWD}/.nanorc .
+          if [ "$PDTERM" == "vt" ]; then
+              echo -e "\n" .nanorc
+              sed '$a\bind ^/ cancel all' .nanorc
+          fi
           rm -rf bin share rnano*
           llvm-strip -s nano.exe
           upx nano.exe || true
