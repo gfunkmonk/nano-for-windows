@@ -136,10 +136,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { arch: i686,    name: Win32,    short: w32, pretty: 32 bits  }
-          - { arch: x86_64,  name: Win64,    short: w64, pretty: 64 bits  }
-          - { arch: aarch64, name: ARM64,    short: a64, pretty: on Arm64 }
-          #- { arch: arm,     name: ARM32,    short: a32, pretty: on Arm32 }
+          - { arch: i686,    name: Win32,  short: w32, pretty: 32 bits  }
+          - { arch: x86_64,  name: Win64,  short: w64, pretty: 64 bits  }
+          - { arch: aarch64, name: ARM,    short: a64, pretty: on Arm64 }
+          - { arch: armv7,   name: ARM,    short: a32, pretty: on Arm32 }
     defaults:
       run:
         shell: bash
@@ -515,6 +515,16 @@ jobs:
         sed -i.bak 's|Compiled options|Project info at https://github.com/gfunkmonk/nano-for-windows\\n Using '"${CURSES}"'\\n &|' src/nano.c
         _diff
 
+    - name: 🚩 Set vt Flags
+      if: ${{ inputs.pdterm }} == 'vt'
+      run: |
+        echo "PDC_VT=RGB UNDERLINE BLINK DIM STANDOUT" >> $GITHUB_ENV
+
+    - name: 🚩 Set wingui Flags
+      if: ${{ inputs.pdterm }} == 'wingui'
+      run: |
+        echo "LIBS=${{ env.CFLAGS }} -luuid -lole32 -lgdi32 -lcomdlg32 -ldwrite -ld2d1" >> $GITHUB_ENV
+
     - name: "⚙️ Compile curses lib for ${{ matrix.name}}"
       run: |
         ##########################
@@ -538,11 +548,6 @@ jobs:
 
     - name: "🔧 Configure Nano Build"
       run: |
-        if [ "$PDTERM" == "vt" ]; then
-            export PDC_VT=RGB UNDERLINE BLINK DIM STANDOUT
-        elif [ "$PDTERM" == "wingui" ]; then
-            export LIBS="${LIBS} -luuid -lole32 -lgdi32 -lcomdlg32 -ldwrite -ld2d1"
-        fi
         ##########################
         ##                        ##
         ##     CONFIGURE BUILD    ##
@@ -588,11 +593,6 @@ jobs:
 
     - name: "⚙️ Build for Windows ${{ matrix.pretty }}"
       run: |
-        if [ "$PDTERM" == "vt" ]; then
-            export PDC_VT=RGB UNDERLINE BLINK DIM STANDOUT
-        elif [ "$PDTERM" == "wingui" ]; then
-            export LIBS="${LIBS} -luuid -lole32 -lgdi32 -lcomdlg32 -ldwrite -ld2d1"
-        fi
         ##########################
         ##                        ##
         ##     BUILD NANO         ##
