@@ -1,5 +1,5 @@
---- a/curses/wingui/pdcdisp.c	2026-05-17 05:10:26.553924800 -0400
-+++ b/curses/wingui/pdcdisp.c	2026-05-17 05:15:52.973922656 -0400
+--- a/curses/wingui/pdcdisp.c
++++ b/curses/wingui/pdcdisp.c
 @@ -220,7 +220,9 @@
      lf.lfPitchAndFamily = FF_MODERN;
      lf.lfWeight = ((font_idx & 1) ? FW_EXTRABOLD : FW_NORMAL);
