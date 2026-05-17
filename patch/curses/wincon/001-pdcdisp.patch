@@ -1,84 +1,81 @@
-diff -ruN curses/wincon/pdcdisp.c cursesb/wincon/pdcdisp.c
---- a/curses/wincon/pdcdisp.c	2026-05-15 06:33:11.555026972 -0400
-+++ b/curses/wincon/pdcdisp.c	2026-05-15 06:36:43.195025583 -0400
-@@ -181,6 +181,57 @@
+--- a/curses/wingui/pdcdisp.c
++++ b/curses/wingui/pdcdisp.c
+@@ -220,7 +220,9 @@
+     lf.lfPitchAndFamily = FF_MODERN;
+     lf.lfWeight = ((font_idx & 1) ? FW_EXTRABOLD : FW_NORMAL);
+     lf.lfItalic = ((font_idx & 2) ? TRUE : FALSE);
+-    lf.lfCharSet = ANSI_CHARSET;
++    /* Allow full Unicode glyph selection (including emoji) instead of
+       restricting font matching to ANSI code pages. */
++    lf.lfCharSet = DEFAULT_CHARSET;
+     lf.lfQuality = PROOF_QUALITY;
+     lf.lfOutPrecision = OUT_RASTER_PRECIS;
+     return( lf);
+@@ -327,6 +329,18 @@
  
- #ifdef PDC_WIDE
-         ch &= A_CHARTEXT;
-+#ifdef USING_COMBINING_CHARACTER_SCHEME
-+        /* Skip the placeholder cell that follows a fullwidth character.
-+         * Writing the noncharacter U+10FFFF here would (a) display garbage
-+         * in some terminals and (b) break ZWJ joining of adjacent emoji,
-+         * because the cluster has to reach the terminal as an unbroken
-+         * sequence of code points. */
-+        if( ch == DUMMY_CHAR_NEXT_TO_FULLWIDTH)
-+            continue;
-+        /* Expand a combined-character cell (base + variation selector,
-+         * base + ZWJ, multi-mark cluster, ...) into its component code
-+         * points so the terminal can compose them.  added[] is filled
-+         * outermost-first, so we emit root, then added[n_added] (oldest
-+         * combiner), ..., added[0] (newest combiner). */
-+        if( ch > MAX_UNICODE)
-+        {
-+            cchar_t added[10];
-+            chtype  root = ch;
-+            int     n_added = 0;
-+            int     k;
+ #define BUFFSIZE 50
+ 
++static bool PDC_has_emoji_or_joiner( const chtype ch)
++{
++    const uint32_t c = (uint32_t)(ch & A_CHARTEXT);
 +
-+            while( (root = PDC_expand_combined_characters( root,
-+                                   &added[n_added])) > MAX_UNICODE)
-+                n_added++;
++    return( c == 0x200d                      /* ZWJ */
++         || (c >= 0xfe00 && c <= 0xfe0f)    /* variation selectors */
++         || (c >= 0x1f3fb && c <= 0x1f3ff)  /* skin tone modifiers */
++         || (c >= 0x1f1e6 && c <= 0x1f1ff)  /* regional indicators */
++         || (c >= 0x1f300 && c <= 0x1faff)  /* emoji blocks (roughly Unicode 15.x) */
++         || (c >= 0x2600 && c <= 0x27bf));  /* misc symbols/dingbats */
++}
 +
-+            if( root <= MAX_UNICODE)
-+            {
-+                if( IS_SUPPLEMENTAL_MULTILINGUAL_PLANE( root))
-+                {
-+                    buffer[n_out++] = (WCHAR)((root - 0x10000) >> 10 | 0xD800);
-+                    buffer[n_out++] = (WCHAR)((root & 0x3FF) | 0xDC00);
-+                }
-+                else
-+                    buffer[n_out++] = (WCHAR)root;
-+            }
-+            for( k = n_added; k >= 0; k--)
-+            {
-+                const chtype c = (chtype)added[k];
-+
-+                if( c == DUMMY_CHAR_NEXT_TO_FULLWIDTH)
-+                    continue;
-+                if( IS_SUPPLEMENTAL_MULTILINGUAL_PLANE( c))
-+                {
-+                    buffer[n_out++] = (WCHAR)((c - 0x10000) >> 10 | 0xD800);
-+                    buffer[n_out++] = (WCHAR)((c & 0x3FF) | 0xDC00);
-+                }
-+                else
-+                    buffer[n_out++] = (WCHAR)c;
-+            }
-+            continue;
-+        }
-+#endif
-         if( ch <= MAX_UNICODE)
+ static void PDC_transform_line_given_hdc( const HDC hdc, const int lineno,
+                              int x, int len, const chtype *srcp)
+ {
+@@ -369,6 +383,7 @@
+         RECT clip_rect;
+         wchar_t buff[BUFFSIZE];
+         int lpDx[BUFFSIZE + 1];
++        bool has_emoji_or_joiner = FALSE;
+         int olen = 0;
+ #ifdef USE_FALLBACK_FONT
+         const bool in_font = character_is_in_font( *srcp);
+@@ -383,6 +398,8 @@
          {
-             if( IS_SUPPLEMENTAL_MULTILINGUAL_PLANE( ch))
-@@ -312,6 +363,22 @@
-     ansi = pdc_ansi || (fore >= 16 || back >= 16);
-     blink = (SP->termattrs & A_BLINK) && (attr & A_BLINK);
+             chtype ch = srcp[i] & A_CHARTEXT;
  
-+#ifdef PDC_WIDE
-+    /* Force ANSI path for runs containing SMP characters (emoji/supplemental
-+       plane), because WriteConsoleOutput does not handle surrogate pairs.
-+       WriteConsoleW (used by the ANSI path) handles them correctly. */
-+    if (!ansi)
-+    {
-+        int k;
-+        for (k = 0; k < len; k++)
-+            if (IS_SUPPLEMENTAL_MULTILINGUAL_PLANE(srcp[k] & A_CHARTEXT))
-+            {
-+                ansi = TRUE;
-+                break;
-+            }
-+    }
-+#endif
++            has_emoji_or_joiner |= PDC_has_emoji_or_joiner( srcp[i]);
 +
-     if (blink)
-     {
-         attr &= ~A_BLINK;
+ #ifdef USING_COMBINING_CHARACTER_SCHEME
+             if( ch > 0xffff && ch < MAX_UNICODE)  /* use Unicode surrogates to fit */
+             {               /* >64K values into 16-bit wchar_t: */
+@@ -477,7 +494,23 @@
+         prev_ch = *srcp;
+         clip_rect.left = x * PDC_cxChar;
+         clip_rect.top = lineno * PDC_cyChar;
+-        clip_rect.right = clip_rect.left + i * PDC_cxChar;
++        /* Calculate actual width by summing character widths, not just count.
++         * This prevents emoji truncation when multiple fullwidth chars are present. */
++        clip_rect.right = clip_rect.left;
++#ifdef PDC_WIDE
++        for (int j = 0; j < i; j++) {
++            uint32_t c = (uint32_t)(srcp[j] & A_CHARTEXT);
++            int width = PDC_wcwidth(c);
++            /* Force emoji to be treated as width-2 to prevent squishing */
++            if (PDC_has_emoji_or_joiner(srcp[j])) {
++                width = 2;
++            }
++            clip_rect.right += (width == 2) ? 2 * PDC_cxChar : PDC_cxChar;
++        }
++#else
++        clip_rect.right += i * PDC_cxChar;
++#endif
+         clip_rect.bottom = clip_rect.top + PDC_cyChar;
+         ExtTextOutW( hdc, clip_rect.left, clip_rect.top,
+                            ETO_CLIPPED | ETO_OPAQUE, &clip_rect,
+                            buff, olen,
+                            /* Let GDI shape emoji/ZWJ clusters naturally. */
+                            (olen > 1 && !has_emoji_or_joiner ?
+                                            lpDx : NULL));
+ #ifdef WA_TOP
+         if( *srcp & (WA_UNDERLINE | WA_RIGHT | WA_LEFT | WA_TOP | WA_STRIKEOUT))
+ #else
+

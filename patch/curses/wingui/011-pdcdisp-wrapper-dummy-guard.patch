@@ -1,0 +1,16 @@
+--- a/curses/wingui/pdcdisp.c
++++ b/curses/wingui/pdcdisp.c
+@@ -588,6 +588,13 @@
+ 
+         assert( len);
+ #ifdef PDC_WIDE
++        while( len && (srcp[len - 1] & A_CHARTEXT) == MAX_UNICODE)
++            len--;
++        if( !len)
++        {
++            ReleaseDC( PDC_hWnd, hdc);
++            return;
++        }
+         assert( (srcp[len - 1] & A_CHARTEXT) != MAX_UNICODE);
+ #endif
+         PDC_transform_line_given_hdc( hdc, lineno, x, len, srcp);

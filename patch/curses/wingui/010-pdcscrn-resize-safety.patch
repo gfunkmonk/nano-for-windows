@@ -1,0 +1,37 @@
+--- a/curses/wingui/pdcscrn.c
++++ b/curses/wingui/pdcscrn.c
+@@ -1238,6 +1238,11 @@
+         return;
+     }
+ 
++    if( !PDC_cxChar || !PDC_cyChar)
++    {
++        prev_wParam = wParam;
++        return;
++    }
+     new_n_rows = n_ypixels / PDC_cyChar;
+     new_n_cols = n_xpixels / PDC_cxChar;
+     debug_printf( "Size was %d x %d; will be %d x %d\n",
+@@ -1588,8 +1593,8 @@
+     int button, i;
+     bool wait_for_more_mouse = FALSE;
+     const int modifiers = convert_key_modifiers_for_mouse( SP->key_modifiers);
+-    const int mouse_x = LOWORD( lParam) / PDC_cxChar;
+-    const int mouse_y = HIWORD( lParam) / PDC_cyChar;
++    const int mouse_x = (PDC_cxChar ? LOWORD( lParam) / PDC_cxChar : 0);
++    const int mouse_y = (PDC_cyChar ? HIWORD( lParam) / PDC_cyChar : 0);
+ 
+ 
+     PDC_hWnd = hwnd;
+@@ -1621,9 +1626,9 @@
+ 
+             pt.x = LOWORD( lParam);
+             pt.y = HIWORD( lParam);
+             ScreenToClient( hwnd, &pt);
+-            pt.x /= PDC_cxChar;
+-            pt.y /= PDC_cyChar;
++            pt.x = (PDC_cxChar ? pt.x / PDC_cxChar : 0);
++            pt.y = (PDC_cyChar ? pt.y / PDC_cyChar : 0);
+             modified_key_to_return = 0;
+             if( message == WM_MOUSEWHEEL)      /* i.e.,  vertical */
+             {

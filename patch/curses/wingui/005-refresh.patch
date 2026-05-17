@@ -1,6 +1,7 @@
---- a/curses/pdcurses/refresh.c
-+++ b/curses/pdcurses/refresh.c
-@@ -184,10 +184,20 @@
+--- a/curses/pdcurses/refresh.c	2026-05-17 16:26:55.383658253 -0400
++++ b/curses/pdcurses/refresh.c	2026-05-17 16:39:39.873653232 -0400
+@@ -184,11 +184,28 @@
+         }
      }
  #ifdef PDC_WIDE
 -    if( x && (*srcp & A_CHARTEXT) == DUMMY_CHAR_NEXT_TO_FULLWIDTH)
@@ -23,21 +24,28 @@
 +            if( !len)
 +                return;
 +        }
++    }
++    /* Defensive check for MAX_UNICODE at end of buffer (resize safety) */
++    if( len > 0 && (srcp[len - 1] & A_CHARTEXT) == MAX_UNICODE)
++    {
++        len--;
++        if( !len)
++            return;
      }
  #endif
      while( len)
-@@ -201,11 +211,15 @@
-                      && (ch = (srcp[i - 1] & A_CHARTEXT)) < MAX_UNICODE
+@@ -202,8 +219,14 @@
                       && i < len)
             i++;
--        if( i == 1 && ch == MAX_UNICODE)
+         if( i == 1 && ch == MAX_UNICODE)
 -            fprintf( stderr, "line %d, x=%d, len=%d\n", lineno, x, len);
 -        assert( i > 1 || ch != MAX_UNICODE);
-+        if( i == 1 && ch == MAX_UNICODE)
 +        {      /* stray fullwidth-dummy in packet; ignore instead of aborting */
 +            srcp++;
 +            x++;
 +            len--;
++            if( !len)
++                return;
 +            continue;
 +        }
          PDC_transform_line( lineno, x,

@@ -1,0 +1,13 @@
+--- a/curses/wingui/pdcdisp.c	2026-05-17 21:11:04.622162961 +0000
++++ b/curses/wingui/pdcdisp.c	2026-05-17 21:11:04.645555259 +0000
+@@ -372,6 +372,10 @@
+     assert( len <= SP->cols - x);
+     assert( lineno < SP->lines && len > 0 && lineno >= 0);
+ #ifdef PDC_WIDE
++    while( len && (srcp[len - 1] & A_CHARTEXT) == MAX_UNICODE)
++        len--;
++    if( !len)
++        return;
+     assert( (srcp[len - 1] & A_CHARTEXT) != MAX_UNICODE);
+ #endif
+ 

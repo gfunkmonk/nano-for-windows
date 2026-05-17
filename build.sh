@@ -250,8 +250,8 @@ sed -i 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/vt
 sed -i 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/wincon/pdckbd.c
 sed -i 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/wingui/pdckbd.c
 
-#echo -e "${GREEN}[${BWHITE}curspriv.h${GREEN}] ${BWHITE}Make MAX_UNICODE suck less.${NC}"
-#sed -i 's|MAX_UNICODE 0x110000|MAX_UNICODE 0x10ffff|g' curses/curspriv.h
+echo -e "${GREEN}[${BWHITE}curspriv.h${GREEN}] ${BWHITE}Make MAX_UNICODE suck less.${NC}"
+sed -i 's|MAX_UNICODE 0x110000|MAX_UNICODE 0x10ffff|g' curses/curspriv.h
 
 # --- 6. Build Binaries ---
 for TRIPLET in "${TARGETS[@]}"; do
