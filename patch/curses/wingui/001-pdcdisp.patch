@@ -169,7 +169,7 @@
 
 +            has_emoji_or_joiner |= PDC_has_emoji_or_joiner( srcp[i]);
 +
-  #ifdef USING_COMBINING_CHARACTER_SCHEME
+ #ifdef USING_COMBINING_CHARACTER_SCHEME
               if( ch > 0xffff && ch < MAX_UNICODE)  /* use Unicode surrogates to fit */
               {               /* >64K values into 16-bit wchar_t: */
 @@ -469,6 +611,9 @@
