@@ -41,7 +41,7 @@
 +         || (c >= 0xfe00 && c <= 0xfe0f)    /* variation selectors */
 +         || (c >= 0x1f3fb && c <= 0x1f3ff)  /* skin tone modifiers */
 +         || (c >= 0x1f1e6 && c <= 0x1f1ff)  /* regional indicators */
-+         || (c >= 0x1f300 && c <= 0x1faff)  /* emoji blocks: update as Unicode grows */
++         || (c >= 0x1f300 && c <= 0x1faff)  /* emoji blocks (roughly Unicode 15.x) */
 +         || (c >= 0x2600 && c <= 0x27bf));  /* misc symbols/dingbats */
 +}
 +
