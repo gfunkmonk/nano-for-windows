@@ -1,5 +1,5 @@
---- a/curses/wingui/pdcdisp.c
-+++ b/curses/wingui/pdcdisp.c
+--- a/curses/wingui/pdcdisp.c	2026-05-17 05:10:26.553924800 -0400
++++ b/curses/wingui/pdcdisp.c	2026-05-17 05:15:52.973922656 -0400
 @@ -220,7 +220,9 @@
      lf.lfPitchAndFamily = FF_MODERN;
      lf.lfWeight = ((font_idx & 1) ? FW_EXTRABOLD : FW_NORMAL);
@@ -11,7 +11,7 @@
      lf.lfQuality = PROOF_QUALITY;
      lf.lfOutPrecision = OUT_RASTER_PRECIS;
      return( lf);
-@@ -329,6 +331,20 @@
+@@ -327,6 +329,18 @@
  
  #define BUFFSIZE 50
  
@@ -30,40 +30,24 @@
  static void PDC_transform_line_given_hdc( const HDC hdc, const int lineno,
                               int x, int len, const chtype *srcp)
  {
-@@ -358,7 +374,14 @@
-     assert( len <= SP->cols - x);
-     assert( lineno < SP->lines && len > 0 && lineno >= 0);
- #ifdef PDC_WIDE
--    assert( (srcp[len - 1] & A_CHARTEXT) != MAX_UNICODE);
-+    /* The trailing placeholder after a fullwidth character (MAX_UNICODE)
-+     * can legitimately appear at the end of a transformed run.  Trim such
-+     * placeholders instead of asserting, so emoji/fullwidth redraw paths do
-+     * not abort in debug builds. */
-+    while( len && (srcp[len - 1] & A_CHARTEXT) == MAX_UNICODE)
-+        len--;
-+    if( !len)
-+        return;
- #endif
- 
-     while( len)
-@@ -378,6 +401,7 @@
+@@ -369,6 +383,7 @@
          RECT clip_rect;
          wchar_t buff[BUFFSIZE];
          int lpDx[BUFFSIZE + 1];
-+        bool has_emoji_or_joiner = FALSE;
++        bool has_emoji_or_joiner = FALSE
          int olen = 0;
  #ifdef USE_FALLBACK_FONT
          const bool in_font = character_is_in_font( *srcp);
-@@ -391,6 +415,8 @@
+@@ -383,6 +398,8 @@
          {
              chtype ch = srcp[i] & A_CHARTEXT;
  
-+            has_emoji_or_joiner |= PDC_has_emoji_or_joiner( srcp[i]);
++            has_emoji_or_joiner |= PDC_has_emoji_or_joiner( srcp[i])
 +
  #ifdef USING_COMBINING_CHARACTER_SCHEME
              if( ch > 0xffff && ch < MAX_UNICODE)  /* use Unicode surrogates to fit */
              {               /* >64K values into 16-bit wchar_t: */
-@@ -495,7 +521,10 @@
+@@ -485,7 +502,10 @@
          clip_rect.bottom = clip_rect.top + PDC_cyChar;
          ExtTextOutW( hdc, clip_rect.left, clip_rect.top,
                             ETO_CLIPPED | ETO_OPAQUE, &clip_rect,
@@ -75,15 +59,3 @@
  #ifdef WA_TOP
          if( *srcp & (WA_UNDERLINE | WA_RIGHT | WA_LEFT | WA_TOP | WA_STRIKEOUT))
  #else
-@@ -557,7 +586,10 @@
- 
-         assert( len);
- #ifdef PDC_WIDE
--        assert( (srcp[len - 1] & A_CHARTEXT) != MAX_UNICODE);
-+        while( len && (srcp[len - 1] & A_CHARTEXT) == MAX_UNICODE)
-+            len--;
-+        if( !len)
-+            return;
- #endif
-         PDC_transform_line_given_hdc( hdc, lineno, x, len, srcp);
-         ReleaseDC( PDC_hWnd, hdc);
