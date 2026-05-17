@@ -30,15 +30,16 @@
  
  PDCURSES_WIN_H	= $(osdir)/pdcwin.h
 @@ -77,16 +82,24 @@
- 	CFLAGS  += -g -DPDCDEBUG
- 	LDFLAGS = -g
+  	CFLAGS  += -g -DPDCDEBUG
+  	LDFLAGS = -g
  else
 -	CFLAGS  += -O3
 +	CFLAGS  += -O2
- 	LDFLAGS =
+  	LDFLAGS =
  endif
  
  CFLAGS += -I$(PDCURSES_SRCDIR)
++CFLAGS += -DUSE_FALLBACK_FONT
  
 +ifdef CHTYPE_64
 +	CFLAGS += -DCHTYPE_64
