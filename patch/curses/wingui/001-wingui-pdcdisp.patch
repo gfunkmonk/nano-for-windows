@@ -1,0 +1,30 @@
+--- a/curses/wingui/pdcdisp.c
++++ b/curses/wingui/pdcdisp.c
+@@ -358,7 +358,14 @@
+     assert( len <= SP->cols - x);
+     assert( lineno < SP->lines && len > 0 && lineno >= 0);
+ #ifdef PDC_WIDE
+-    assert( (srcp[len - 1] & A_CHARTEXT) != MAX_UNICODE);
++    /* The trailing placeholder after a fullwidth character (MAX_UNICODE)
++     * can legitimately appear at the end of a transformed run.  Trim such
++     * placeholders instead of asserting, so emoji/fullwidth redraw paths do
++     * not abort in debug builds. */
++    while( len && (srcp[len - 1] & A_CHARTEXT) == MAX_UNICODE)
++        len--;
++    if( !len)
++        return;
+ #endif
+ 
+     while( len)
+@@ -557,7 +564,10 @@
+ 
+         assert( len);
+ #ifdef PDC_WIDE
+-        assert( (srcp[len - 1] & A_CHARTEXT) != MAX_UNICODE);
++        while( len && (srcp[len - 1] & A_CHARTEXT) == MAX_UNICODE)
++            len--;
++        if( !len)
++            return;
+ #endif
+         PDC_transform_line_given_hdc( hdc, lineno, x, len, srcp);
+         ReleaseDC( PDC_hWnd, hdc);

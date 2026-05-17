@@ -1,0 +1,13 @@
+--- a/curses/wingui/pdcdisp.c
++++ b/curses/wingui/pdcdisp.c
+@@ -220,7 +220,9 @@
+     lf.lfPitchAndFamily = FF_MODERN;
+     lf.lfWeight = ((font_idx & 1) ? FW_EXTRABOLD : FW_NORMAL);
+     lf.lfItalic = ((font_idx & 2) ? TRUE : FALSE);
+-    lf.lfCharSet = ANSI_CHARSET;
++    /* Allow full Unicode glyph selection (including emoji) instead of
++       restricting font matching to ANSI code pages. */
++    lf.lfCharSet = DEFAULT_CHARSET;
+     lf.lfQuality = PROOF_QUALITY;
+     lf.lfOutPrecision = OUT_RASTER_PRECIS;
+     return( lf);
