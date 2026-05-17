@@ -1,2 +1,3 @@
 build/
-toolchains/
+toolchain/
+dist/

@@ -36,12 +36,12 @@ BASE_DIR="$(pwd)"
 BUILDDIR="${BASE_DIR}/build"
 
 mkdir -p "${BUILDDIR}"
-cd "${BUILDDIR}"
+cd "$(pwd)"/build
 
 # Global variables from your workflow
 export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DCHTYPE_64 -DPDC_WIDE -DPDC_FORCE_UTF8 -D_GNU_SOURCE"
 export LDFLAGS="-L${BUILDDIR}/nano/curses/$PDTERM -static -static-libgcc $BUILDDIR/nano/curses/$PDTERM/pdcurses.a"
-export LIBS="-l:pdcurses.a -lwinmm -lbcrypt -lshlwapi"
+export LIBS="-l:pdcurses.a -lwinmm -lbcrypt -lshlwapi -lwinpthread"
 export NCURSES_CFLAGS="-I${BUILDDIR}/nano/curses/ -DNCURSES_STATIC -DENABLE_MOUSE"
 export NCURSES_LIBS="-l:pdcurses.a -lwinmm -lbcrypt"
 export CPPFLAGS="-D__USE_MINGW_ANSI_STDIO -DHAVE_NCURSESW_NCURSES_H -DNCURSES_STATIC"
@@ -54,26 +54,26 @@ fi
 
 # --- 3. Toolchain Setup (gfunkmonk/win-cross) ---
 echo -e "${TEAL}Setting up toolchain...${NC}"
-TOOLCHAIN_RELEASE="NT3.51"
+TOOLCHAIN_RELEASE="20260505"
 
 # Define a persistent toolchain directory outside the BUILDDIR if you want true persistence,
 # or just check if it's already in the BUILDDIR.
-if [ ! -d "$BASE_DIR/toolchains/$1-mingw" ]; then
+if [ ! -d "$BASE_DIR/toolchain/bin" ]; then
     echo -e "${YELLOW}Downloading toolchain release: ${TOOLCHAIN_RELEASE}${NC}"
-    mkdir -p "$BASE_DIR/toolchains"
+    mkdir -p "$BASE_DIR/toolchain"
     if command -v axel >/dev/null 2>&1; then
-        axel -n 6 -o "$BASE_DIR/toolchains/toolchain.tar.xz" "https://github.com/gfunkmonk/win-cross/releases/download/${TOOLCHAIN_RELEASE}/${1}-w64-mingw32.tar.xz"
+	axel -n 6 -o "$BASE_DIR/llvm.tar.xz" "https://github.com/mstorsjo/llvm-mingw/releases/download/${TOOLCHAIN_RELEASE}/llvm-mingw-${TOOLCHAIN_RELEASE}-ucrt-ubuntu-22.04-x86_64.tar.xz"
     else
-        curl -L -o "$BASE_DIR/toolchains/toolchain.tar.xz" "https://github.com/gfunkmonk/win-cross/releases/download/${TOOLCHAIN_RELEASE}/${1}-w64-mingw32.tar.xz"
+	curl -L -o "$BASE_DIR/llvm.tar.xz" "https://github.com/mstorsjo/llvm-mingw/releases/download/${TOOLCHAIN_RELEASE}/llvm-mingw-${TOOLCHAIN_RELEASE}-ucrt-ubuntu-22.04-x86_64.tar.xz"
     fi
-    cd "$BASE_DIR/toolchains"
-    tar -xJf toolchain.tar.xz && mv "$1"-* "$1"-mingw && rm toolchain.tar.xz
     cd "$BASE_DIR"
+    tar -xJf llvm.tar.xz --strip-components=1 -C llvm/
+    rm llvm.tar.xz
 else
-    echo -e "${GREEN}Toolchain cache hit: $1-mingw found.${NC}"
+    echo -e "${GREEN}Toolchain cache hit: llvm found.${NC}"
 fi
 
-export PATH="$BASE_DIR/toolchains/$1-mingw/bin:$PATH"
+export PATH="$BASE_DIR/toolchain/bin:$PATH"
 
 # --- 4. Source Setup ---
 # Function to sync without redownloading the universe
@@ -277,8 +277,8 @@ for TRIPLET in "${TARGETS[@]}"; do
         CXXFLAGS="${CFLAGS}" \
         LDFLAGS="${LDFLAGS}" \
         LIBS="${LIBS}" \
-        NCURSESW_CFLAGS="${NCURSES_CFLAGS}" \
-        NCURSESW_LIBS="${NCURSES_LIBS}"
+	NCURSESW_CFLAGS="${NCURSES_CFLAGS}" \
+	NCURSESW_LIBS="${NCURSES_LIBS}"
 
 cat << EOF >> config.h
 #define HAVE_FREXP_IN_LIBC 1

@@ -19,6 +19,7 @@ case "$1" in
     x86_64)  TARGETS=("x86_64-w64-mingw32") ;;
     i686)    TARGETS=("i686-w64-mingw32") ;;
     aarch64) TARGETS=("aarch64-w64-mingw32") ;;
+    armv7) TARGETS=("armv7-w64-mingw32") ;;
     *) echo "Invalid architecture: $1"; exit 1 ;;
 esac
 

@@ -27,12 +27,12 @@
 +		NOT_WIN = Y
 +	endif
 +	ifdef _a32
-+		PREFIX = armv7-w64-mingw32-
++		PREFIX  = armv7-w64-mingw32-
 +		NOT_WIN = Y
  	endif
  endif
  
-@@ -77,16 +84,35 @@
+@@ -77,16 +85,35 @@
  	CFLAGS  += -g -DPDCDEBUG
  	LDFLAGS = -g
  else
@@ -69,7 +69,7 @@
  ifeq ($(UTF8),Y)
  	CFLAGS += -DPDC_FORCE_UTF8
  else
-@@ -99,7 +126,7 @@
+@@ -99,7 +127,7 @@
  	PDCCFLAGS += -DHAVE_NO_INFOEX
  endif
  

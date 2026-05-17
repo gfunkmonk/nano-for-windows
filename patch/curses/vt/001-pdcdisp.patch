@@ -1,6 +1,20 @@
---- a/curses/vt/pdcdisp.c
-+++ b/curses/vt/pdcdisp.c
-@@ -320,6 +320,17 @@
+--- a/curses/vt/pdcdisp.c	2026-05-16 23:35:20.974056833 -0400
++++ b/curses/vt/pdcdisp.c	2026-05-16 23:39:05.314055360 -0400
+@@ -307,6 +307,13 @@
+         len--;
+ #endif
+     PDC_gotoyx( lineno, x);
++    /* Clear the line before drawing to prevent ghosting when scrolling
++     * with wide characters (emojis take 2 columns). This is especially
++     * important when paging down where old content may remain visible. */
++    if( x == 0)
++    {
++        PDC_puts_to_stdout( CSI "2K");  /* clear entire line */
++    }
+     if( force_reset_all_attribs || (!x && !lineno))
+     {
+         force_reset_all_attribs = FALSE;
+@@ -320,6 +327,17 @@
         size_t bytes_out = 0;
  
  #ifdef PDC_WIDE
@@ -18,7 +32,7 @@
         assert( ch != MAX_UNICODE);
         assert( len == 1 || ch < MAX_UNICODE);
  #endif
-@@ -379,7 +390,7 @@
+@@ -379,7 +397,7 @@
             bytes_out = 1;
             *obuff = (char)ch;
  #else
@@ -27,7 +41,7 @@
  #endif
  #ifdef PDC_WIDE
             while( count < len && !((srcp[0] ^ srcp[count]) & ~A_CHARTEXT)
-@@ -397,7 +408,7 @@
+@@ -397,7 +415,7 @@
  #else
                 if( ch < (int)' ' || (ch >= 0x80 && ch <= 0x9f))
                    ch = ' ';
