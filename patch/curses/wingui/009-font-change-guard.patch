@@ -1,13 +1,11 @@
 --- a/curses/wingui/pdcscrn.c
 +++ b/curses/wingui/pdcscrn.c
-@@ -614,25 +614,46 @@
- static void get_character_sizes( const HWND hwnd,
+@@ -615,21 +615,47 @@
                             int *xchar_size, int *ychar_size)
  {
--    HFONT hFont = PDC_get_font_handle( 0);
+     HFONT hFont = PDC_get_font_handle( 0);
 -    HFONT prev_font;
 -    HDC hdc = GetDC (hwnd) ;
-+    HFONT hFont = PDC_get_font_handle( 0);
 +    HFONT prev_font = NULL;
 +    HDC hdc = GetDC( hwnd);
      TEXTMETRIC tm ;
@@ -55,8 +53,5 @@
 +        }
 +    }
  #endif         /* #ifdef USE_FALLBACK_FONT */
--    SelectObject( hdc, prev_font);
-+    SelectObject( hdc, prev_font);
+     SelectObject( hdc, prev_font);
      ReleaseDC (hwnd, hdc) ;
-     DeleteObject( hFont);
-     *xchar_size = tm.tmAveCharWidth ;
