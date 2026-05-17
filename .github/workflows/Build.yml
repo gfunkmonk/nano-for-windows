@@ -515,13 +515,13 @@ jobs:
         sed -i.bak 's|Compiled options|Project info at https://github.com/gfunkmonk/nano-for-windows\\n Using '"${CURSES}"'\\n &|' src/nano.c
         _diff
 
-    - name: 🚩 Set vt Flags
-      if: ${{ inputs.pdterm }} == 'vt'
+    - if: ${{ inputs.pdterm }} == 'vt'
+      name: 🚩 Set vt Flags
       run: |
         echo "PDC_VT=RGB UNDERLINE BLINK DIM STANDOUT" >> $GITHUB_ENV
 
-    - name: 🚩 Set wingui Flags
-      if: ${{ inputs.pdterm }} == 'wingui'
+    - if: ${{ inputs.pdterm }} == 'wingui'
+      name: 🚩 Set wingui Flags
       run: |
         echo "LIBS=${{ env.CFLAGS }} -luuid -lole32 -lgdi32 -lcomdlg32 -ldwrite -ld2d1" >> $GITHUB_ENV
 
