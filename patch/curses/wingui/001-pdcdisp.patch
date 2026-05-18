@@ -1,5 +1,5 @@
---- a/curses/wingui/pdcdisp.c	2026-05-17 18:07:09.643618757 -0400
-+++ b/curses/wingui/pdcdisp.c	2026-05-17 18:07:35.503618587 -0400
+--- a/curses/wingui/pdcdisp.c
++++ b/curses/wingui/pdcdisp.c
 @@ -220,7 +220,9 @@
      lf.lfPitchAndFamily = FF_MODERN;
      lf.lfWeight = ((font_idx & 1) ? FW_EXTRABOLD : FW_NORMAL);
@@ -30,18 +30,29 @@
  static void PDC_transform_line_given_hdc( const HDC hdc, const int lineno,
                               int x, int len, const chtype *srcp)
  {
-@@ -358,6 +372,10 @@
-     assert( len <= SP->cols - x);
-     assert( lineno < SP->lines && len > 0 && lineno >= 0);
+@@ -354,11 +368,17 @@
+ #endif
+         return;
+     }
+-    assert( x >= 0);
+-    assert( len <= SP->cols - x);
+-    assert( lineno < SP->lines && len > 0 && lineno >= 0);
++    if( x < 0 || lineno < 0 || lineno >= SP->lines || x >= SP->cols || len <= 0)
++        return;
++    if( len > SP->cols - x)
++        len = SP->cols - x;
++    if( !len)
++        return;
  #ifdef PDC_WIDE
+-    assert( (srcp[len - 1] & A_CHARTEXT) != MAX_UNICODE);
 +    while( len && (srcp[len - 1] & A_CHARTEXT) == MAX_UNICODE)
 +        len--;
 +    if( !len)
 +        return;
-     assert( (srcp[len - 1] & A_CHARTEXT) != MAX_UNICODE);
  #endif
  
-@@ -369,6 +387,7 @@
+     while( len)
+@@ -369,6 +389,7 @@
          RECT clip_rect;
          wchar_t buff[BUFFSIZE];
          int lpDx[BUFFSIZE + 1];
@@ -49,7 +60,7 @@
          int olen = 0;
  #ifdef USE_FALLBACK_FONT
          const bool in_font = character_is_in_font( *srcp);
-@@ -383,6 +402,8 @@
+@@ -383,9 +404,13 @@
          {
              chtype ch = srcp[i] & A_CHARTEXT;
  
@@ -58,7 +69,43 @@
  #ifdef USING_COMBINING_CHARACTER_SCHEME
              if( ch > 0xffff && ch < MAX_UNICODE)  /* use Unicode surrogates to fit */
              {               /* >64K values into 16-bit wchar_t: */
-@@ -477,7 +498,17 @@
++                if( olen + 1 >= BUFFSIZE - 1)
++                    break;
+                 ch -= 0x10000;
+                 buff[olen] = (wchar_t)( 0xd800 | (ch >> 10));
+                 lpDx[olen] = 0;
+@@ -400,8 +425,12 @@
+                 while( (root = PDC_expand_combined_characters( root,
+                                    &added[n_combined])) > MAX_UNICODE)
+                 {
++                    if( n_combined >= 9)
++                        break;
+                     n_combined++;
+                 }
++                if( olen >= BUFFSIZE - 1)
++                    break;
+                 buff[olen] = (wchar_t)root;
+                 lpDx[olen] = 0;
+                 olen++;
+@@ -409,6 +438,8 @@
+                 while( n_combined)
+                 {
+                     n_combined--;
++                    if( olen >= BUFFSIZE - 1)
++                        break;
+                     buff[olen] = (wchar_t)added[n_combined];
+                     lpDx[olen] = 0;
+                     olen++;
+@@ -429,6 +460,8 @@
+                ch = (chtype)z;
+             }
+ #endif
++            if( olen >= BUFFSIZE - 1)
++                break;
+             buff[olen] = (wchar_t)ch;
+             lpDx[olen] = PDC_cxChar;
+ #ifdef PDC_WIDE
+@@ -477,7 +510,17 @@
          prev_ch = *srcp;
          clip_rect.left = x * PDC_cxChar;
          clip_rect.top = lineno * PDC_cyChar;
@@ -77,10 +124,18 @@
  #ifdef PDC_WIDE
          if( 2 == PDC_wcwidth( (uint32_t)( *srcp & A_CHARTEXT)))  /* allow extra */
              clip_rect.right += PDC_cxChar;        /* space for a fullwidth char */
-@@ -557,6 +588,13 @@
+@@ -555,9 +598,19 @@
+         extern HWND PDC_hWnd;
+         const HDC hdc = (override_hdc ? override_hdc : GetDC( PDC_hWnd)) ;
  
-         assert( len);
+-        assert( len);
++        if( len <= 0)
++        {
++            ReleaseDC( PDC_hWnd, hdc);
++            return;
++        }
  #ifdef PDC_WIDE
+-        assert( (srcp[len - 1] & A_CHARTEXT) != MAX_UNICODE);
 +        while( len && (srcp[len - 1] & A_CHARTEXT) == MAX_UNICODE)
 +            len--;
 +        if( !len)
@@ -88,6 +143,6 @@
 +            ReleaseDC( PDC_hWnd, hdc);
 +            return;
 +        }
-         assert( (srcp[len - 1] & A_CHARTEXT) != MAX_UNICODE);
  #endif
          PDC_transform_line_given_hdc( hdc, lineno, x, len, srcp);
+         ReleaseDC( PDC_hWnd, hdc);
