@@ -1,9 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
-if [ $# -lt 2 ]; then
-    echo "Usage: $0 [x86_64|i686|aarch64] PDTERM"
-    echo "Example: $0 i686 wincon"
+if [ $# -lt 1 ]; then
+    echo "Usage: $0 PDTERM"
+    echo "Example: $0 wincon"
     exit 1
 fi
 
@@ -15,16 +15,16 @@ GREEN="\x1b[1;32m"
 NC="\x1b[0m"
 
 # Map the input to the full triplet
-case "$1" in
-    x86_64)  TARGETS=("x86_64-w64-mingw32") ;;
-    i686)    TARGETS=("i686-w64-mingw32") ;;
-    aarch64) TARGETS=("aarch64-w64-mingw32") ;;
-    armv7) TARGETS=("armv7-w64-mingw32") ;;
-    *) echo "Invalid architecture: $1"; exit 1 ;;
-esac
+#case "$1" in
+#    x86_64)  TARGETS=("x86_64-w64-mingw32") ;;
+#    i686)    TARGETS=("i686-w64-mingw32") ;;
+#    aarch64) TARGETS=("aarch64-w64-mingw32") ;;
+#    armv7) TARGETS=("armv7-w64-mingw32") ;;
+#    *) echo "Invalid architecture: $1"; exit 1 ;;
+#esac
 
 # Map PDTERM
-PDTERM="$2"
+PDTERM="$1"
 echo "Building for $1 with PDTERM=$PDTERM"
 
 # --- 2. Configuration & Environment ---
@@ -190,20 +190,22 @@ sed -i "/0x42[1234]/d" src/definitions.h
 ##sed -i 's/waddnwstr(window, \&widechar, 1);/waddnwstr(window, \&widechar, wcwidth(widechar));/' src/winio.c
 
 # PDCurses uses 64bit (chtype) for cell attributes instead of 32bit (int)
-#echo -e "\n\nPATCH: Improving from 256colors to true color."
-#sed -i "/interface_color_pair/ s/\bint\b/chtype/g" src/prototypes.h src/global.c
-#sed -i "/int attributes/ s/\bint\b/chtype/g" src/definitions.h
-#sed -i "/int attributes/ s/\bint\b/chtype/g" src/rcfile.c
-#sed -i "/bool parse_combination/ s/\bint\b/chtype/g" src/rcfile.c
+echo -e "${GREEN}[${BWHITE}various${GREEN}] ${BWHITE}Improving from 256colors to true color${NC}"
+sed -i "/interface_color_pair/ s/\bint\b/chtype/g" src/prototypes.h src/global.c
+sed -i "/int attributes/ s/\bint\b/chtype/g" src/definitions.h
+sed -i "/int attributes/ s/\bint\b/chtype/g" src/rcfile.c
+sed -i "/bool parse_combination/ s/\bint\b/chtype/g" src/rcfile.c
 
-#echo -e "\n\nPATCH: PDC_display_utf8 = TRUE"
-#sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wincon/*.c
-#sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/vt/*.c
-
-#echo -e "\n\nPATCH: Make MAX_UNICODE suck less."
-#sed -i 's|MAX_UNICODE 0xffff|MAX_UNICODE 0x10ffff|g' curses/curspriv.h
+echo -e "${GREEN}[${BWHITE}wincon & vt${GREEN}] ${BWHITE}PDC_display_utf8 = TRUE${NC}"
+sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wincon/*.c
+sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/vt/*.c
+sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wingui/*.c
 
 echo -e "${GREEN}[${BWHITE}pdckbd.c${GREEN}] ${BWHITE}Forced for 64-bit chtype${NC}"
 sed -i 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/vt/pdckbd.c
 sed -i 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/wincon/pdckbd.c
+sed -i 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/wingui/pdckbd.c
+
+echo -e "${GREEN}[${BWHITE}curspriv.h${GREEN}] ${BWHITE}Make MAX_UNICODE suck less.${NC}"
+sed -i 's|MAX_UNICODE 0x110000|MAX_UNICODE 0x10ffff|g' curses/curspriv.h
 
