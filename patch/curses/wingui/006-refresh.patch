@@ -1,6 +1,24 @@
---- a/curses/pdcurses/refresh.c	2026-05-17 16:26:55.383658253 -0400
-+++ b/curses/pdcurses/refresh.c	2026-05-17 16:39:39.873653232 -0400
-@@ -184,11 +184,28 @@
+--- a/curses/pdcurses/refresh.c
++++ b/curses/pdcurses/refresh.c
+@@ -158,11 +158,21 @@
+ void PDC_transform_line_sliced( int lineno, int x, int len, const chtype *srcp)
+ {
+-    assert( x >= 0);
+-    assert( len > 0);
+-    assert( x + len <= COLS);
+-    assert( lineno >= 0);
+-    assert( lineno < SP->lines);
++    /* Defensive bounds checks instead of hard asserts — these conditions
++     * can occur transiently during window resize or font changes and must
++     * not abort the process. */
++    if( x < 0 || len <= 0 || lineno < 0 || !SP || lineno >= SP->lines)
++        return;
++    if( x >= COLS)
++        return;
++    if( x + len > COLS)
++        len = COLS - x;
+     if( lineno == SP->cursrow && x <= SP->curscol && x + len > SP->curscol)
+@@ -184,11 +194,28 @@
          }
      }
  #ifdef PDC_WIDE
