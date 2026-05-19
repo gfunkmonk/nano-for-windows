@@ -10,10 +10,10 @@
  #include "../common/pdccolor.h"
  #include "../common/pdccolor.c"
  #ifdef WIN32_LEAN_AND_MEAN
-@@ -342,6 +344,123 @@
+@@ -342,6 +344,144 @@
           || (c >= 0x2600 && c <= 0x27bf));  /* misc symbols/dingbats */
  }
-
+ 
 +static bool PDC_render_with_uniscribe( const HDC hdc, const wchar_t *text, int len,
 +                                       int x, int y, int width, const RECT *clip_rect)
 +{
