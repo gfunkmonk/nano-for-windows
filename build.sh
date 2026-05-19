@@ -28,7 +28,6 @@ case "$2" in
      vt)	export PDT_PRETTY="VT" ;;
      wincon)    export PDT_PRETTY="WinCon" ;;
      wingui)    export PDT_PRETTY="WinGUI" ;;
-     *)         echo "Invalid terminal type: $2; exit 1 ;;
 esac
 
 # Map PDTERM
