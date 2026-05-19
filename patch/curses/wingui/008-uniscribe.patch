@@ -10,7 +10,7 @@
  #include "../common/pdccolor.h"
  #include "../common/pdccolor.c"
  #ifdef WIN32_LEAN_AND_MEAN
-@@ -342,6 +344,123 @@
+@@ -342,6 +344,144 @@
           || (c >= 0x2600 && c <= 0x27bf));  /* misc symbols/dingbats */
  }
 
@@ -67,6 +67,10 @@
 +        GOFFSET *pGoffset = NULL;
 +        ABC abc;
 +        SCRIPT_CACHE psc = NULL;
++        SCRIPT_FONTPROPERTIES sfp;
++        WORD default_glyph = 0;
++        bool has_default_glyph = FALSE;
++        int glyph_idx;
 +
 +        pwGlyphs = (WORD *)calloc( item_len * 2, sizeof( WORD));
 +        pwLogClust = (WORD *)calloc( item_len, sizeof( WORD));
@@ -85,6 +89,23 @@
 +            MessageBoxA( NULL, msg, "Uniscribe Error", MB_OK);
 +            goto item_cleanup;
 +        }
++
++        memset( &sfp, 0, sizeof( sfp));
++        sfp.cBytes = sizeof( sfp);
++        hr = ScriptGetFontProperties( hdc, &psc, &sfp);
++        if( SUCCEEDED( hr))
++        {
++            default_glyph = sfp.wgDefault;
++            has_default_glyph = TRUE;
++        }
++
++        for( glyph_idx = 0; has_default_glyph && glyph_idx < cGlyphs; glyph_idx++)
++            if( pwGlyphs[glyph_idx] == default_glyph)
++            {
++                MessageBoxA( NULL, "Uniscribe produced fallback glyph - using GDI fallback",
++                             "Rendering", MB_OK);
++                goto item_cleanup;
++            }
 +
 +        piAdvance = (int *)calloc( cGlyphs, sizeof( int));
 +        pGoffset = (GOFFSET *)calloc( cGlyphs, sizeof( GOFFSET));
