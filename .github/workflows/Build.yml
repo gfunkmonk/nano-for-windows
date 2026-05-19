@@ -648,12 +648,25 @@ jobs:
     needs:
     - checks
     - build
-    name: "📨 Publish ${{ github.event.inputs.release }}-${{ env.PDT_PRETTY }}"
+    name: "📨 Publish ${{ github.event.inputs.release }}"
     runs-on: ubuntu-latest
     defaults:
       run:
         shell: bash
     steps:
+    - if: ${{ inputs.pdterm == 'vt' }}
+      name: 🚩 Set vt Flags
+      run: |
+        echo "PDT_PRETTY=VT" >> $GITHUB_ENV
+    - if: ${{ inputs.pdterm == 'wincon' }}
+      name: 🚩 Set wincon Flags
+      run: |
+        echo "PDT_PRETTY=WinCon" >> $GITHUB_ENV
+    - if: ${{ inputs.pdterm == 'wingui' }}
+      name: 🚩 Set wingui Flags
+      run: |
+        echo "PDT_PRETTY=WinGUI" >> $GITHUB_ENV
+
     - name: "📬 Receive Packages"
       uses: actions/download-artifact@v8
       with:
