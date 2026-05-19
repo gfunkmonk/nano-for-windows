@@ -10,7 +10,7 @@
  #include "../common/pdccolor.h"
  #include "../common/pdccolor.c"
  #ifdef WIN32_LEAN_AND_MEAN
-@@ -342,6 +344,144 @@
+@@ -342,6 +344,146 @@
           || (c >= 0x2600 && c <= 0x27bf));  /* misc symbols/dingbats */
  }
 
@@ -20,11 +20,13 @@
 +    SCRIPT_CONTROL sc = {0};
 +    SCRIPT_STATE ss = {0};
 +    SCRIPT_ITEM *items = NULL;
-+    int max_items = 16;
++    int max_items = 16; (void)width;
 +    int n_items = 0;
 +    HRESULT hr;
 +    int i;
 +    bool success = FALSE;
++    TEXTMETRIC tm;
++    int baseline_y = y + (GetTextMetrics( hdc, &tm) ? tm.tmAscent : 0);
 +    char msg[256];
 +
 +    items = (SCRIPT_ITEM *)calloc( max_items, sizeof( SCRIPT_ITEM));
@@ -124,7 +126,7 @@
 +            goto item_cleanup;
 +        }
 +
-+        hr = ScriptTextOut( hdc, &psc, x, y, 0, clip_rect, psa,
++        hr = ScriptTextOut( hdc, &psc, x, baseline_y, ETO_CLIPPED, clip_rect, psa,
 +                      NULL, 0, pwGlyphs, cGlyphs, piAdvance, NULL, pGoffset);
 +        if( FAILED( hr))
 +        {
