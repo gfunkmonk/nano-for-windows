@@ -50,7 +50,7 @@
 +
 +    if( FAILED( hr))
 +    {
-+        sprintf( msg, "ScriptItemize failed: 0x%08X", hr);
++        sprintf( msg, "ScriptItemize failed: 0x%08lX", (unsigned long)hr);
 +        MessageBoxA( NULL, msg, "Uniscribe Error", MB_OK);
 +        goto cleanup;
 +    }
@@ -66,7 +66,7 @@
 +        int *piAdvance = NULL;
 +        GOFFSET *pGoffset = NULL;
 +        ABC abc;
-+        SCRIPT_CACHE *psc = NULL;
++        SCRIPT_CACHE psc = NULL;
 +
 +        pwGlyphs = (WORD *)calloc( item_len * 2, sizeof( WORD));
 +        pwLogClust = (WORD *)calloc( item_len, sizeof( WORD));
@@ -81,7 +81,7 @@
 +                          item_len * 2, psa, pwGlyphs, pwLogClust, psva, &cGlyphs);
 +        if( FAILED( hr))
 +        {
-+            sprintf( msg, "ScriptShape failed: 0x%08X", hr);
++            sprintf( msg, "ScriptShape failed: 0x%08lX", (unsigned long)hr);
 +            MessageBoxA( NULL, msg, "Uniscribe Error", MB_OK);
 +            goto item_cleanup;
 +        }
@@ -98,7 +98,7 @@
 +                          piAdvance, pGoffset, &abc);
 +        if( FAILED( hr))
 +        {
-+            sprintf( msg, "ScriptPlace failed: 0x%08X", hr);
++            sprintf( msg, "ScriptPlace failed: 0x%08lX", (unsigned long)hr);
 +            MessageBoxA( NULL, msg, "Uniscribe Error", MB_OK);
 +            goto item_cleanup;
 +        }
@@ -107,7 +107,7 @@
 +                      NULL, 0, pwGlyphs, cGlyphs, piAdvance, NULL, pGoffset);
 +        if( FAILED( hr))
 +        {
-+            sprintf( msg, "ScriptTextOut failed: 0x%08X", hr);
++            sprintf( msg, "ScriptTextOut failed: 0x%08lX", (unsigned long)hr);
 +            MessageBoxA( NULL, msg, "Uniscribe Error", MB_OK);
 +            goto item_cleanup;
 +        }
@@ -121,7 +121,7 @@
 +        if( psva) free( psva);
 +        if( piAdvance) free( piAdvance);
 +        if( pGoffset) free( pGoffset);
-+        if( psc) ScriptFreeCache( psc);
++        if( psc) ScriptFreeCache( &psc);
 +        if( !success)
 +            goto cleanup;
 +    }
