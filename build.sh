@@ -24,6 +24,13 @@ case "$1" in
     *) echo "Invalid architecture: $1"; exit 1 ;;
 esac
 
+case "$2" in
+     vt)	export PDT_PRETTY="VT" ;;
+     wincon)    export PDT_PRETTY="WinCon" ;;
+     wingui)    export PDT_PRETTY="WinGUI" ;;
+     *)         echo "Invalid terminal type: $2; exit 1 ;;
+esac
+
 # Map PDTERM
 PDTERM="$2"
 case "$PDTERM" in
@@ -323,5 +330,5 @@ EOF
     rm -rf bin share rnano*
     upx --lzma --best nano.exe || true
     ls -als
-    7z a -mx9 -mm=Deflate64 -mmt$(nproc) "${BASE_DIR}/dist/nano-for-windows_${ARCH}_${PDTERM}_$(date +%y%m%d_%H%M%S).zip" * .nanorc
+    7z a -mx9 -mm=Deflate64 -mmt$(nproc) "${BASE_DIR}/dist/nano-for-windows_${ARCH}_${PDT_PRETTY}_$(date +%y%m%d_%H%M%S).zip" * .nanorc
 done
