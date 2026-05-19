@@ -23,8 +23,7 @@
  
  
      PDC_hWnd = hwnd;
-@@ -1621,9 +1626,9 @@
- 
+@@ -1621,8 +1626,8 @@
              pt.x = LOWORD( lParam);
              pt.y = HIWORD( lParam);
              ScreenToClient( hwnd, &pt);
@@ -35,3 +34,4 @@
              modified_key_to_return = 0;
              if( message == WM_MOUSEWHEEL)      /* i.e.,  vertical */
              {
+
