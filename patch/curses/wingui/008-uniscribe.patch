@@ -1,4 +1,4 @@
-                          item_len * 2, psa, NULL, pwGlyphs, psva, &cGlyphs);--- a/curses/wingui/pdcdisp.c   2026-05-17 00:00:00.000000000 -0400
+--- a/curses/wingui/pdcdisp.c   2026-05-17 00:00:00.000000000 -0400
 +++ b/curses/wingui/pdcdisp.c   2026-05-17 00:00:00.000000000 -0400
 @@ -7,7 +7,9 @@
  #include <assert.h>
@@ -60,8 +60,8 @@
 +        int item_len = items[i + 1].iCharPos - items[i].iCharPos;
 +        SCRIPT_ANALYSIS *psa = &items[i].a;
 +        int cGlyphs = 0;
-+        memset( psa, 0, sizeof( SCRIPT_ANALYSIS));
 +        WORD *pwGlyphs = NULL;
++        WORD *pwLogClust = NULL;
 +        SCRIPT_VISATTR *psva = NULL;
 +        int *piAdvance = NULL;
 +        GOFFSET *pGoffset = NULL;
@@ -69,15 +69,16 @@
 +        SCRIPT_CACHE *psc = NULL;
 +
 +        pwGlyphs = (WORD *)calloc( item_len * 2, sizeof( WORD));
++        pwLogClust = (WORD *)calloc( item_len, sizeof( WORD));
 +        psva = (SCRIPT_VISATTR *)calloc( item_len * 2, sizeof( SCRIPT_VISATTR));
-+        if( !pwGlyphs || !psva)
++        if( !pwGlyphs || !pwLogClust || !psva)
 +        {
 +            MessageBoxA( NULL, "Failed to allocate glyphs/visattr", "Uniscribe Error", MB_OK);
 +            goto item_cleanup;
 +        }
 +
-+        hr = ScriptShape( hdc, psc, text + items[i].iCharPos, item_len,
-+                          item_len * 2, psa, NULL, pwGlyphs, psva, &cGlyphs);
++        hr = ScriptShape( hdc, &psc, text + items[i].iCharPos, item_len,
++                          item_len * 2, psa, pwGlyphs, pwLogClust, psva, &cGlyphs);
 +        if( FAILED( hr))
 +        {
 +            sprintf( msg, "ScriptShape failed: 0x%08X", hr);
@@ -93,7 +94,7 @@
 +            goto item_cleanup;
 +        }
 +
-+        hr = ScriptPlace( hdc, psc, pwGlyphs, cGlyphs, psva, psa,
++        hr = ScriptPlace( hdc, &psc, pwGlyphs, cGlyphs, psva, psa,
 +                          piAdvance, pGoffset, &abc);
 +        if( FAILED( hr))
 +        {
@@ -102,7 +103,7 @@
 +            goto item_cleanup;
 +        }
 +
-+        hr = ScriptTextOut( hdc, psc, x, y, 0, clip_rect, psa,
++        hr = ScriptTextOut( hdc, &psc, x, y, 0, clip_rect, psa,
 +                      NULL, 0, pwGlyphs, cGlyphs, piAdvance, NULL, pGoffset);
 +        if( FAILED( hr))
 +        {
@@ -116,6 +117,7 @@
 +
 +item_cleanup:
 +        if( pwGlyphs) free( pwGlyphs);
++        if( pwLogClust) free( pwLogClust);
 +        if( psva) free( psva);
 +        if( piAdvance) free( piAdvance);
 +        if( pGoffset) free( pGoffset);
@@ -162,4 +164,3 @@
  #ifdef WA_TOP
          if( *srcp & (WA_UNDERLINE | WA_RIGHT | WA_LEFT | WA_TOP | WA_STRIKEOUT))
  #else
-
