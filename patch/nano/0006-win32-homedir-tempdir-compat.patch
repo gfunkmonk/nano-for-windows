@@ -1,19 +1,7 @@
-From cac0ca725aaecc2779dd0a8d9822002cdcea5601 Mon Sep 17 00:00:00 2001
-From: Chawye Hsu <su+git@chawyehsu.com>
-Date: Thu, 16 Apr 2026 00:41:05 +0800
-Subject: [PATCH 06/17] win32: homedir tempdir compat
-
-Signed-off-by: Chawye Hsu <su+git@chawyehsu.com>
----
- src/files.c |  4 ++--
- src/utils.c | 12 ++++--------
- 2 files changed, 6 insertions(+), 10 deletions(-)
-
-diff --git a/src/files.c b/src/files.c
-index 36f8c3a..e541757 100644
---- a/src/files.c
-+++ b/src/files.c
-@@ -1462,7 +1462,7 @@ char *check_writable_directory(const char *path)
+diff -ruN nano/src/files.c nanob/src/files.c
+--- a/src/files.c	2026-05-15 06:16:54.265033390 -0400
++++ b/src/files.c	2026-05-15 06:19:30.885032362 -0400
+@@ -1417,7 +1417,7 @@
   * file stream opened in read-write mode.  On error, return NULL. */
  char *safe_tempfile(FILE **stream)
  {
@@ -22,7 +10,7 @@ index 36f8c3a..e541757 100644
  	char *tempdir = NULL, *tempfile_name = NULL;
  	char *extension;
  	int descriptor;
-@@ -1476,7 +1476,7 @@ char *safe_tempfile(FILE **stream)
+@@ -1431,7 +1431,7 @@
  		tempdir = check_writable_directory(P_tmpdir);
  
  	if (tempdir == NULL)
@@ -31,11 +19,10 @@ index 36f8c3a..e541757 100644
  
  	extension = strrchr(openfile->filename, '.');
  	normalize_slashes(extension);
-diff --git a/src/utils.c b/src/utils.c
-index 84df35c..ad14c79 100644
---- a/src/utils.c
-+++ b/src/utils.c
-@@ -35,15 +35,11 @@ void get_homedir(void)
+diff -ruN nano/src/utils.c nanob/src/utils.c
+--- a/src/utils.c	2026-05-15 06:16:54.265033390 -0400
++++ b/src/utils.c	2026-05-15 06:21:35.845031541 -0400
+@@ -35,15 +35,11 @@
  	if (homedir == NULL) {
  		const char *homenv = getenv("HOME");
  
@@ -46,7 +33,7 @@ index 84df35c..ad14c79 100644
 +		if (homenv == NULL || *homenv == '\0')
 +			homenv = getenv("USERPROFILE");
  
--			if (userage != NULL)
+-			if (userage)
 -				homenv = userage->pw_dir;
 -		}
 -#endif
@@ -54,7 +41,4 @@ index 84df35c..ad14c79 100644
 +			homenv = getenv("ALLUSERSPROFILE");
  
  		/* Only set `homedir` if a home directory could be determined. */
- 		if (homenv != NULL && *homenv != '\0')
--- 
-2.54.0.windows.1
-
+ 		if (homenv && *homenv)
