@@ -1,0 +1,165 @@
+                          item_len * 2, psa, NULL, pwGlyphs, psva, &cGlyphs);--- a/curses/wingui/pdcdisp.c   2026-05-17 00:00:00.000000000 -0400
++++ b/curses/wingui/pdcdisp.c   2026-05-17 00:00:00.000000000 -0400
+@@ -7,7 +7,9 @@
+ #include <assert.h>
+ #include <stdlib.h>
+ #include <string.h>
+ #include <tchar.h>
++#include <usp10.h>
++#include <wingdi.h>
+ #include "../common/pdccolor.h"
+ #include "../common/pdccolor.c"
+ #ifdef WIN32_LEAN_AND_MEAN
+@@ -342,6 +344,121 @@
+          || (c >= 0x2600 && c <= 0x27bf));  /* misc symbols/dingbats */
+ }
+
++static bool PDC_render_with_uniscribe( const HDC hdc, const wchar_t *text, int len,
++                                       int x, int y, int width, const RECT *clip_rect)
++{
++    SCRIPT_CONTROL sc = {0};
++    SCRIPT_STATE ss = {0};
++    SCRIPT_ITEM *items = NULL;
++    int max_items = 16;
++    int n_items = 0;
++    HRESULT hr;
++    int i;
++    bool success = FALSE;
++    char msg[256];
++
++    items = (SCRIPT_ITEM *)calloc( max_items, sizeof( SCRIPT_ITEM));
++    if( !items)
++    {
++        MessageBoxA( NULL, "Failed to allocate items", "Uniscribe Error", MB_OK);
++        goto cleanup;
++    }
++
++    hr = ScriptItemize( text, len, max_items, &sc, &ss, items, &n_items);
++    if( hr == E_OUTOFMEMORY)
++    {
++        free( items);
++        max_items = len + 1;
++        items = (SCRIPT_ITEM *)calloc( max_items, sizeof( SCRIPT_ITEM));
++        if( !items)
++        {
++            MessageBoxA( NULL, "Failed to allocate items (retry)", "Uniscribe Error", MB_OK);
++            goto cleanup;
++        }
++        hr = ScriptItemize( text, len, max_items, &sc, &ss, items, &n_items);
++    }
++
++    if( FAILED( hr))
++    {
++        sprintf( msg, "ScriptItemize failed: 0x%08X", hr);
++        MessageBoxA( NULL, msg, "Uniscribe Error", MB_OK);
++        goto cleanup;
++    }
++
++    for( i = 0; i < n_items; i++)
++    {
++        int item_len = items[i + 1].iCharPos - items[i].iCharPos;
++        SCRIPT_ANALYSIS *psa = &items[i].a;
++        int cGlyphs = 0;
++        memset( psa, 0, sizeof( SCRIPT_ANALYSIS));
++        WORD *pwGlyphs = NULL;
++        SCRIPT_VISATTR *psva = NULL;
++        int *piAdvance = NULL;
++        GOFFSET *pGoffset = NULL;
++        ABC abc;
++        SCRIPT_CACHE *psc = NULL;
++
++        pwGlyphs = (WORD *)calloc( item_len * 2, sizeof( WORD));
++        psva = (SCRIPT_VISATTR *)calloc( item_len * 2, sizeof( SCRIPT_VISATTR));
++        if( !pwGlyphs || !psva)
++        {
++            MessageBoxA( NULL, "Failed to allocate glyphs/visattr", "Uniscribe Error", MB_OK);
++            goto item_cleanup;
++        }
++
++        hr = ScriptShape( hdc, psc, text + items[i].iCharPos, item_len,
++                          item_len * 2, psa, NULL, pwGlyphs, psva, &cGlyphs);
++        if( FAILED( hr))
++        {
++            sprintf( msg, "ScriptShape failed: 0x%08X", hr);
++            MessageBoxA( NULL, msg, "Uniscribe Error", MB_OK);
++            goto item_cleanup;
++        }
++
++        piAdvance = (int *)calloc( cGlyphs, sizeof( int));
++        pGoffset = (GOFFSET *)calloc( cGlyphs, sizeof( GOFFSET));
++        if( !piAdvance || !pGoffset)
++        {
++            MessageBoxA( NULL, "Failed to allocate advance/goffset", "Uniscribe Error", MB_OK);
++            goto item_cleanup;
++        }
++
++        hr = ScriptPlace( hdc, psc, pwGlyphs, cGlyphs, psva, psa,
++                          piAdvance, pGoffset, &abc);
++        if( FAILED( hr))
++        {
++            sprintf( msg, "ScriptPlace failed: 0x%08X", hr);
++            MessageBoxA( NULL, msg, "Uniscribe Error", MB_OK);
++            goto item_cleanup;
++        }
++
++        hr = ScriptTextOut( hdc, psc, x, y, 0, clip_rect, psa,
++                      NULL, 0, pwGlyphs, cGlyphs, piAdvance, NULL, pGoffset);
++        if( FAILED( hr))
++        {
++            sprintf( msg, "ScriptTextOut failed: 0x%08X", hr);
++            MessageBoxA( NULL, msg, "Uniscribe Error", MB_OK);
++            goto item_cleanup;
++        }
++
++        x += abc.abcA + abc.abcB + abc.abcC;
++        success = TRUE;
++
++item_cleanup:
++        if( pwGlyphs) free( pwGlyphs);
++        if( psva) free( psva);
++        if( piAdvance) free( piAdvance);
++        if( pGoffset) free( pGoffset);
++        if( psc) ScriptFreeCache( psc);
++        if( !success)
++            goto cleanup;
++    }
++
++cleanup:
++    if( items) free( items);
++    return success;
++}
++
+ static void PDC_transform_line_given_hdc( const HDC hdc, const int lineno,
+                              int x, int len, const chtype *srcp)
+ {
+@@ -636,9 +636,28 @@
+             clip_rect.right += PDC_cxChar;        /* space for a fullwidth char */
+ #endif
+         clip_rect.bottom = clip_rect.top + PDC_cyChar;
+-        ExtTextOutW( hdc, clip_rect.left, clip_rect.top,
++
++        if( has_emoji_or_joiner)
++        {
++            if( !PDC_render_with_uniscribe( hdc, buff, olen, clip_rect.left, clip_rect.top,
++                                           clip_rect.right - clip_rect.left, &clip_rect))
++            {
++                MessageBoxA( NULL, "Uniscribe FAILED - using GDI fallback", "Rendering", MB_OK);
++                ExtTextOutW( hdc, clip_rect.left, clip_rect.top,
+                            ETO_CLIPPED | ETO_OPAQUE, &clip_rect,
+                            buff, olen, (olen > 1 ? lpDx : NULL));
++            }
++            else
++            {
++                MessageBoxA( NULL, "Uniscribe SUCCESS", "Rendering", MB_OK);
++            }
++        }
++        else
++        {
++            ExtTextOutW( hdc, clip_rect.left, clip_rect.top,
++                           ETO_CLIPPED | ETO_OPAQUE, &clip_rect,
++                           buff, olen, (olen > 1 ? lpDx : NULL));
++        }
+ #ifdef WA_TOP
+         if( *srcp & (WA_UNDERLINE | WA_RIGHT | WA_LEFT | WA_TOP | WA_STRIKEOUT))
+ #else
+
