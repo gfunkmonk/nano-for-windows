@@ -1,0 +1,457 @@
+--- a/curses/wingui/pdcdisp.c	2026-05-20 15:33:36.918723540 -0400
++++ b/curses/wingui/pdcdisp.c	2026-05-20 15:34:26.558723214 -0400
+@@ -2,6 +2,21 @@
+ 
+ #include "pdcwin.h"
+ #define USE_UNICODE_ACS_CHARS 1
++#define COBJMACROS
++/* INITGUID emits storage for all GUIDs in dwrite.h and d2d1.h so we don't
++   need to link uuid.lib/dwrite.lib/d2d1.lib — everything is loaded at
++   runtime via LoadLibrary/GetProcAddress. */
++#define INITGUID
++#include <dwrite.h>
++#include <d2d1.h>
++#undef INITGUID
++#undef COBJMACROS
++#if !defined(__cplusplus)
++/* MinGW/Clang in C mode may lack typedef forward declarations for these
++   COM interfaces when parsing commdlg.h. */
++typedef struct IPrintDialogCallback IPrintDialogCallback;
++typedef struct IPrintDialogServices IPrintDialogServices;
++#endif
+ 
+ #include "../common/acs_defs.h"
+ 
+@@ -220,7 +235,9 @@
+     lf.lfPitchAndFamily = FF_MODERN;
+     lf.lfWeight = ((font_idx & 1) ? FW_EXTRABOLD : FW_NORMAL);
+     lf.lfItalic = ((font_idx & 2) ? TRUE : FALSE);
+-    lf.lfCharSet = ANSI_CHARSET;
++    /* Allow full Unicode glyph selection (including emoji) instead of
++       restricting font matching to ANSI code pages. */
++    lf.lfCharSet = DEFAULT_CHARSET;
+     lf.lfQuality = PROOF_QUALITY;
+     lf.lfOutPrecision = OUT_RASTER_PRECIS;
+     return( lf);
+@@ -327,6 +344,223 @@
+ 
+ #define BUFFSIZE 50
+ 
++/* ---------------------------------------------------------------------------
++ * Color emoji rendering via Direct2D ID2D1DCRenderTarget
++ *
++ * GDI's ExtTextOutW and IDWriteBitmapRenderTarget::DrawGlyphRun are both
++ * monochrome-only — they cannot render COLR/PNG color glyph tables.
++ *
++ * The correct path is:
++ *   ID2D1Factory::CreateDCRenderTarget()  →  ID2D1DCRenderTarget
++ *   ID2D1DCRenderTarget::BindDC(hdc, rect)
++ *   ID2D1DCRenderTarget::BeginDraw()
++ *   ID2D1DCRenderTarget::DrawTextLayout(..., D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT)
++ *   ID2D1DCRenderTarget::EndDraw()
++ *
++ * D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT is the flag that activates COLR
++ * color glyph rendering.  Without it even Direct2D renders monochrome.
++ *
++ * Both d2d1.dll and dwrite.dll are loaded lazily via GetProcAddress so the
++ * binary still runs on systems where they are absent.
++ * -------------------------------------------------------------------------*/
++
++static bool g_d2d_tried     = FALSE;
++static bool g_d2d_available = FALSE;
++
++static ID2D1Factory          *g_d2d_factory  = NULL;
++static ID2D1DCRenderTarget   *g_d2d_rt       = NULL;
++static ID2D1SolidColorBrush  *g_d2d_brush    = NULL;
++static IDWriteFactory        *g_dw_factory   = NULL;
++static IDWriteTextFormat     *g_dw_fmt       = NULL;
++
++typedef HRESULT (WINAPI *PFN_D2D1CreateFactory)(
++    D2D1_FACTORY_TYPE, REFIID, const D2D1_FACTORY_OPTIONS *, void **);
++typedef HRESULT (WINAPI *PFN_DWriteCreateFactory)(
++    DWRITE_FACTORY_TYPE, REFIID, IUnknown **);
++
++static void PDC_d2d_init(void)
++{
++    HMODULE hD2D1, hDWrite;
++    PFN_D2D1CreateFactory  pfnD2D;
++    PFN_DWriteCreateFactory pfnDW;
++    HRESULT hr;
++    D2D1_RENDER_TARGET_PROPERTIES rtp;
++    D2D1_COLOR_F transparent = {0.0f, 0.0f, 0.0f, 0.0f};
++    D2D1_BRUSH_PROPERTIES bp;
++    D2D1_MATRIX_3X2_F identity = {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f};
++    bp.opacity = 1.0f;
++    bp.transform = identity;
++    extern int   PDC_font_size;
++    extern TCHAR PDC_font_name[128];
++    float pt_size;
++
++    if (g_d2d_tried) return;
++    g_d2d_tried = TRUE;
++
++    hD2D1  = LoadLibraryW(L"d2d1.dll");
++    hDWrite = LoadLibraryW(L"dwrite.dll");
++    if (!hD2D1 || !hDWrite) return;
++
++    pfnD2D = (PFN_D2D1CreateFactory)GetProcAddress(hD2D1,  "D2D1CreateFactory");
++    pfnDW  = (PFN_DWriteCreateFactory)GetProcAddress(hDWrite, "DWriteCreateFactory");
++    if (!pfnD2D || !pfnDW) return;
++
++    /* Single-threaded factory is fine — PDCurses renders on the UI thread. */
++    hr = pfnD2D(D2D1_FACTORY_TYPE_SINGLE_THREADED,
++                &IID_ID2D1Factory, NULL, (void **)&g_d2d_factory);
++    if (FAILED(hr) || !g_d2d_factory) return;
++
++    /* DC render target with BGRA pixel format (required for GDI interop)
++     * and IGNORE alpha so the background fill shows through correctly. */
++    memset(&rtp, 0, sizeof(rtp));
++    rtp.type             = D2D1_RENDER_TARGET_TYPE_DEFAULT;
++    rtp.pixelFormat.format    = DXGI_FORMAT_B8G8R8A8_UNORM;
++    rtp.pixelFormat.alphaMode = D2D1_ALPHA_MODE_IGNORE;
++    rtp.dpiX = rtp.dpiY  = 0.0f;   /* use system DPI */
++    rtp.usage            = D2D1_RENDER_TARGET_USAGE_GDI_COMPATIBLE;
++    rtp.minLevel         = D2D1_FEATURE_LEVEL_DEFAULT;
++
++    hr = ID2D1Factory_CreateDCRenderTarget(g_d2d_factory, &rtp, &g_d2d_rt);
++    if (FAILED(hr) || !g_d2d_rt) return;
++
++    /* Create a reusable solid-color brush; color is updated per-run. */
++    hr = ID2D1DCRenderTarget_CreateSolidColorBrush(
++            g_d2d_rt, &transparent, &bp, &g_d2d_brush);
++    if (FAILED(hr) || !g_d2d_brush) return;
++
++    /* DirectWrite factory and text format. */
++    hr = pfnDW(DWRITE_FACTORY_TYPE_SHARED,
++               &IID_IDWriteFactory, (IUnknown **)&g_dw_factory);
++    if (FAILED(hr) || !g_dw_factory) return;
++
++    pt_size = (PDC_font_size > 0) ? (float)PDC_font_size : 8.0f;
++    hr = IDWriteFactory_CreateTextFormat(
++            g_dw_factory,
++            PDC_font_name[0] ? PDC_font_name : L"Courier New",
++            NULL,
++            DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL,
++            DWRITE_FONT_STRETCH_NORMAL, pt_size, L"", &g_dw_fmt);
++    if (FAILED(hr) || !g_dw_fmt) return;
++
++    g_d2d_available = TRUE;
++}
++
++static void PDC_d2d_cleanup(void)
++{
++    if (g_dw_fmt)     { IDWriteTextFormat_Release(g_dw_fmt);              g_dw_fmt = NULL; }
++    if (g_dw_factory) { IDWriteFactory_Release(g_dw_factory);             g_dw_factory = NULL; }
++    if (g_d2d_brush)  { ID2D1SolidColorBrush_Release(g_d2d_brush);        g_d2d_brush = NULL; }
++    if (g_d2d_rt)     { ID2D1DCRenderTarget_Release(g_d2d_rt);            g_d2d_rt = NULL; }
++    if (g_d2d_factory){ ID2D1Factory_Release(g_d2d_factory);              g_d2d_factory = NULL; }
++    g_d2d_tried = g_d2d_available = FALSE;
++}
++
++/* Convert a run of chtype cells to a proper UTF-16 string with surrogate
++ * pairs for SMP codepoints.  USING_COMBINING_CHARACTER_SCHEME is not defined
++ * in this build so buff[] has truncated values — we re-encode from srcp[]. */
++static int PDC_srcp_to_utf16(const chtype *srcp, int ncells,
++                              wchar_t *out, int out_max)
++{
++    int olen = 0, i;
++    for (i = 0; i < ncells && olen < out_max - 2; i++)
++    {
++        uint32_t cp = (uint32_t)(srcp[i] & A_CHARTEXT);
++        if (cp == MAX_UNICODE || cp == 0) continue;
++        if (cp < 0x20) cp = 0x20;
++        if (cp > 0xFFFF) {
++            cp -= 0x10000;
++            out[olen++] = (wchar_t)(0xD800 | (cp >> 10));
++            out[olen++] = (wchar_t)(0xDC00 | (cp & 0x3FF));
++        } else {
++            out[olen++] = (wchar_t)cp;
++        }
++    }
++    out[olen] = 0;
++    return olen;
++}
++
++/* Render an emoji run via Direct2D directly onto hdc.
++ * Uses D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT to activate COLR color glyphs.
++ * srcp/ncells: raw chtype cells.  fg/bg: COLORREF.  cell_w/h: pixels. */
++static void PDC_d2d_render_emoji(
++        HDC hdc, int dst_x, int dst_y,
++        const chtype *srcp, int src_cells, int px_w,
++        COLORREF fg, COLORREF bg, int cell_w, int cell_h)
++{
++    wchar_t u16[BUFFSIZE * 2 + 1];
++    int nchars;
++    RECT bind_rect;
++    D2D1_COLOR_F bg_color, fg_color;
++    D2D1_RECT_F  layout_rect;
++    D2D1_POINT_2F origin = {0.0f, 0.0f};
++    IDWriteTextLayout *layout = NULL;
++    HRESULT hr;
++    D2D1_TAG t1, t2;
++
++    nchars = PDC_srcp_to_utf16(srcp, src_cells, u16, BUFFSIZE * 2);
++    if (nchars <= 0) return;
++
++    /* Bind the DC render target to the exact cell rectangle on the window DC. */
++    bind_rect.left   = dst_x;
++    bind_rect.top    = dst_y;
++    bind_rect.right  = dst_x + px_w + (cell_w * 4);
++    bind_rect.bottom = dst_y + cell_h;
++    hr = ID2D1DCRenderTarget_BindDC(g_d2d_rt, hdc, &bind_rect);
++    if (FAILED(hr)) return;
++
++    /* Build text layout. */
++    hr = IDWriteFactory_CreateTextLayout(
++            g_dw_factory, u16, (UINT32)nchars,
++            g_dw_fmt, (FLOAT)(px_w + (cell_w * 4)), (FLOAT)cell_h, &layout);
++    if (FAILED(hr) || !layout) return;
++
++    /* Keep the emoji run on one line; wrapped text would be clipped by the
++     * single-cell-high DC render target and look like truncated glyphs. */
++    IDWriteTextLayout_SetWordWrapping(layout, DWRITE_WORD_WRAPPING_NO_WRAP);
++
++    /* Convert COLORREF to D2D1_COLOR_F (0..1 range, BGRA→RGBA). */
++    bg_color.r = (float)GetRValue(bg) / 255.0f;
++    bg_color.g = (float)GetGValue(bg) / 255.0f;
++    bg_color.b = (float)GetBValue(bg) / 255.0f;
++    bg_color.a = 1.0f;
++    fg_color.r = (float)GetRValue(fg) / 255.0f;
++    fg_color.g = (float)GetGValue(fg) / 255.0f;
++    fg_color.b = (float)GetBValue(fg) / 255.0f;
++    fg_color.a = 1.0f;
++
++    layout_rect.left = layout_rect.top = 0.0f;
++    layout_rect.right  = (FLOAT)(px_w + (cell_w * 4));
++    layout_rect.bottom = (FLOAT)cell_h;
++
++    ID2D1DCRenderTarget_BeginDraw(g_d2d_rt);
++
++    /* Fill background. */
++    ID2D1DCRenderTarget_Clear(g_d2d_rt, &bg_color);
++
++    /* Set brush color to foreground (used for monochrome fallback glyphs). */
++    ID2D1SolidColorBrush_SetColor(g_d2d_brush, &fg_color);
++
++    /* DrawTextLayout with ENABLE_COLOR_FONT activates COLR color emoji. */
++    ID2D1DCRenderTarget_DrawTextLayout(g_d2d_rt, origin, layout,
++            (ID2D1Brush *)g_d2d_brush,
++            D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT);
++
++    ID2D1DCRenderTarget_EndDraw(g_d2d_rt, &t1, &t2);
++    IDWriteTextLayout_Release(layout);
++}
++
++static bool PDC_has_emoji_or_joiner( const chtype ch)
++{
++    const uint32_t c = (uint32_t)(ch & A_CHARTEXT);
++
++    return( c == 0x200d                      /* ZWJ */
++         || (c >= 0xfe00 && c <= 0xfe0f)    /* variation selectors */
++         || (c >= 0x1f3fb && c <= 0x1f3ff)  /* skin tone modifiers */
++         || (c >= 0x1f1e6 && c <= 0x1f1ff)  /* regional indicators */
++         || (c >= 0x1f300 && c <= 0x1faff)  /* emoji blocks (roughly Unicode 15.x) */
++         || (c >= 0x2600 && c <= 0x27bf));  /* misc symbols/dingbats */
++}
++
+ static void PDC_transform_line_given_hdc( const HDC hdc, const int lineno,
+                              int x, int len, const chtype *srcp)
+ {
+@@ -339,6 +573,7 @@
+ 
+     if( !srcp)             /* just freeing up fonts */
+     {
++        PDC_d2d_cleanup();
+         for( i = 0; i < N_CACHED_FONTS; i++)
+             if( hFonts[i])
+             {
+@@ -357,7 +592,36 @@
+     assert( x >= 0);
+     assert( len <= SP->cols - x);
+     assert( lineno < SP->lines && len > 0 && lineno >= 0);
++
++    /* Quick conservative fix: when only a very small slice is being
++     * redrawn (e.g. length <= 3 cells), expand the slice by +/-2 columns
++     * so grapheme clusters (ZWJ, variation selectors, skin-tone modifiers,
++     * regional indicators) are less likely to be split by the clip region.
++     * This adjusts the local `x`, `len`, and `srcp` variables only and
++     * is intentionally conservative to avoid changing global behavior.
++     */
++    if (len <= 3)
++    {
++        const int expand = 2;
++        int new_x = x - expand;
++        if (new_x < 0) new_x = 0;
++        int shift = x - new_x; /* how many cells we moved back */
++        int new_len = len + shift + expand; /* add both left and right expansion */
++        if (new_len > SP->cols - new_x) new_len = SP->cols - new_x;
++
++        /* Move the src pointer back by `shift` cells so it points at new_x. */
++        srcp = srcp - shift;
++        x = new_x;
++        len = new_len;
++    }
+ #ifdef PDC_WIDE
++    /* Lazy-init Direct2D + DirectWrite on first render call. */
++    PDC_d2d_init();
++
++    while( len && (srcp[len - 1] & A_CHARTEXT) == MAX_UNICODE)
++        len--;
++    if( !len)
++        return;
+     assert( (srcp[len - 1] & A_CHARTEXT) != MAX_UNICODE);
+ #endif
+ 
+@@ -369,6 +633,7 @@
+         RECT clip_rect;
+         wchar_t buff[BUFFSIZE];
+         int lpDx[BUFFSIZE + 1];
++        bool has_emoji_or_joiner = FALSE;
+         int olen = 0;
+ #ifdef USE_FALLBACK_FONT
+         const bool in_font = character_is_in_font( *srcp);
+@@ -383,6 +648,8 @@
+         {
+             chtype ch = srcp[i] & A_CHARTEXT;
+ 
++            has_emoji_or_joiner |= PDC_has_emoji_or_joiner( srcp[i]);
++
+ #ifdef USING_COMBINING_CHARACTER_SCHEME
+             if( ch > 0xffff && ch < MAX_UNICODE)  /* use Unicode surrogates to fit */
+             {               /* >64K values into 16-bit wchar_t: */
+@@ -477,15 +744,117 @@
+         prev_ch = *srcp;
+         clip_rect.left = x * PDC_cxChar;
+         clip_rect.top = lineno * PDC_cyChar;
+-        clip_rect.right = clip_rect.left + i * PDC_cxChar;
++        /* Calculate actual width by summing character widths, not just count.
++         * This prevents emoji truncation when multiple fullwidth chars are present. */
++        clip_rect.right = clip_rect.left;
++#ifdef PDC_WIDE
++        for (int j = 0; j < i; j++) {
++            int width = PDC_wcwidth((uint32_t)(srcp[j] & A_CHARTEXT));
++            clip_rect.right += (width == 2) ? 2 * PDC_cxChar : PDC_cxChar;
++        }
++#else
++        clip_rect.right += i * PDC_cxChar;
++#endif
+ #ifdef PDC_WIDE
+         if( 2 == PDC_wcwidth( (uint32_t)( *srcp & A_CHARTEXT)))  /* allow extra */
+             clip_rect.right += PDC_cxChar;        /* space for a fullwidth char */
+ #endif
+         clip_rect.bottom = clip_rect.top + PDC_cyChar;
+-        ExtTextOutW( hdc, clip_rect.left, clip_rect.top,
+-                           ETO_CLIPPED | ETO_OPAQUE, &clip_rect,
+-                           buff, olen, (olen > 1 ? lpDx : NULL));
++
++        /* ----------------------------------------------------------------
++         * Color emoji path: Direct2D DrawTextLayout with
++         * D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT renders COLR/PNG color
++         * glyphs.  GDI ExtTextOutW and IDWriteBitmapRenderTarget are both
++         * monochrome-only regardless of font.
++         *
++         * When a partial line refresh lands in the middle of a grapheme
++         * cluster, DirectWrite can receive only part of a ZWJ sequence.
++         * Expand the run against the full line buffer so DWrite sees the
++         * whole cluster.
++         * ---------------------------------------------------------------- */
++        if (has_emoji_or_joiner && g_d2d_available)
++        {
++            PACKED_RGB fg_rgb, bg_rgb;
++            const chtype *full_line = srcp - x;
++            int start_col = x;
++            int end_col = x + i; /* exclusive */
++
++            if (start_col < 0)
++                start_col = 0;
++            if (end_col > SP->cols)
++                end_col = SP->cols;
++
++            while (start_col > 0)
++            {
++                uint32_t prev = (uint32_t)(full_line[start_col - 1] & A_CHARTEXT);
++                if (prev == 0x200D
++                 || (prev >= 0xFE00 && prev <= 0xFE0F)
++                 || (prev >= 0x1F3FB && prev <= 0x1F3FF)
++                 || (prev >= 0x1F1E6 && prev <= 0x1F1FF))
++                    start_col--;
++                else
++                    break;
++            }
++
++            while (end_col < SP->cols)
++            {
++                uint32_t cur = (uint32_t)(full_line[end_col] & A_CHARTEXT);
++
++                if (cur == 0x200D)
++                {
++                    if (end_col + 1 < SP->cols)
++                        end_col += 2;
++                    else
++                        break;
++                }
++                else if ((cur >= 0xFE00 && cur <= 0xFE0F)
++                      || (cur >= 0x1F3FB && cur <= 0x1F3FF)
++                      || (cur >= 0x1F1E6 && cur <= 0x1F1FF))
++                    end_col++;
++                else
++                    break;
++            }
++
++            int run_cells = end_col - start_col;
++            if (run_cells <= 0)
++                run_cells = i;
++
++            int px_w = 0;
++            for (int t = start_col; t < start_col + run_cells; t++)
++            {
++                uint32_t cp = (uint32_t)(full_line[t] & A_CHARTEXT);
++                int w = PDC_wcwidth(cp);
++                px_w += (w == 2) ? 2 * PDC_cxChar : PDC_cxChar;
++            }
++
++            clip_rect.left = start_col * PDC_cxChar;
++            clip_rect.right = clip_rect.left + px_w;
++
++            if (start_col < x)
++            {
++                int left_shift = x - start_col;
++                srcp -= left_shift;
++                i += left_shift;
++                x = start_col;
++            }
++
++            if (run_cells > i)
++                i = run_cells;
++
++            PDC_get_rgb_values(*srcp, &fg_rgb, &bg_rgb);
++            PDC_d2d_render_emoji(
++                hdc,
++                clip_rect.left, clip_rect.top,
++                srcp, i, px_w,
++                (COLORREF)fg_rgb, (COLORREF)bg_rgb,
++                PDC_cxChar, PDC_cyChar);
++        }
++        else
++        {
++            ExtTextOutW( hdc, clip_rect.left, clip_rect.top,
++                               ETO_CLIPPED | ETO_OPAQUE, &clip_rect,
++                               buff, olen, (olen > 1 ? lpDx : NULL));
++        }
+ #ifdef WA_TOP
+         if( *srcp & (WA_UNDERLINE | WA_RIGHT | WA_LEFT | WA_TOP | WA_STRIKEOUT))
+ #else
+@@ -557,6 +926,13 @@
+ 
+         assert( len);
+ #ifdef PDC_WIDE
++        while( len && (srcp[len - 1] & A_CHARTEXT) == MAX_UNICODE)
++            len--;
++        if( !len)
++        {
++            ReleaseDC( PDC_hWnd, hdc);
++            return;
++        }
+         assert( (srcp[len - 1] & A_CHARTEXT) != MAX_UNICODE);
+ #endif
+         PDC_transform_line_given_hdc( hdc, lineno, x, len, srcp);

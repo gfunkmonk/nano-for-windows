@@ -140,7 +140,7 @@ jobs:
   build:
     needs: [ checks ]
     if: needs.checks.outputs.cancel != 'true'
-    name: "⚙️ nano4Win ${{ matrix.pretty }} $(${{ matrix.term_pretty }}) build"
+    name: "⚙️ nano4Win ${{ matrix.pretty }} (${{ matrix.term_pretty }}) build"
     runs-on: ubuntu-latest
     container: alpine:edge
     strategy:
