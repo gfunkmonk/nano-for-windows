@@ -1,0 +1,316 @@
+--- a/curses/wingui/pdcdisp.c	2026-05-19 20:54:02.052418228 -0400
++++ b/curses/wingui/pdcdisp.c	2026-05-19 20:57:28.212416874 -0400
+@@ -1,8 +1,13 @@
+ /* Public Domain Curses */
+-
++#define COBJMACROS
+ #include "pdcwin.h"
+ #define USE_UNICODE_ACS_CHARS 1
+-
++/* Include dwrite.h with INITGUID so DEFINE_GUID emits actual storage for
++   IID_IDWriteFactory and friends — no need to link uuid.lib or dwrite.lib.
++   We load DWriteCreateFactory at runtime via GetProcAddress. */
++#define INITGUID
++#include <dwrite.h>
++#undef INITGUID
+ #include "../common/acs_defs.h"
+ 
+ #include <assert.h>
+@@ -329,6 +334,243 @@
+ 
+ #define BUFFSIZE 50
+ 
++/* ---------------------------------------------------------------------------
++ * Color emoji rendering via DirectWrite + IDWriteBitmapRenderTarget
++ *
++ * GDI's ExtTextOutW is fundamentally monochrome — it cannot render the COLR
++ * or PNG glyph tables used by Segoe UI Emoji.  DirectWrite can.
++ *
++ * We implement a minimal IDWriteTextRenderer in C that forwards DrawGlyphRun
++ * calls to IDWriteBitmapRenderTarget_DrawGlyphRun.  IDWriteTextLayout_Draw()
++ * drives the renderer, which handles font fallback and ZWJ cluster shaping.
++ * The result is BitBlt'd onto the real window HDC.
++ *
++ * All COM objects are loaded lazily via LoadLibrary/GetProcAddress so the
++ * binary still runs on systems without dwrite.dll (pre-Win7).  If init fails
++ * g_dwrite_available stays FALSE and we fall back to monochrome ExtTextOutW.
++ * -------------------------------------------------------------------------*/
++
++/* --- Minimal IDWriteTextRenderer implementation in C -------------------- */
++
++typedef struct PDC_TextRenderer PDC_TextRenderer;
++
++typedef struct {
++    /* IUnknown */
++    HRESULT (STDMETHODCALLTYPE *QueryInterface)(PDC_TextRenderer *, REFIID, void **);
++    ULONG   (STDMETHODCALLTYPE *AddRef)(PDC_TextRenderer *);
++    ULONG   (STDMETHODCALLTYPE *Release)(PDC_TextRenderer *);
++    /* IDWritePixelSnapping */
++    HRESULT (STDMETHODCALLTYPE *IsPixelSnappingDisabled)(PDC_TextRenderer *, void *, WINBOOL *);
++    HRESULT (STDMETHODCALLTYPE *GetCurrentTransform)(PDC_TextRenderer *, void *, DWRITE_MATRIX *);
++    HRESULT (STDMETHODCALLTYPE *GetPixelsPerDip)(PDC_TextRenderer *, void *, FLOAT *);
++    /* IDWriteTextRenderer */
++    HRESULT (STDMETHODCALLTYPE *DrawGlyphRun)(PDC_TextRenderer *, void *,
++                FLOAT, FLOAT, DWRITE_MEASURING_MODE,
++                const DWRITE_GLYPH_RUN *, const DWRITE_GLYPH_RUN_DESCRIPTION *,
++                IUnknown *);
++    HRESULT (STDMETHODCALLTYPE *DrawUnderline)(PDC_TextRenderer *, void *,
++                FLOAT, FLOAT, const DWRITE_UNDERLINE *, IUnknown *);
++    HRESULT (STDMETHODCALLTYPE *DrawStrikethrough)(PDC_TextRenderer *, void *,
++                FLOAT, FLOAT, const DWRITE_STRIKETHROUGH *, IUnknown *);
++    HRESULT (STDMETHODCALLTYPE *DrawInlineObject)(PDC_TextRenderer *, void *,
++                FLOAT, FLOAT, IDWriteInlineObject *, WINBOOL, WINBOOL, IUnknown *);
++} PDC_TextRendererVtbl;
++
++struct PDC_TextRenderer {
++    const PDC_TextRendererVtbl   *lpVtbl;
++    IDWriteBitmapRenderTarget    *target;
++    IDWriteRenderingParams       *params;
++    COLORREF                      color;
++};
++
++static HRESULT STDMETHODCALLTYPE pdc_tr_QueryInterface(
++        PDC_TextRenderer *This, REFIID riid, void **ppv)
++{
++    (void)This; (void)riid; *ppv = NULL; return E_NOINTERFACE;
++}
++static ULONG STDMETHODCALLTYPE pdc_tr_AddRef(PDC_TextRenderer *This)
++    { (void)This; return 1; }
++static ULONG STDMETHODCALLTYPE pdc_tr_Release(PDC_TextRenderer *This)
++    { (void)This; return 1; }
++static HRESULT STDMETHODCALLTYPE pdc_tr_IsPixelSnappingDisabled(
++        PDC_TextRenderer *This, void *ctx, WINBOOL *disabled)
++    { (void)This; (void)ctx; *disabled = FALSE; return S_OK; }
++static HRESULT STDMETHODCALLTYPE pdc_tr_GetCurrentTransform(
++        PDC_TextRenderer *This, void *ctx, DWRITE_MATRIX *m)
++{
++    (void)ctx;
++    return This->target->lpVtbl->GetCurrentTransform(This->target, m);
++}
++static HRESULT STDMETHODCALLTYPE pdc_tr_GetPixelsPerDip(
++        PDC_TextRenderer *This, void *ctx, FLOAT *ppd)
++{
++    (void)ctx;
++    *ppd = This->target->lpVtbl->GetPixelsPerDip(This->target);
++    return S_OK;
++}
++static HRESULT STDMETHODCALLTYPE pdc_tr_DrawGlyphRun(
++        PDC_TextRenderer *This, void *ctx,
++        FLOAT baseX, FLOAT baseY,
++        DWRITE_MEASURING_MODE mode,
++        const DWRITE_GLYPH_RUN *run,
++        const DWRITE_GLYPH_RUN_DESCRIPTION *descr,
++        IUnknown *effect)
++{
++    (void)ctx; (void)descr; (void)effect;
++    return This->target->lpVtbl->DrawGlyphRun(
++            This->target, baseX, baseY, mode, run, This->params, This->color, NULL);
++}
++static HRESULT STDMETHODCALLTYPE pdc_tr_DrawUnderline(
++        PDC_TextRenderer *This, void *ctx,
++        FLOAT x, FLOAT y, const DWRITE_UNDERLINE *u, IUnknown *e)
++    { (void)This;(void)ctx;(void)x;(void)y;(void)u;(void)e; return S_OK; }
++static HRESULT STDMETHODCALLTYPE pdc_tr_DrawStrikethrough(
++        PDC_TextRenderer *This, void *ctx,
++        FLOAT x, FLOAT y, const DWRITE_STRIKETHROUGH *s, IUnknown *e)
++    { (void)This;(void)ctx;(void)x;(void)y;(void)s;(void)e; return S_OK; }
++static HRESULT STDMETHODCALLTYPE pdc_tr_DrawInlineObject(
++        PDC_TextRenderer *This, void *ctx,
++        FLOAT x, FLOAT y, IDWriteInlineObject *o,
++        WINBOOL sw, WINBOOL rtl, IUnknown *e)
++    { (void)This;(void)ctx;(void)x;(void)y;(void)o;(void)sw;(void)rtl;(void)e; return S_OK; }
++
++static const PDC_TextRendererVtbl g_pdc_tr_vtbl = {
++    pdc_tr_QueryInterface,
++    pdc_tr_AddRef,
++    pdc_tr_Release,
++    pdc_tr_IsPixelSnappingDisabled,
++    pdc_tr_GetCurrentTransform,
++    pdc_tr_GetPixelsPerDip,
++    pdc_tr_DrawGlyphRun,
++    pdc_tr_DrawUnderline,
++    pdc_tr_DrawStrikethrough,
++    pdc_tr_DrawInlineObject,
++};
++
++/* --- DirectWrite state -------------------------------------------------- */
++
++static bool g_dwrite_tried     = FALSE;
++static bool g_dwrite_available = FALSE;
++
++static IDWriteFactory        *g_dw_factory  = NULL;
++static IDWriteGdiInterop     *g_dw_interop  = NULL;
++static IDWriteTextFormat     *g_dw_fmt      = NULL;
++static IDWriteBitmapRenderTarget *g_dw_rt   = NULL;
++static IDWriteRenderingParams    *g_dw_rp   = NULL;
++static int g_rt_w = 0, g_rt_h = 0;
++
++typedef HRESULT (WINAPI *PFN_DWriteCreateFactory)(
++    DWRITE_FACTORY_TYPE, REFIID, IUnknown **);
++
++static void PDC_dwrite_init(void)
++{
++    HMODULE hDWrite;
++    PFN_DWriteCreateFactory pfn;
++    HRESULT hr;
++    extern int   PDC_font_size;
++    extern TCHAR PDC_font_name[128];
++    float pt_size;
++
++    if (g_dwrite_tried) return;
++    g_dwrite_tried = TRUE;
++
++    hDWrite = LoadLibraryW(L"dwrite.dll");
++    if (!hDWrite) return;
++
++    pfn = (PFN_DWriteCreateFactory)GetProcAddress(hDWrite, "DWriteCreateFactory");
++    if (!pfn) return;
++
++    hr = pfn(DWRITE_FACTORY_TYPE_SHARED, &IID_IDWriteFactory, (IUnknown **)&g_dw_factory);
++    if (FAILED(hr) || !g_dw_factory) return;
++
++    hr = IDWriteFactory_GetGdiInterop(g_dw_factory, &g_dw_interop);
++    if (FAILED(hr) || !g_dw_interop) return;
++
++    pt_size = (PDC_font_size > 0) ? (float)PDC_font_size : 12.0f;
++    hr = IDWriteFactory_CreateTextFormat(
++            g_dw_factory,
++            PDC_font_name[0] ? PDC_font_name : L"Courier New",
++            NULL,
++            DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL,
++            DWRITE_FONT_STRETCH_NORMAL, pt_size, L"", &g_dw_fmt);
++    if (FAILED(hr) || !g_dw_fmt) return;
++
++    hr = IDWriteFactory_CreateRenderingParams(g_dw_factory, &g_dw_rp);
++    if (FAILED(hr)) return;
++
++    g_dwrite_available = TRUE;
++}
++
++static void PDC_dwrite_cleanup(void)
++{
++    if (g_dw_rt)      { IDWriteBitmapRenderTarget_Release(g_dw_rt);  g_dw_rt = NULL; }
++    if (g_dw_rp)      { IDWriteRenderingParams_Release(g_dw_rp);     g_dw_rp = NULL; }
++    if (g_dw_fmt)     { IDWriteTextFormat_Release(g_dw_fmt);         g_dw_fmt = NULL; }
++    if (g_dw_interop) { IDWriteGdiInterop_Release(g_dw_interop);     g_dw_interop = NULL; }
++    if (g_dw_factory) { IDWriteFactory_Release(g_dw_factory);        g_dw_factory = NULL; }
++    g_dwrite_tried = g_dwrite_available = FALSE;
++    g_rt_w = g_rt_h = 0;
++}
++
++/* Render one emoji run via DirectWrite and blit it onto hdc at (dst_x, dst_y).
++ * buff/nchars: UTF-16 string (may contain surrogate pairs for SMP emoji).
++ * ncells: terminal columns the run occupies.  fg/bg: COLORREF colours.
++ * cell_w/h: pixel size of one terminal cell. */
++static void PDC_dwrite_render_emoji(
++        HDC hdc, int dst_x, int dst_y,
++        const wchar_t *buff, int nchars, int ncells,
++        COLORREF fg, COLORREF bg, int cell_w, int cell_h)
++{
++    int px_w = cell_w * ncells;
++    int px_h = cell_h;
++    HRESULT hr;
++    IDWriteTextLayout *layout = NULL;
++    PDC_TextRenderer renderer;
++    HDC rt_hdc;
++    RECT rc;
++    HBRUSH hbr;
++
++    /* (Re)create the render target if cell size changed. */
++    if (!g_dw_rt || px_w != g_rt_w || px_h != g_rt_h)
++    {
++        if (g_dw_rt) { IDWriteBitmapRenderTarget_Release(g_dw_rt); g_dw_rt = NULL; }
++        hr = IDWriteGdiInterop_CreateBitmapRenderTarget(
++                g_dw_interop, NULL, (UINT32)px_w, (UINT32)px_h, &g_dw_rt);
++        if (FAILED(hr) || !g_dw_rt) return;
++        g_rt_w = px_w; g_rt_h = px_h;
++    }
++
++    rt_hdc = IDWriteBitmapRenderTarget_GetMemoryDC(g_dw_rt);
++
++    /* Fill background. */
++    rc.left = 0; rc.top = 0; rc.right = px_w; rc.bottom = px_h;
++    hbr = CreateSolidBrush(bg);
++    FillRect(rt_hdc, &rc, hbr);
++    DeleteObject(hbr);
++
++    /* Build text layout. */
++    hr = IDWriteFactory_CreateTextLayout(
++            g_dw_factory, buff, (UINT32)nchars,
++            g_dw_fmt, (FLOAT)px_w, (FLOAT)px_h, &layout);
++    if (FAILED(hr) || !layout) return;
++
++    /* Set up our minimal renderer. */
++    renderer.lpVtbl = &g_pdc_tr_vtbl;
++    renderer.target = g_dw_rt;
++    renderer.params = g_dw_rp;
++    renderer.color  = fg;
++
++    /* Draw — DirectWrite handles font fallback, ZWJ clusters, COLR colour. */
++    IDWriteTextLayout_Draw(layout, NULL,
++            (IDWriteTextRenderer *)&renderer,
++            0.0f, (FLOAT)(cell_h * 0.1f));   /* small top offset for ascender */
++
++    IDWriteTextLayout_Release(layout);
++
++    /* Blit the rendered bitmap onto the real window DC. */
++    BitBlt(hdc, dst_x, dst_y, px_w, px_h, rt_hdc, 0, 0, SRCCOPY);
++}
++
+ static bool PDC_has_emoji_or_joiner( const chtype ch)
+ {
+     const uint32_t c = (uint32_t)(ch & A_CHARTEXT);
+@@ -353,6 +595,7 @@
+ 
+     if( !srcp)             /* just freeing up fonts */
+     {
++        PDC_dwrite_cleanup();
+         for( i = 0; i < N_CACHED_FONTS; i++)
+             if( hFonts[i])
+             {
+@@ -372,6 +615,9 @@
+     assert( len <= SP->cols - x);
+     assert( lineno < SP->lines && len > 0 && lineno >= 0);
+ #ifdef PDC_WIDE
++    /* Lazy-init DirectWrite on first render call. */
++    PDC_dwrite_init();
++
+     while( len && (srcp[len - 1] & A_CHARTEXT) == MAX_UNICODE)
+         len--;
+     if( !len)
+@@ -514,9 +760,32 @@
+             clip_rect.right += PDC_cxChar;        /* space for a fullwidth char */
+ #endif
+         clip_rect.bottom = clip_rect.top + PDC_cyChar;
+-        ExtTextOutW( hdc, clip_rect.left, clip_rect.top,
+-                           ETO_CLIPPED | ETO_OPAQUE, &clip_rect,
+-                           buff, olen, (olen > 1 ? lpDx : NULL));
++
++        /* ----------------------------------------------------------------
++         * Color emoji path: use DirectWrite so COLR/PNG glyph tables in
++         * Segoe UI Emoji are rendered in full colour.  GDI ExtTextOutW
++         * only produces monochrome glyphs.
++         * ---------------------------------------------------------------- */
++        if (has_emoji_or_joiner && g_dwrite_available)
++        {
++            PACKED_RGB fg_rgb, bg_rgb;
++            int ncells = (clip_rect.right - clip_rect.left) / PDC_cxChar;
++            if (ncells < 1) ncells = 1;
++            PDC_get_rgb_values(*srcp, &fg_rgb, &bg_rgb);
++            PDC_dwrite_render_emoji(
++                    hdc,
++                    clip_rect.left, clip_rect.top,
++                    buff, olen, ncells,
++                    (COLORREF)fg_rgb, (COLORREF)bg_rgb,
++                    PDC_cxChar, PDC_cyChar);
++        }
++        else
++        {
++            /* Standard monochrome GDI path for regular text. */
++            ExtTextOutW( hdc, clip_rect.left, clip_rect.top,
++                               ETO_CLIPPED | ETO_OPAQUE, &clip_rect,
++                               buff, olen, (olen > 1 ? lpDx : NULL));
++        }
+ #ifdef WA_TOP
+         if( *srcp & (WA_UNDERLINE | WA_RIGHT | WA_LEFT | WA_TOP | WA_STRIKEOUT))
+ #else
