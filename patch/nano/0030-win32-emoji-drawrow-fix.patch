@@ -7,9 +7,7 @@
  	if (is_shorter || ISSET(SOFTWRAP))
 -		wclrtoeol(midwin);
 +#ifdef _WIN32
-+		/* On Windows, explicitly write spaces to ensure emoji artifacts are cleared.
-+		 * wclrtoeol() may not properly clear double-width emoji characters.
-+		 * We need to fill the rest of the line from current position to the end. */
++		/* Windows: explicitly write spaces to clear emoji artifacts. */
 +		{
 +			int curx, cury;
 +			getyx(midwin, cury, curx);
@@ -23,4 +21,3 @@
  
  #ifndef NANO_TINY
  	if (sidebar)
-
