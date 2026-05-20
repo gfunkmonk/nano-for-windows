@@ -1,12 +1,10 @@
---- a/curses/wingui/pdcdisp.c	2026-05-19 22:04:44.332390369 -0400
-+++ b/curses/wingui/pdcdisp.c	2026-05-19 22:08:15.412388983 -0400
-@@ -1,7 +1,16 @@
- /* Public Domain Curses */
+--- a/curses/wingui/pdcdisp.c	2026-05-19 22:32:34.402379401 -0400
++++ b/curses/wingui/pdcdisp.c	2026-05-19 22:33:04.982379201 -0400
+@@ -2,6 +2,15 @@
  
-+#define CINTERFACE
-+#define COBJMACROS
  #include "pdcwin.h"
  #define USE_UNICODE_ACS_CHARS 1
++#define COBJMACROS
 +/* INITGUID emits storage for all GUIDs in dwrite.h and d2d1.h so we don't
 +   need to link uuid.lib/dwrite.lib/d2d1.lib — everything is loaded at
 +   runtime via LoadLibrary/GetProcAddress. */
@@ -14,10 +12,11 @@
 +#include <dwrite.h>
 +#include <d2d1.h>
 +#undef INITGUID
++#undef COBJMACROS
  
  #include "../common/acs_defs.h"
  
-@@ -329,6 +337,208 @@
+@@ -329,6 +338,208 @@
  
  #define BUFFSIZE 50
  
@@ -226,7 +225,7 @@
  static bool PDC_has_emoji_or_joiner( const chtype ch)
  {
      const uint32_t c = (uint32_t)(ch & A_CHARTEXT);
-@@ -353,6 +563,7 @@
+@@ -353,6 +564,7 @@
  
      if( !srcp)             /* just freeing up fonts */
      {
@@ -234,7 +233,7 @@
          for( i = 0; i < N_CACHED_FONTS; i++)
              if( hFonts[i])
              {
-@@ -372,6 +583,9 @@
+@@ -372,6 +584,9 @@
      assert( len <= SP->cols - x);
      assert( lineno < SP->lines && len > 0 && lineno >= 0);
  #ifdef PDC_WIDE
@@ -244,7 +243,7 @@
      while( len && (srcp[len - 1] & A_CHARTEXT) == MAX_UNICODE)
          len--;
      if( !len)
-@@ -514,9 +728,32 @@
+@@ -514,9 +729,32 @@
              clip_rect.right += PDC_cxChar;        /* space for a fullwidth char */
  #endif
          clip_rect.bottom = clip_rect.top + PDC_cyChar;
