@@ -47,7 +47,7 @@
  #ifdef USING_COMBINING_CHARACTER_SCHEME
              if( ch > 0xffff && ch < MAX_UNICODE)  /* use Unicode surrogates to fit */
              {               /* >64K values into 16-bit wchar_t: */
-@@ -485,7 +502,10 @@
+@@ -485,8 +502,22 @@
          clip_rect.bottom = clip_rect.top + PDC_cyChar;
          ExtTextOutW( hdc, clip_rect.left, clip_rect.top,
                             ETO_CLIPPED | ETO_OPAQUE, &clip_rect,
@@ -56,7 +56,17 @@
 +                           /* Let GDI shape emoji/ZWJ clusters naturally. */
 +                           (olen > 1 && !has_emoji_or_joiner ?
 +                                            lpDx : NULL));
++
++        /* BUGFIX: For emoji, explicitly clear the 2nd cell to prevent artifacts
++         * from previous screen content when paging. Double-width emoji need both
++         * cells cleared by ETO_OPAQUE, but GDI may not handle this correctly. */
++        if (has_emoji_or_joiner && olen > 0)
++        {
++            RECT clear_rect = {clip_rect.right, clip_rect.top,
++                               clip_rect.right + PDC_cxChar, clip_rect.bottom};
++            FillRect(hdc, &clear_rect, PDC_background_brush);
++        }
++
  #ifdef WA_TOP
          if( *srcp & (WA_UNDERLINE | WA_RIGHT | WA_LEFT | WA_TOP | WA_STRIKEOUT))
  #else
-
