@@ -249,7 +249,7 @@
      while( len && (srcp[len - 1] & A_CHARTEXT) == MAX_UNICODE)
          len--;
      if( !len)
-@@ -514,9 +735,32 @@
+@@ -514,9 +735,69 @@
              clip_rect.right += PDC_cxChar;        /* space for a fullwidth char */
  #endif
          clip_rect.bottom = clip_rect.top + PDC_cyChar;
