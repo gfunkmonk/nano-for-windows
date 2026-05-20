@@ -257,30 +257,67 @@
 -                           ETO_CLIPPED | ETO_OPAQUE, &clip_rect,
 -                           buff, olen, (olen > 1 ? lpDx : NULL));
 +
++        ExtTextOutW( hdc, clip_rect.left, clip_rect.top,
++                           ETO_CLIPPED | ETO_OPAQUE, &clip_rect,
++                           buff, olen, (olen > 1 ? lpDx : NULL));
++
 +        /* ----------------------------------------------------------------
-+         * Color emoji path: Direct2D DrawTextLayout with
-+         * D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT renders COLR/PNG color
-+         * glyphs.  GDI ExtTextOutW and IDWriteBitmapRenderTarget are both
-+         * monochrome-only regardless of font.
++         * Overlay only emoji spans with Direct2D color-font rendering.
++         * This keeps non-emoji text on the regular GDI path (font fallback,
++         * spacing, ACS behavior), while still enabling color emoji glyphs.
 +         * ---------------------------------------------------------------- */
 +        if (has_emoji_or_joiner && g_d2d_available)
 +        {
 +            PACKED_RGB fg_rgb, bg_rgb;
-+            int ncells = (clip_rect.right - clip_rect.left) / PDC_cxChar;
-+            if (ncells < 1) ncells = 1;
++            int j, span_start = -1, span_x_cells = 0, x_cells = 0;
++
 +            PDC_get_rgb_values(*srcp, &fg_rgb, &bg_rgb);
-+            PDC_d2d_render_emoji(
-+                    hdc,
-+                    clip_rect.left, clip_rect.top,
-+                    srcp, i,
-+                    (COLORREF)fg_rgb, (COLORREF)bg_rgb,
-+                    PDC_cxChar, PDC_cyChar);
-+        }
-+        else
-+        {
-+            ExtTextOutW( hdc, clip_rect.left, clip_rect.top,
-+                               ETO_CLIPPED | ETO_OPAQUE, &clip_rect,
-+                               buff, olen, (olen > 1 ? lpDx : NULL));
++
++            for (j = 0; j < i; j++)
++            {
++                const uint32_t cp = (uint32_t)(srcp[j] & A_CHARTEXT);
++                const bool is_emoji = PDC_has_emoji_or_joiner(srcp[j]);
++                const bool is_emoji_cont = (cp == MAX_UNICODE && span_start >= 0);
++
++                if (span_start < 0)
++                {
++                    if (is_emoji)
++                    {
++                        span_start = j;
++                        span_x_cells = x_cells;
++                    }
++                }
++                else if (!is_emoji && !is_emoji_cont)
++                {
++                    const int span_cells = j - span_start;
++
++                    if (span_cells > 0)
++                        PDC_d2d_render_emoji(
++                                hdc,
++                                clip_rect.left + span_x_cells * PDC_cxChar,
++                                clip_rect.top,
++                                srcp + span_start, span_cells,
++                                (COLORREF)fg_rgb, (COLORREF)bg_rgb,
++                                PDC_cxChar, PDC_cyChar);
++                    span_start = -1;
++                }
++
++                x_cells++;
++            }
++
++            if (span_start >= 0)
++            {
++                const int span_cells = i - span_start;
++
++                if (span_cells > 0)
++                    PDC_d2d_render_emoji(
++                            hdc,
++                            clip_rect.left + span_x_cells * PDC_cxChar,
++                            clip_rect.top,
++                            srcp + span_start, span_cells,
++                            (COLORREF)fg_rgb, (COLORREF)bg_rgb,
++                            PDC_cxChar, PDC_cyChar);
++            }
 +        }
  #ifdef WA_TOP
          if( *srcp & (WA_UNDERLINE | WA_RIGHT | WA_LEFT | WA_TOP | WA_STRIKEOUT))
