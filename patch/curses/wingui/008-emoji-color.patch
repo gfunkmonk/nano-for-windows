@@ -1,8 +1,9 @@
 --- a/curses/wingui/pdcdisp.c	2026-05-19 22:04:44.332390369 -0400
 +++ b/curses/wingui/pdcdisp.c	2026-05-19 22:08:15.412388983 -0400
-@@ -1,7 +1,15 @@
+@@ -1,7 +1,16 @@
  /* Public Domain Curses */
  
++#define CINTERFACE
 +#define COBJMACROS
  #include "pdcwin.h"
  #define USE_UNICODE_ACS_CHARS 1
