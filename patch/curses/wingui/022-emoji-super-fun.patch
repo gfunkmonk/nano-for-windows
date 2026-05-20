@@ -1,5 +1,5 @@
---- a/curses/wingui/pdcdisp.c	2026-05-19 23:40:23.012352683 -0400
-+++ b/curses/wingui/pdcdisp.c	2026-05-19 23:43:18.302351532 -0400
+--- a/curses/wingui/pdcdisp.c	2026-05-20 10:46:26.828836690 -0400
++++ b/curses/wingui/pdcdisp.c	2026-05-20 10:46:53.198836517 -0400
 @@ -2,6 +2,21 @@
  
  #include "pdcwin.h"
@@ -234,7 +234,7 @@
  static bool PDC_has_emoji_or_joiner( const chtype ch)
  {
      const uint32_t c = (uint32_t)(ch & A_CHARTEXT);
-@@ -353,6 +570,7 @@
+@@ -353,6 +573,7 @@
  
      if( !srcp)             /* just freeing up fonts */
      {
@@ -242,9 +242,32 @@
          for( i = 0; i < N_CACHED_FONTS; i++)
              if( hFonts[i])
              {
-@@ -372,6 +590,9 @@
+@@ -371,7 +592,32 @@
+     assert( x >= 0);
      assert( len <= SP->cols - x);
      assert( lineno < SP->lines && len > 0 && lineno >= 0);
++
++    /* Quick conservative fix: when only a very small slice is being
++     * redrawn (e.g. length <= 3 cells), expand the slice by +/-2 columns
++     * so grapheme clusters (ZWJ, variation selectors, skin-tone modifiers,
++     * regional indicators) are less likely to be split by the clip region.
++     * This adjusts the local `x`, `len`, and `srcp` variables only and
++     * is intentionally conservative to avoid changing global behavior.
++     */
++    if (len <= 3)
++    {
++        const int expand = 2;
++        int new_x = x - expand;
++        if (new_x < 0) new_x = 0;
++        int shift = x - new_x; /* how many cells we moved back */
++        int new_len = len + shift + expand; /* add both left and right expansion */
++        if (new_len > SP->cols - new_x) new_len = SP->cols - new_x;
++
++        /* Move the src pointer back by `shift` cells so it points at new_x. */
++        srcp = srcp - shift;
++        x = new_x;
++        len = new_len;
++    }
  #ifdef PDC_WIDE
 +    /* Lazy-init Direct2D + DirectWrite on first render call. */
 +    PDC_d2d_init();
@@ -252,7 +275,7 @@
      while( len && (srcp[len - 1] & A_CHARTEXT) == MAX_UNICODE)
          len--;
      if( !len)
-@@ -514,9 +735,65 @@
+@@ -514,9 +760,101 @@
              clip_rect.right += PDC_cxChar;        /* space for a fullwidth char */
  #endif
          clip_rect.bottom = clip_rect.top + PDC_cyChar;
@@ -265,52 +288,88 @@
 +         * D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT renders COLR/PNG color
 +         * glyphs.  GDI ExtTextOutW and IDWriteBitmapRenderTarget are both
 +         * monochrome-only regardless of font.
++         *
++         * When a partial line refresh lands in the middle of a grapheme
++         * cluster, DirectWrite can receive only part of a ZWJ sequence.
++         * Expand the run against the full line buffer so DWrite sees the
++         * whole cluster.
 +         * ---------------------------------------------------------------- */
 +        if (has_emoji_or_joiner && g_d2d_available)
 +        {
 +            PACKED_RGB fg_rgb, bg_rgb;
-+            int px_w = clip_rect.right - clip_rect.left;
-+            /* Extend the run to include ZWJ clusters and modifiers so the
-+             * DirectWrite layout sees the full grapheme sequence. */
-+            int run_cells = i;
-+            for (int k = i; k < len; k++) {
-+                uint32_t cj = (uint32_t)(srcp[k] & A_CHARTEXT);
-+                if (cj == 0x200D) {
-+                    if (k + 1 < len) {
-+                        run_cells = k + 2;
-+                        for (int tt = k; tt < run_cells; tt++) {
-+                            int w = PDC_wcwidth((uint32_t)(srcp[tt] & A_CHARTEXT));
-+                            px_w += (w == 2) ? 2 * PDC_cxChar : PDC_cxChar;
-+                        }
-+                        k = run_cells - 1;
-+                        continue;
-+                    }
++            const chtype *full_line = srcp - x;
++            int start_col = x;
++            int end_col = x + i; /* exclusive */
++
++            if (start_col < 0)
++                start_col = 0;
++            if (end_col > SP->cols)
++                end_col = SP->cols;
++
++            while (start_col > 0)
++            {
++                uint32_t prev = (uint32_t)(full_line[start_col - 1] & A_CHARTEXT);
++                if (prev == 0x200D
++                 || (prev >= 0xFE00 && prev <= 0xFE0F)
++                 || (prev >= 0x1F3FB && prev <= 0x1F3FF)
++                 || (prev >= 0x1F1E6 && prev <= 0x1F1FF))
++                    start_col--;
++                else
 +                    break;
-+                }
-+                if ((cj >= 0xFE00 && cj <= 0xFE0F) || (cj >= 0x1F3FB && cj <= 0x1F3FF)) {
-+                    run_cells = k + 1;
-+                    int w = PDC_wcwidth(cj);
-+                    px_w += (w == 2) ? 2 * PDC_cxChar : PDC_cxChar;
-+                    continue;
-+                }
-+                if (k > 0 && (uint32_t)(srcp[k - 1] & A_CHARTEXT) == 0x200D) {
-+                    run_cells = k + 1;
-+                    int w = PDC_wcwidth((uint32_t)(srcp[k] & A_CHARTEXT));
-+                    px_w += (w == 2) ? 2 * PDC_cxChar : PDC_cxChar;
-+                    continue;
-+                }
-+                break;
 +            }
 +
-+            /* Expand clip rectangle to match the extended D2D run width. */
++            while (end_col < SP->cols)
++            {
++                uint32_t cur = (uint32_t)(full_line[end_col] & A_CHARTEXT);
++
++                if (cur == 0x200D)
++                {
++                    if (end_col + 1 < SP->cols)
++                        end_col += 2;
++                    else
++                        break;
++                }
++                else if ((cur >= 0xFE00 && cur <= 0xFE0F)
++                      || (cur >= 0x1F3FB && cur <= 0x1F3FF)
++                      || (cur >= 0x1F1E6 && cur <= 0x1F1FF))
++                    end_col++;
++                else
++                    break;
++            }
++
++            int run_cells = end_col - start_col;
++            if (run_cells <= 0)
++                run_cells = i;
++
++            int px_w = 0;
++            for (int t = start_col; t < start_col + run_cells; t++)
++            {
++                uint32_t cp = (uint32_t)(full_line[t] & A_CHARTEXT);
++                int w = PDC_wcwidth(cp);
++                px_w += (w == 2) ? 2 * PDC_cxChar : PDC_cxChar;
++            }
++
++            clip_rect.left = start_col * PDC_cxChar;
 +            clip_rect.right = clip_rect.left + px_w;
++
++            if (start_col < x)
++            {
++                int left_shift = x - start_col;
++                srcp -= left_shift;
++                i += left_shift;
++                x = start_col;
++            }
++
++            if (run_cells > i)
++                i = run_cells;
++
 +            PDC_get_rgb_values(*srcp, &fg_rgb, &bg_rgb);
 +            PDC_d2d_render_emoji(
-+                    hdc,
-+                    clip_rect.left, clip_rect.top,
-+                    srcp, run_cells, px_w,
-+                    (COLORREF)fg_rgb, (COLORREF)bg_rgb,
-+                    PDC_cxChar, PDC_cyChar);
++                hdc,
++                clip_rect.left, clip_rect.top,
++                srcp, i, px_w,
++                (COLORREF)fg_rgb, (COLORREF)bg_rgb,
++                PDC_cxChar, PDC_cyChar);
 +        }
 +        else
 +        {
