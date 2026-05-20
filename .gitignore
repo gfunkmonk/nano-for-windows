@@ -1,0 +1,11 @@
+build/
+toolchain/
+dist/
+llvm/
+*.zip
+*.7z
+*.tar.*
+*.tar
+*.exe
+*.diff
+

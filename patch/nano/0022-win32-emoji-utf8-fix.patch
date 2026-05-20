@@ -1,47 +1,113 @@
---- a/src/winio.c	2026-05-05 00:00:00.000000000 -0400
-+++ b/src/winio.c	2026-05-05 00:00:00.000000000 -0400
-@@ -1055,8 +1055,14 @@
+--- a/src/winio.c	2026-05-15 10:06:13.484943033 -0400
++++ b/src/winio.c	2026-05-15 10:12:32.034940547 -0400
+@@ -1073,9 +1073,15 @@
+ #endif
  #ifdef ENABLE_UTF8
  			else if (0xC0 <= keycode && keycode <= 0xFF && using_utf8) {
 +#ifdef _WIN32
-+				/* On Windows, allow UTF-8 sequences for emoji and symbol support.
-+				 * Don't treat them as foreign sequences that get discarded. */
-+				return keycode;
++                       /* On Windows, allow UTF-8 sequences for emoji and symbol support.
++                        * Don't treat them as foreign sequences that get discarded. */
++                       return keycode;
 +#else
  				while (waiting_codes && 0x80 <= nextcodes[0] && nextcodes[0] <= 0xBF)
  					get_input(NULL);
  				return FOREIGN_SEQUENCE;
 +#endif
  			}
+ #endif
  			else if (keycode < 0x20 && !last_escape_was_alone)
- 				meta_key = TRUE;
-@@ -1901,6 +1912,30 @@
+@@ -1797,6 +1803,9 @@
+ 		/* The actual column where that first character starts. */
+ 	size_t stowaways = 20;
+ 		/* The number of zero-width characters for which to reserve space. */
++#ifdef _WIN32
++	bool preceded_by_zwj = FALSE;
++#endif
+ 	size_t allocsize = (COLS + stowaways) * MAXCHARLEN + 1;
+ 		/* The amount of memory to reserve for the displayable string. */
+ 	char *converted = nmalloc(allocsize);
+@@ -1907,6 +1916,33 @@
+ 
  		/* Convert a multibyte character to a single code. */
  		charlength = mbtowide(&wc, text);
- 
-+#ifdef _WIN32
-+		/* On Windows, mbtowide (gnulib mbrtowc) may fail for any multi-byte UTF-8
-+		 * sequence when the C locale is not UTF-8.  Handle 2-, 3-, and 4-byte
-+		 * sequences here so that symbols like ♠ ♥ ♣ ♦ (3-byte BMP), variation
-+		 * selectors like U+FE0F (also 3-byte), and 4-byte SMP emoji all pass
-+		 * through as raw bytes rather than being replaced with U+FFFD. */
-+		if (charlength < 0 && (unsigned char)text[0] >= 0xC0) {
-+			unsigned char b0 = (unsigned char)text[0];
-+			int seqlen = (b0 >= 0xF0 && b0 <= 0xF4) ? 4 : (b0 >= 0xE0) ? 3 : 2;
-+			/* Validate continuation bytes; '\0' is caught by the < 0x80 check. */
-+			int k;
-+			for (k = 1; k < seqlen; k++)
-+				if ((unsigned char)text[k] < 0x80 || (unsigned char)text[k] > 0xBF)
-+					break;
-+			if (k == seqlen) {
-+				for (k = 0; k < seqlen; k++)
-+					converted[index++] = text[k];
-+				text += seqlen;
-+				column++;
-+				continue;
-+			}
-+		}
-+#endif
++		uint32_t true_cp = wc;
 +
++#ifdef _WIN32
++               /* On Windows, mbtowide (gnulib mbrtowc) can fail for valid UTF-8 when
++                * the C locale isn't UTF-8. Decode valid UTF-8 manually so symbol and
++                * emoji width handling still works. */
++               if (charlength < 0 && (unsigned char)text[0] >= 0xC0) {
++                 unsigned char b0 = (unsigned char)text[0];
++                 int seqlen = (b0 >= 0xF0 && b0 <= 0xF4) ? 4 : (b0 >= 0xE0) ? 3 : 2;
++                 unsigned int codepoint = (b0 >= 0xF0 && b0 <= 0xF4) ? (b0 & 0x07) :
++                                               (b0 >= 0xE0) ? (b0 & 0x0F) : (b0 & 0x1F);
++                 int k;
++
++                 for (k = 1; k < seqlen && text[k] != '\0'; k++) {
++                       unsigned char bx = (unsigned char)text[k];
++                       if (bx < 0x80 || bx > 0xBF)
++                               break;
++                       codepoint = (codepoint << 6) | (bx & 0x3F);
++                 }
++
++                 if (k == seqlen) {
++                       wc = (wchar_t)codepoint;
++                       true_cp = codepoint;
++                       charlength = seqlen;
++                 }
++               }
++#endif
+ 
  		/* Represent an invalid character with the Replacement Character. */
  		if (charlength < 0) {
+@@ -1919,7 +1955,49 @@
+ 		}
+ 
+ 		/* Determine whether the character takes zero, one, or two columns. */
+-		charwidth = uc_width(wc, "UTF-8");
++		if (wc == 0xFFFD)
++			true_cp = 0xFFFD;
++		charwidth = uc_width(true_cp, "UTF-8");
++
++#ifdef _WIN32
++               /* Keep common emoji clusters in one displayed cell span: FE0F upgrades
++                * text-style symbols to emoji width, and ZWJ keeps following emoji in
++                * the same grapheme cluster. */
++               if (true_cp == 0x200D)
++                 charwidth = 0;
++               else if (true_cp >= 0x1F3FB && true_cp <= 0x1F3FF)
++                 charwidth = 0;
++               else if (preceded_by_zwj && charwidth > 0)
++                 charwidth = 0;
++
++               if (charwidth == 1) {
++                 wchar_t nextwc = 0;
++                 int nextlength = mbtowide(&nextwc, text + charlength);
++
++                 if (nextlength < 0 && (unsigned char)text[charlength] >= 0xC0) {
++                       unsigned char b0 = (unsigned char)text[charlength];
++                       int seqlen = (b0 >= 0xF0 && b0 <= 0xF4) ? 4 : (b0 >= 0xE0) ? 3 : 2;
++                       unsigned int codepoint = (b0 >= 0xF0 && b0 <= 0xF4) ? (b0 & 0x07) :
++                                                       (b0 >= 0xE0) ? (b0 & 0x0F) : (b0 & 0x1F);
++                       int k;
++
++                       for (k = 1; k < seqlen; k++) {
++                               unsigned char bx = (unsigned char)text[charlength + k];
++                               if (bx < 0x80 || bx > 0xBF)
++                                       break;
++                               codepoint = (codepoint << 6) | (bx & 0x3F);
++                       }
++
++                       if (k == seqlen)
++                               nextwc = (wchar_t)codepoint;
++                 }
++
++                 if (nextwc == 0xFE0F || true_cp == 0xFE0F)
++                       charwidth = 2;
++               }
++
++               preceded_by_zwj = (true_cp == 0x200D);
++#endif
+ 
+ 		/* Watch the number of zero-widths, to keep ample memory reserved. */
+ 		if (charwidth == 0 && --stowaways == 0) {

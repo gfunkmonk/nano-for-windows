@@ -13,6 +13,16 @@ on:
         options:
           - Artifact
           - Release
+      pdterm:
+        description: Terminal type
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - wincon
+          - wingui
+          - vt
       debugssh:
         description: SSH Server
         required: false
@@ -24,7 +34,8 @@ env:
   CLICOLOR_FORCE: "1"
   WT_SESSION: "1"        # This triggers pdc_wt = TRUE
   ConEmuANSI: "ON"      # This is a fallback if WT_SESSION isn't found
-  CFLAGS: "-O2 -fno-math-errno -flto -std=c17 -Wno-error -DCHTYPE_64 -DPDC_WIDE -DPDC_VT=RGB -DPDC_FORCE_UTF8 -DPDC_SYMBOL_VERSIONING=0 -D_GNU_SOURCE"
+  CFLAGS: "-O2 -fno-math-errno -flto -std=c17 -Wno-error -DCHTYPE_64 -DPDC_WIDE -DPDC_FORCE_UTF8 -D_GNU_SOURCE"
+  CPPFLAGS: "-D__USE_MINGW_ANSI_STDIO -DHAVE_NCURSESW_NCURSES_H -DNCURSES_STATIC"
 
 jobs:
   ## PRECHECK ##############################################################################
@@ -37,11 +48,21 @@ jobs:
       body: ${{ steps.checks.outputs.body }}
       build: ${{ steps.checks.outputs.build }}
       cancel: ${{ steps.checks.outputs.cancel }}
+      pdterms: ${{ steps.checks.outputs.pdterms }}
+      tag_suffix: ${{ steps.checks.outputs.tag_suffix }}
     steps:
     - name: "✔️ Pre-build checks"
       id: checks
       shell: bash
       run: |
+        # Generate the pdterms matrix based on input
+        if [[ "${{ github.event.inputs.pdterm }}" == "all" ]] || [[ -z "${{ github.event.inputs.pdterm }}" ]]; then
+          echo 'pdterms=["wincon", "wingui", "vt"]' >> $GITHUB_OUTPUT
+          echo "tag_suffix=" >> $GITHUB_OUTPUT
+        else
+          echo 'pdterms=["${{ github.event.inputs.pdterm }}"]' >> $GITHUB_OUTPUT
+          echo "tag_suffix=-${{ github.event.inputs.pdterm }}" >> $GITHUB_OUTPUT
+        fi
         git clone --depth=1 -n https://github.com/GitMirroring/nano.git
         cd nano
         LAST_NANO=$( TZ=UTC git show --quiet --date='format-local:%Y-%m-%dT%H:%M:%SZ' --format="%cd" )
@@ -85,15 +106,16 @@ jobs:
           echo "Nano main VERSION: $NANO_VERSION"
           NANO_SUBVER=$(curl -s "https://api.github.com/repos/GitMirroring/nano/compare/${NANO_VERSION}...master" | jq -r '.ahead_by')
           echo "Nano SUBVERSION: $NANO_SUBVER"
-          [ $NANO_SUBVER -gt 0 ] && NANO_VERSION="${NANO_VERSION}-${NANO_SUBVER}"
+          [[ "$NANO_SUBVER" =~ ^[0-9]+$ ]] && [ "$NANO_SUBVER" -gt 0 ] && NANO_VERSION="${NANO_VERSION}-${NANO_SUBVER}"
           echo "Current nano version: ${NANO_VERSION}"
-          LAST_BUILD=$( curl -fsSL https://github.com/$GITHUB_REPOSITORY/releases | sed -nE "s|^.*tag/(v[0-9.-]+).*|\1|p" | head -1 ) || echo "FIRST RELEASE!!!!"
+          LAST_BUILD=$( curl -fsSL https://github.com/$GITHUB_REPOSITORY/releases | sed -nE "s|^.*tag/(v[0-9.-]+).*|\1|p" | head -1 || true )
+          [ -z "${LAST_BUILD}" ] && LAST_BUILD="v0.0"
           echo "Last Nano for Windows build: ${LAST_BUILD}"
-          LAST_VERSION=$( echo $LAST_BUILD | awk -F '-' '{print $1}' )
+          LAST_VERSION=$( echo "${LAST_BUILD}" | awk -F '-' '{print $1}' )
           echo "Last Nano for Windows main Version: ${LAST_VERSION}"
-          LAST_SUBVER=$(echo $LAST_BUILD | awk -F '[.-]' '{print $3}' )
+          LAST_SUBVER=$(echo "${LAST_BUILD}" | awk -F '[.-]' '{print $3}' )
           echo "Last Nano for Windows Subversion: ${LAST_SUBVER}"
-          [ $LAST_SUBVER -gt 0 ] && LAST_VERSION="${LAST_VERSION}-${LAST_SUBVER}"
+          [[ "$LAST_SUBVER" =~ ^[0-9]+$ ]] && [ "$LAST_SUBVER" -gt 0 ] && LAST_VERSION="${LAST_VERSION}-${LAST_SUBVER}"
           echo "Last Nano version: ${LAST_VERSION}"
           if [ "${NANO_VERSION}" == "${LAST_VERSION}" ]; then
             # This is a new Windows build based on the same nano build, probably because there is a new curses patch
@@ -118,17 +140,37 @@ jobs:
   build:
     needs: [ checks ]
     if: needs.checks.outputs.cancel != 'true'
-    name: "⚙️ nano4Win ${{ matrix.pretty }} build"
+    name: "⚙️ nano4Win ${{ matrix.pretty }} $${{ matrix.term_pretty }}) build"
     runs-on: ubuntu-latest
     container: alpine:edge
     strategy:
       fail-fast: false
       matrix:
+        pdterm: ${{ fromJson(needs.checks.outputs.pdterms) }}
+        arch: [i686, x86_64, aarch64, armv7]
         include:
-          - { arch: i686,    name: Win32,    short: w32, pretty: 32 bits  }
-          - { arch: x86_64,  name: Win64,    short: w64, pretty: 64 bits  }
-          #- { arch: arm,     name: arm32,    short: a32, pretty: on Arm32 }
-          - { arch: aarch64, name: WinARM64, short: a64, pretty: on Arm64 }
+          - arch: i686
+            name: Win32
+            short: w32
+            pretty: 32 bits
+          - arch: x86_64
+            name: Win64
+            short: w64
+            pretty: 64 bits
+          - arch: aarch64
+            name: ARM64
+            short: a64
+            pretty: on Arm64
+          - arch: armv7
+            name: ARM32
+            short: a32
+            pretty: on Arm32
+          - pdterm: wincon
+            term_pretty: Windows Console
+          - pdterm: wingui
+            term_pretty: Windows GUI
+          - pdterm: vt
+            term_pretty: Virtual Terminal
     defaults:
       run:
         shell: bash
@@ -148,18 +190,6 @@ jobs:
         # this seems to be needed when running in a container (because of UID mismatch??)
         git config --global --add safe.directory '*'
 
-#    - name: "📂 Restore LLVM-MinGW Folder"
-#      uses: actions/cache@v5
-#      id: cache-folder
-#      with:
-        # FIX: static key "llvm-folder" never expires; keyed on weekly
-        # schedule date so it rebuilds at most once per week, matching
-        # the toolchain-builder.yml cadence. Format: YYYY-WNN.
-#        key: llvm-mingw-${{ github.run_id }}
-#        restore-keys: |
-#          llvm-mingw-
-#        path: llvm-mingw
-
     - name: "⏬ Download LLVM-MinGW from Toolchain Workflow"
       shell: bash
       env:
@@ -168,10 +198,11 @@ jobs:
         RUN_ID=$(gh run list \
           --workflow toolchain-builder.yml \
           --repo ${{ github.repository }} \
-          --limit 1 \
-          --json databaseId --jq '.[0].databaseId')
+          --limit 20 \
+          --json databaseId,status,conclusion \
+          --jq '[.[] | select(.status == "completed" and .conclusion == "success")][0].databaseId')
         if [ -z "$RUN_ID" ] || [ "$RUN_ID" == "null" ]; then
-          echo "::error::Could not find ANY runs for toolchain-builder.yml"
+          echo "::error::Could not find a successful completed run for toolchain-builder.yml"
           exit 1
         fi
         echo "Attempting to download artifact from Run ID: $RUN_ID"
@@ -192,7 +223,7 @@ jobs:
         git clone https://github.com/GitMirroring/nano.git --depth=1
         cd nano
         git clone https://github.com/Bill-Gray/PDCursesMod.git  curses
-        git clone https://git.savannah.gnu.org/git/gnulib.git --depth 1
+        git clone https://github.com/coreutils/gnulib.git --depth 1
         autopoint --force
         glibmodules="
             base32
@@ -237,23 +268,21 @@ jobs:
       run: |
         CWD=$(pwd)
         cd nano
-        for p in $(ls -v ${CWD}/patch/nano/*.patch); do
-          if [ -f "$p" ]; then
-            echo -e "\033[1;35mApplying $(basename "$p")...\033[0m"
-            patch -p1 --fuzz=3 < "$p" || exit 1
-          fi
-        done
+        while IFS= read -r p; do
+          [ -n "$p" ] || continue
+          echo -e "\033[1;35mApplying $(basename "$p")...\033[0m"
+          patch -p1 < "$p" || exit 1
+        done < <(find "${CWD}/patch/nano" -maxdepth 1 -type f -name '*.patch' | sort -V)
 
     - name: ❤️‍🩹 PDCurses Patches
       run: |
         CWD=$(pwd)
         cd nano
-        for p in $(ls -v ${CWD}/patch/curses/*.patch); do
-          if [ -f "$p" ]; then
-            echo -e "\033[1;33mApplying $(basename "$p")...\033[0m"
-            patch -p1 --fuzz=3 < "$p" || exit 1
-          fi
-        done
+        while IFS= read -r p; do
+          [ -n "$p" ] || continue
+          echo -e "\033[1;33mApplying $(basename "$p")...\033[0m"
+          patch -p1 < "$p" || exit 1
+        done < <(find "${CWD}/patch/curses/${{ matrix.pdterm }}" -maxdepth 1 -type f -name '*.patch' | sort -V)
 
     - name: "🪄 Apply Windows Portability Magic"
       run: |
@@ -281,9 +310,9 @@ jobs:
         cd nano
 
         ##########################
-        ##                        ##
-        ##     APPLY PATCHES      ##
-        ##                        ##
+        ##                      ##
+        ##     APPLY PATCHES    ##
+        ##                      ##
         ##########################
         # 1. >realpath< function doesn't exist on Windows, which isn't fully POSIX compliant.
         echo -e "\n\nPATCH: realpath() workaround applied."
@@ -395,14 +424,14 @@ jobs:
 
         # 1. Force nano to treat the character range for Emojis as double-width (2 columns)
         # This patches the wide-character width detection logic.
-        echo -e "\n\nPATCH: fix wcwidth"
-        sed -i.bak 's/return wcwidth(wc);/if (wc >= 0x1F300 \&\& wc <= 0x1F9FF) return 2; return wcwidth(wc);/' src/chars.c
+        #echo -e "\n\nPATCH: fix wcwidth"
+        #sed -i.bak 's/return wcwidth(wc);/if (wc >= 0x1F300 \&\& wc <= 0x1F9FF) return 2; return wcwidth(wc);/' src/chars.c
         # 2. Adjust winio.c to prevent PDCurses from truncating high-plane characters
         # This ensures that characters outside the BMP (Basic Multilingual Plane) aren't filtered.
-        sed -i.bak '/if (is_extended_char(wc))/i \    if (wc > 0xFFFF) return true;' src/winio.c
+        #sed -i.bak '/if (is_extended_char(wc))/i \    if (wc > 0xFFFF) return true;' src/winio.c
         # 3. Ensure the title bar and status bar allow for multi-column character spacing
-        sed -i.bak 's/waddnwstr(window, \&widechar, 1);/waddnwstr(window, \&widechar, wcwidth(widechar));/' src/winio.c
-        _diff
+        #sed -i.bak 's/waddnwstr(window, \&widechar, 1);/waddnwstr(window, \&widechar, wcwidth(widechar));/' src/winio.c
+        #_diff
 
         ####                               ####
         #### PDCursesMod especific patches ####
@@ -414,14 +443,14 @@ jobs:
         _diff
 
         # PDCurses uses 64bit (chtype) for cell attributes instead of 32bit (int)
-        echo -e "\n\nPATCH: Improving from 256colors to true color."
-        sed -i.bak "/interface_color_pair/ s/\bint\b/chtype/g" src/prototypes.h src/global.c
-        _diff
-        sed -i.bak "/int attributes/ s/\bint\b/chtype/g" src/definitions.h
-        _diff
-        sed -i.bak "/int attributes/ s/\bint\b/chtype/g" src/rcfile.c
-        sed -i.bak "/bool parse_combination/ s/\bint\b/chtype/g" src/rcfile.c
-        _diff
+        #echo -e "\n\nPATCH: Improving from 256colors to true color."
+        #sed -i.bak "/interface_color_pair/ s/\bint\b/chtype/g" src/prototypes.h src/global.c
+        #_diff
+        #sed -i.bak "/int attributes/ s/\bint\b/chtype/g" src/definitions.h
+        #_diff
+        #sed -i.bak "/int attributes/ s/\bint\b/chtype/g" src/rcfile.c
+        #sed -i.bak "/bool parse_combination/ s/\bint\b/chtype/g" src/rcfile.c
+        #_diff
 
         # Desambiguation of BACKSPACE vs ^H, or ENTER vs ^M and certain CTRL+key combos             //o//
         echo -e "\n\nPATCH: Full key modifiers detection."
@@ -471,16 +500,19 @@ jobs:
         echo -e "\n\nPATCH: PDC_display_utf8 = TRUE"
         sed -i.bak 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wincon/*.c
         sed -i.bak 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/vt/*.c
+        sed -i.bak 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wingui/*.c
         _diff
 
         echo -e "\n\nPATCH: Make MAX_UNICODE suck less."
-        sed -i.bak 's|MAX_UNICODE 0xffff|MAX_UNICODE 0x10ffff|g' curses/curspriv.h
+        sed -i.bak 's|MAX_UNICODE 0x110000|MAX_UNICODE 0x10ffff|g' curses/curspriv.h
         _diff
 
         # Force the UTF-8 decoder to process 4-byte sequences (emojis)
         # even if the system defines a small WCHAR_MAX
         echo -e "\n\nPATCH: Force 4-byte UTF-8 emoji input in VT keyboard driver."
         sed -i.bak 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/vt/pdckbd.c
+        sed -i.bak 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/wincon/pdckbd.c
+        sed -i.bak 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/wingui/pdckbd.c
         _diff
 
         ####                               ####
@@ -511,23 +543,39 @@ jobs:
         echo -e "\n\nBRANDING: NANO VER DISPLAY."
         cd ..
         sed -i.bak 's/ GNU nano from git,//' src/nano.c
-        sed -i 's|Compiled options|Project info at https://github.com/gfunkmonk/nano-for-windows\\n Using '"${CURSES}"'\\n &|' src/nano.c
+        sed -i.bak 's|Compiled options|Project info at https://github.com/gfunkmonk/nano-for-windows\\n Using '"${CURSES}"'\\n &|' src/nano.c
         _diff
+
+    - if: ${{ matrix.pdterm == 'vt' }}
+      name: 🚩 Set vt Flags
+      run: |
+        echo "PDC_VT=RGB UNDERLINE BLINK DIM STANDOUT" >> $GITHUB_ENV
+        echo "PDT_PRETTY=VT" >> $GITHUB_ENV
+
+    - if: ${{ matrix.pdterm == 'wincon' }}
+      name: 🚩 Set wincon Flags
+      run: |
+        echo "PDT_PRETTY=WinCon" >> $GITHUB_ENV
+
+    - if: ${{ matrix.pdterm == 'wingui' }}
+      name: 🚩 Set wingui Flags
+      run: |
+        echo "PDT_PRETTY=WinGUI" >> $GITHUB_ENV
 
     - name: "⚙️ Compile curses lib for ${{ matrix.name}}"
       run: |
         ##########################
-        ##                        ##
-        ##     COMPILE CURSES     ##
-        ##                        ##
+        ##                      ##
+        ##     COMPILE CURSES   ##
+        ##                      ##
         ##########################
-        PDTERM=wincon
+        PDTERM=${{ matrix.pdterm }}
         echo "PDTERM=${PDTERM}" >> $GITHUB_ENV
         export CFLAGS="${{ env.CFLAGS }}"
         export CXXFLAGS="${CFLAGS}"
         unset NCURSESW_CFLAGS
         cd "nano/curses/${PDTERM}"
-          make -j$(($(nproc)*2)) WIDE=Y UTF8=Y CHTYPE_64=Y DLL=N VT=Y _${{matrix.short}}=Y PDC_SYMBOL_VERSIONING=0
+          make -j$(($(nproc)*2)) WIDE=Y UTF8=Y CHTYPE_64=Y DLL=N _${{matrix.short}}=Y
 
     - name: "🐞 SSH session"
       uses: mxschmitt/action-tmate@v3
@@ -538,28 +586,32 @@ jobs:
     - name: "🔧 Configure Nano Build"
       run: |
         ##########################
-        ##                        ##
-        ##     CONFIGURE BUILD    ##
-        ##                        ##
+        ##                      ##
+        ##     CONFIGURE BUILD  ##
+        ##                      ##
         ##########################
         # FIX: capture CWD at step start and export to GITHUB_ENV so subsequent
         # steps can reference it even after cd calls shift the working directory.
         CWD=$(pwd)
         echo "BUILD_CWD=${CWD}" >> $GITHUB_ENV
+        PDTERM="${{ matrix.pdterm }}"
         TARGET="${{ matrix.arch }}-w64-mingw32"
         OUTDIR="${CWD}/nano/pkg"
         CURSES_DIR="${CWD}/nano/curses"
         export CFLAGS="${{ env.CFLAGS }} -DPDC_NCMOUSE"
         export CXXFLAGS="${CFLAGS}"
-        export LDFLAGS="-L${CURSES_DIR}/${{ env.PDTERM }} -static -static-libgcc ${CURSES_DIR}/${{ env.PDTERM }}/pdcurses.a"
+        export LDFLAGS="-L${CURSES_DIR}/${PDTERM} -static -static-libgcc ${CURSES_DIR}/${PDTERM}/pdcurses.a"
         export NCURSESW_CFLAGS="-I${CURSES_DIR} -DNCURSES_STATIC  -DENABLE_MOUSE"
         export NCURSESW_LIBS="-l:pdcurses.a -lwinmm -lbcrypt"
         export LIBS="-lbcrypt"
+        if [ "${PDTERM}" = "wingui" ]; then
+          export LIBS="${LIBS} -lole32 -lgdi32 -lcomdlg32"
+        fi
         # Configure nano
         mkdir -p nano/build
         cd nano/build
           ../configure --host="${TARGET}" --prefix="${OUTDIR}" \
-              --enable-{utf8,threads=windows,extra,color,nanorc} --disable-nls \
+              --enable-{utf8,threads=windows,extra,color,nanorc} --disable-{nls,dependency-tracking} \
               --sysconfdir="C:\\ProgramData" || cat config.log
           echo "
             #define HAVE_FREXP_IN_LIBC 1
@@ -583,9 +635,9 @@ jobs:
     - name: "⚙️ Build for Windows ${{ matrix.pretty }}"
       run: |
         ##########################
-        ##                        ##
-        ##     BUILD NANO         ##
-        ##                        ##
+        ##                      ##
+        ##     BUILD NANO       ##
+        ##                      ##
         ##########################
         cd nano/build
           make -j$(($(nproc)*2)) && \
@@ -612,12 +664,12 @@ jobs:
           llvm-strip -s nano.exe
           upx nano.exe || true
           ls -als
-          7z a -mx9 -mm=Deflate64 -mmt$(nproc) "${CWD}/nano-for-windows_${{matrix.name}}_${{ needs.checks.outputs.build }}.zip" * .nanorc
+          7z a -mx9 -mm=Deflate64 -mmt$(nproc) "${CWD}/nano-for-windows_${{matrix.name}}_${{ needs.checks.outputs.build }}-${{ env.PDT_PRETTY }}.zip" * .nanorc
 
-    - name: "👍 Upload Artifact nano-for-windows_${{ matrix.name }}_${{ needs.checks.outputs.build }}.zip"
+    - name: "👍 Upload Artifact nano-for-windows_${{ matrix.name }}_${{ needs.checks.outputs.build }}-${{ env.PDT_PRETTY }}.zip"
       uses: actions/upload-artifact@v7
       with:
-        name: nano-for-windows_${{ matrix.name }}_${{ needs.checks.outputs.build }}
+        name: nano-for-windows_${{ matrix.name }}_${{ needs.checks.outputs.build }}-${{ env.PDT_PRETTY }}
         path: |
           *.zip
 
@@ -645,7 +697,7 @@ jobs:
 
     - name: "📦 Prepare Final Package"
       run: |
-        mv nano-for*/* .
+        mv nano-for*/* . || true
         sha256sum *.zip > hashes.txt
         echo "${{ needs.checks.outputs.body }}" | base64 -d > body.txt
 
@@ -653,7 +705,7 @@ jobs:
       uses: actions/upload-artifact@v7
       if: github.event.inputs.release == 'Artifact'
       with:
-        name: nano-for-windows_${{ needs.checks.outputs.build }}
+        name: nano-for-windows_${{ needs.checks.outputs.build }}${{ needs.checks.outputs.tag_suffix }}
         path: |
           *.zip
           *.txt
@@ -669,8 +721,9 @@ jobs:
         prerelease: false
         draft: false
         make_latest: true
-        tag_name: ${{ needs.checks.outputs.build }}
+        tag_name: ${{ needs.checks.outputs.build }}${{ needs.checks.outputs.tag_suffix }}
         body_path: body.txt
         files: |
           ./*.zip
           ./hashes.txt
+

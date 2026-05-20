@@ -42,16 +42,16 @@ jobs:
         REV=$(git ls-remote https://github.com/mstorsjo/llvm-mingw.git HEAD | cut -f1)
         echo "rev=${REV}" >> $GITHUB_OUTPUT
 
-    - name: "💾 Cache Toolchain"
-      uses: actions/cache@v5
-      id: cache-toolchain
-      with:
-        path: llvm-mingw
+    #- name: "💾 Cache Toolchain"
+    #  uses: actions/cache@v5
+    #  id: cache-toolchain
+    #  with:
+    #    path: llvm-mingw
         # FIX: was "llvm-mingw-${{ github.run_id }}" — unique per run means
         # restore-keys never find a warm cache. Now keyed on upstream HEAD SHA.
-        key: llvm-mingw-${{ steps.llvm-rev.outputs.rev }}
-        restore-keys: |
-          llvm-mingw-
+    #    key: llvm-mingw-${{ steps.llvm-rev.outputs.rev }}
+    #    restore-keys: |
+    #      llvm-mingw-
 
     - name: "🔧 Prepare debug session"
       if: github.event.inputs.debug_enabled == 'true'
@@ -77,8 +77,6 @@ jobs:
           ccache-llvm-
 
     - name: "⚙️ Build LLVM-MinGW Master"
-      # FIX: skip rebuild if cache was fully restored
-      if: steps.cache-toolchain.outputs.cache-hit != 'true'
       shell: bash
       run: |
         # Create ccache symlinks for Alpine if they don't exist
@@ -105,8 +103,7 @@ jobs:
 
     - name: "🚮 Delete stale caches"
       # Only prune old caches after a successful fresh build.
-      # FIX: was running even on cache-hit (pointless); now gated on fresh build.
-      if: steps.cache-toolchain.outputs.cache-hit != 'true' && success()
+      if: success()
       uses: snnaplab/delete-branch-cache-action@v1
 
     - name: "📦 Upload Toolchain Artifact"
@@ -116,4 +113,4 @@ jobs:
       with:
         name: llvm-mingw
         path: llvm-mingw
-        retention-days: 7
+        retention-days: 9
