@@ -54,7 +54,7 @@ sync_repo() {
 sync_repo "https://github.com/GitMirroring/nano.git" "nano"
 cd nano
 sync_repo "https://github.com/Bill-Gray/PDCursesMod.git" "curses"
-sync_repo "https://git.savannah.gnu.org/git/gnulib.git" "gnulib"
+sync_repo "https://github.com/coreutils/gnulib.git" "gnulib"
 
 # Gnulib Import (The glibc fix)
 #modules="base32 base64 futimens getdelim getline getopt-gnu glob isblank iswblank lstat mbrlen mbchar mkstemps nl_langinfo regex rewinddir sigaction snprintf-posix stdarg-h strcase strcasestr-simple strnlen sys_wait-h uniwidth unitypes unictype/property-emoji vsnprintf-posix wchar-h wctype-h wcwidth"

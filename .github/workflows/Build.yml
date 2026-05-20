@@ -140,7 +140,7 @@ jobs:
   build:
     needs: [ checks ]
     if: needs.checks.outputs.cancel != 'true'
-    name: "⚙️ nano4Win ${{ matrix.pretty }} $${{ matrix.term_pretty }}) build"
+    name: "⚙️ nano4Win ${{ matrix.pretty }} $(${{ matrix.term_pretty }}) build"
     runs-on: ubuntu-latest
     container: alpine:edge
     strategy:
@@ -546,21 +546,13 @@ jobs:
         sed -i.bak 's|Compiled options|Project info at https://github.com/gfunkmonk/nano-for-windows\\n Using '"${CURSES}"'\\n &|' src/nano.c
         _diff
 
-    - if: ${{ matrix.pdterm == 'vt' }}
-      name: 🚩 Set vt Flags
+    - name: 🚩 Set PDTerm Flags
       run: |
-        echo "PDC_VT=RGB UNDERLINE BLINK DIM STANDOUT" >> $GITHUB_ENV
-        echo "PDT_PRETTY=VT" >> $GITHUB_ENV
-
-    - if: ${{ matrix.pdterm == 'wincon' }}
-      name: 🚩 Set wincon Flags
-      run: |
-        echo "PDT_PRETTY=WinCon" >> $GITHUB_ENV
-
-    - if: ${{ matrix.pdterm == 'wingui' }}
-      name: 🚩 Set wingui Flags
-      run: |
-        echo "PDT_PRETTY=WinGUI" >> $GITHUB_ENV
+        case "${{ matrix.pdterm }}" in
+          vt)     echo "PDT_PRETTY=VT"     >> $GITHUB_ENV ;;
+          wincon) echo "PDT_PRETTY=WinCon" >> $GITHUB_ENV ;;
+          wingui) echo "PDT_PRETTY=WinGUI" >> $GITHUB_ENV ;;
+        esac
 
     - name: "⚙️ Compile curses lib for ${{ matrix.name}}"
       run: |

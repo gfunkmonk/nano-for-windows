@@ -51,7 +51,7 @@ export WT_SESSION="1"
 export ConEmuANSI="ON"
 
 if [ "$PDTERM" == "vt" ]; then
-    export PDC_VT=RGB UNDERLINE BLINK DIM STANDOUT
+    export PDC_VT="RGB UNDERLINE BLINK DIM STANDOUT"
 elif [ "$PDTERM" == "wingui" ]; then
     export LIBS="${LIBS} -lole32 -lgdi32 -lcomdlg32"
 fi
@@ -103,7 +103,8 @@ sync_repo "https://github.com/Bill-Gray/PDCursesMod.git" "curses"
 sync_repo "https://github.com/coreutils/gnulib.git" "gnulib"
 
 # Gnulib Import (The glibc fix)
-modules="base32 base64 futimens getdelim getline getopt-gnu glob isblank iswblank lstat mbrlen mbchar mkstemps nl_langinfo regex rewinddir sigaction snprintf-posix stdarg-h strcase strcasestr-simple strnlen sys_wait-h uniwidth unitypes unictype/property-emoji vsnprintf-posix wchar-h wctype-h wcwidth"
+#modules="base32 base64 futimens getdelim getline getopt-gnu glob isblank iswblank lstat mbrlen mbchar mkstemps nl_langinfo regex rewinddir sigaction snprintf-posix stdarg-h strcase strcasestr-simple strnlen sys_wait-h uniwidth unitypes unictype/property-emoji vsnprintf-posix wchar-h wctype-h wcwidth"
+modules="canonicalize-lgpl futimens getdelim getline getopt-gnu glob isblank iswblank lstat mbrlen mbchar mkstemps nl_langinfo regex rewinddir sigaction snprintf-posix stdarg-h strcase strcasestr-simple strnlen sys_wait-h uniwidth vsnprintf-posix wchar-h wctype-h wcwidth"
 ./gnulib/gnulib-tool --import $modules
 autopoint --force && aclocal -I m4 && autoconf && autoheader && automake --add-missing
 
