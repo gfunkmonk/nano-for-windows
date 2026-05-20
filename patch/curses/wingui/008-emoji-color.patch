@@ -1,6 +1,6 @@
 --- a/curses/wingui/pdcdisp.c	2026-05-19 22:32:34.402379401 -0400
 +++ b/curses/wingui/pdcdisp.c	2026-05-19 22:33:04.982379201 -0400
-@@ -2,6 +2,15 @@
+@@ -2,6 +2,21 @@
  
  #include "pdcwin.h"
  #define USE_UNICODE_ACS_CHARS 1
@@ -13,6 +13,12 @@
 +#include <d2d1.h>
 +#undef INITGUID
 +#undef COBJMACROS
++#if !defined(__cplusplus)
++/* MinGW/Clang in C mode may lack typedef forward declarations for these
++   COM interfaces when parsing commdlg.h. */
++typedef struct IPrintDialogCallback IPrintDialogCallback;
++typedef struct IPrintDialogServices IPrintDialogServices;
++#endif
  
  #include "../common/acs_defs.h"
  

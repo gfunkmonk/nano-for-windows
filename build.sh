@@ -1,5 +1,5 @@
 #!/bin/bash
-set -euo pipefail
+set -euox pipefail
 
 if [ $# -lt 2 ]; then
     echo "Usage: $0 [x86_64|i686|aarch64|armv7] [wincon|wingui|vt]"
@@ -38,8 +38,7 @@ echo "Building for $1 with PDTERM=$PDTERM"
 BASE_DIR="$(pwd)"
 BUILDDIR="${BASE_DIR}/build"
 
-mkdir -p "${BUILDDIR}"
-cd "$(pwd)"/build
+mkdir -p "$BUILDDIR"
 
 # Global variables from your workflow
 export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DCHTYPE_64 -DPDC_WIDE -DPDC_FORCE_UTF8 -D_GNU_SOURCE"
@@ -59,21 +58,21 @@ fi
 
 # --- 3. Toolchain Setup (gfunkmonk/win-cross) ---
 echo -e "${TEAL}Setting up toolchain...${NC}"
-TOOLCHAIN_RELEASE="20260505"
+TOOLCHAIN_RELEASE="20260519"
 
 # Define a persistent toolchain directory outside the BUILDDIR if you want true persistence,
 # or just check if it's already in the BUILDDIR.
+cd "$BASE_DIR"
 if [ ! -d "$BASE_DIR/toolchain/bin" ]; then
     echo -e "${YELLOW}Downloading toolchain release: ${TOOLCHAIN_RELEASE}${NC}"
     mkdir -p "$BASE_DIR/toolchain"
-    if command -v axel >/dev/null 2>&1; then
+    if command -v axel >/dev/null 2>&1 && [ ! -f "$BASE_DIR/llvm.tar.xz" ]; then
 	axel -n 6 -o "$BASE_DIR/llvm.tar.xz" "https://github.com/mstorsjo/llvm-mingw/releases/download/${TOOLCHAIN_RELEASE}/llvm-mingw-${TOOLCHAIN_RELEASE}-ucrt-ubuntu-22.04-x86_64.tar.xz"
     else
 	curl -L -o "$BASE_DIR/llvm.tar.xz" "https://github.com/mstorsjo/llvm-mingw/releases/download/${TOOLCHAIN_RELEASE}/llvm-mingw-${TOOLCHAIN_RELEASE}-ucrt-ubuntu-22.04-x86_64.tar.xz"
     fi
-    cd "$BASE_DIR"
-    tar -xJf llvm.tar.xz --strip-components=1 -C llvm/
-    rm llvm.tar.xz
+    tar -xJf "$BASE_DIR/llvm.tar.xz" --strip-components=1 -C "$BASE_DIR/toolchain/"
+    rm "$BASE_DIR/llvm.tar.xz"
 else
     echo -e "${GREEN}Toolchain cache hit: llvm found.${NC}"
 fi
@@ -97,10 +96,11 @@ sync_repo() {
     fi
 }
 
+cd "${BUILDDIR}"
 sync_repo "https://github.com/GitMirroring/nano.git" "nano"
 cd nano
 sync_repo "https://github.com/Bill-Gray/PDCursesMod.git" "curses"
-sync_repo "https://git.savannah.gnu.org/git/gnulib.git" "gnulib"
+sync_repo "https://github.com/coreutils/gnulib.git" "gnulib"
 
 # Gnulib Import (The glibc fix)
 modules="base32 base64 futimens getdelim getline getopt-gnu glob isblank iswblank lstat mbrlen mbchar mkstemps nl_langinfo regex rewinddir sigaction snprintf-posix stdarg-h strcase strcasestr-simple strnlen sys_wait-h uniwidth unitypes unictype/property-emoji vsnprintf-posix wchar-h wctype-h wcwidth"
