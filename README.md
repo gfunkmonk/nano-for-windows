@@ -32,7 +32,7 @@ Pretty much everything is supported except for Linux-specific functions, includi
 - Transparent backgrounds in Windows Terminal, and other supported environments.
 - Beta native support for Windows on ARM (WoA)
 
-<div align="center"><img width="947" alt="image" src="https://user-images.githubusercontent.com/22417711/218406120-a7198c98-fd5f-4a1b-8793-b65c3ba68d7c.png"></div>
+<div align="center"><img width="947" alt="image" src="https://github.com/user-attachments/assets/96f12597-b9af-4d20-a0d5-88950218f71d"></div>
 
 <br/>
 
@@ -53,3 +53,9 @@ nano ~/.nanorc
 - When using Windows Terminal and the screen is resized within nano, after returning to the shell there could be some corruption due to the new size. To fix the issue without losing the terminal history just resize the terminal window to zero lines and return to the desired size.
 
 - Feel free to open any issue you find, or use the [Discussions](https://github.com/gfunkmonk/nano-for-windows/discussions) section for any other issue, suggestion, question, etc...
+
+# Special Mention & Thanks
+
+- original idea and repo this work is built from https://github.com/okibcn/nano-for-windows
+
+- and I shamelessly stole most of the nano patches from https://github.com/chawyehsu/nano-for-windows
