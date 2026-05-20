@@ -12,8 +12,14 @@ YELLOW="\x1b[1;33m"
 TEAL="\x1b[2;36m"
 BWHITE="\x1b[1;37m"
 GREEN="\x1b[1;32m"
+CYAN="\x1b[1;36m"
 RED="\x1b[1;31m"
 NC="\x1b[0m"
+
+# --- 1. Check Dependencies ---
+for cmd in git curl tar patch sed perl make autoconf automake 7z; do
+    command -v "$cmd" >/dev/null 2>&1 || echo -e  "${RED}$cmd is required but not installed.${NC}"
+done
 
 # Map the input to the full triplet
 case "$1" in
@@ -32,6 +38,7 @@ case "$PDTERM" in
      wingui)    export PDT_PRETTY="WinGUI" ;;
     *) echo "Invalid PDTERM: $PDTERM (expected wincon, wingui, or vt)"; exit 1 ;;
 esac
+
 echo "Building for $1 with PDTERM=$PDTERM"
 
 # --- 2. Configuration & Environment ---
@@ -50,51 +57,53 @@ export CPPFLAGS="-D__USE_MINGW_ANSI_STDIO -DHAVE_NCURSESW_NCURSES_H -DNCURSES_ST
 export WT_SESSION="1"
 export ConEmuANSI="ON"
 
-if [ "$PDTERM" == "vt" ]; then
+if [[ "$PDTERM" == "vt" ]]; then
     export PDC_VT="RGB UNDERLINE BLINK DIM STANDOUT"
-elif [ "$PDTERM" == "wingui" ]; then
+elif [[ "$PDTERM" == "wingui" ]]; then
     export LIBS="${LIBS} -lole32 -lgdi32 -lcomdlg32"
 fi
 
 # --- 3. Toolchain Setup (gfunkmonk/win-cross) ---
-echo -e "${TEAL}Setting up toolchain...${NC}"
-TOOLCHAIN_RELEASE="20260519"
-
-# Define a persistent toolchain directory outside the BUILDDIR if you want true persistence,
-# or just check if it's already in the BUILDDIR.
-cd "$BASE_DIR"
-if [ ! -d "$BASE_DIR/toolchain/bin" ]; then
-    echo -e "${YELLOW}Downloading toolchain release: ${TOOLCHAIN_RELEASE}${NC}"
-    mkdir -p "$BASE_DIR/toolchain"
-    if command -v axel >/dev/null 2>&1 && [ ! -f "$BASE_DIR/llvm.tar.xz" ]; then
-	axel -n 6 -o "$BASE_DIR/llvm.tar.xz" "https://github.com/mstorsjo/llvm-mingw/releases/download/${TOOLCHAIN_RELEASE}/llvm-mingw-${TOOLCHAIN_RELEASE}-ucrt-ubuntu-22.04-x86_64.tar.xz"
+setup_toolchain() {
+    echo -e "${TEAL}Setting up toolchain...${NC}"
+    local RELEASE="20260519"
+    local URL="https://github.com/mstorsjo/llvm-mingw/releases/download/${RELEASE}/llvm-mingw-${RELEASE}-ucrt-ubuntu-22.04-x86_64.tar.xz"
+    local ARCHIVE="$BASE_DIR/llvm.tar.xz"
+    if [[ ! -d "$BASE_DIR/toolchain/bin" ]]; then
+        if [[ ! -f "$ARCHIVE" ]]; then
+            echo -e "${CYAN}Downloading toolchain release: ${YELLOW}${RELEASE}${NC}"
+            if command -v axel >/dev/null 2>&1; then
+                axel -n 6 -o "$ARCHIVE" "$URL"
+            else
+                curl -L -o "$ARCHIVE" "$URL"
+            fi
+        fi
+        mkdir -p "$BASE_DIR/toolchain"
+        tar -xJf "$ARCHIVE" --strip-components=1 -C "$BASE_DIR/toolchain/"
+        rm -f "$ARCHIVE"
     else
-	curl -L -o "$BASE_DIR/llvm.tar.xz" "https://github.com/mstorsjo/llvm-mingw/releases/download/${TOOLCHAIN_RELEASE}/llvm-mingw-${TOOLCHAIN_RELEASE}-ucrt-ubuntu-22.04-x86_64.tar.xz"
+    	echo -e "${GREEN}Toolchain cache hit: llvm found.${NC}"
     fi
-    tar -xJf "$BASE_DIR/llvm.tar.xz" --strip-components=1 -C "$BASE_DIR/toolchain/"
-    rm "$BASE_DIR/llvm.tar.xz"
-else
-    echo -e "${GREEN}Toolchain cache hit: llvm found.${NC}"
-fi
 
-export PATH="$BASE_DIR/toolchain/bin:$PATH"
+    export PATH="$BASE_DIR/toolchain/bin:$PATH"
+}
 
-# --- 4. Source Setup ---
-# Function to sync without redownloading the universe
 sync_repo() {
     local url=$1
     local dir=$2
-    if [ ! -d "$dir" ]; then
+    if [[ ! -d "$dir" ]]; then
         git clone "$url" --depth=1 "$dir"
     else
         echo -e "${TEAL}Syncing $dir...${NC}"
         cd "$dir"
         git fetch --depth=1
         git reset --hard origin/$(git symbolic-ref --short HEAD)
-        git clean -fd # Scrub the previous sed/patch debris
+        git clean -fd
         cd ..
     fi
 }
+
+setup_toolchain
 
 cd "${BUILDDIR}"
 sync_repo "https://github.com/GitMirroring/nano.git" "nano"
@@ -102,8 +111,6 @@ cd nano
 sync_repo "https://github.com/Bill-Gray/PDCursesMod.git" "curses"
 sync_repo "https://github.com/coreutils/gnulib.git" "gnulib"
 
-# Gnulib Import (The glibc fix)
-#modules="base32 base64 futimens getdelim getline getopt-gnu glob isblank iswblank lstat mbrlen mbchar mkstemps nl_langinfo regex rewinddir sigaction snprintf-posix stdarg-h strcase strcasestr-simple strnlen sys_wait-h uniwidth unitypes unictype/property-emoji vsnprintf-posix wchar-h wctype-h wcwidth"
 modules="canonicalize-lgpl futimens getdelim getline getopt-gnu glob isblank iswblank lstat mbrlen mbchar mkstemps nl_langinfo regex rewinddir sigaction snprintf-posix stdarg-h strcase strcasestr-simple strnlen sys_wait-h uniwidth vsnprintf-posix wchar-h wctype-h wcwidth"
 ./gnulib/gnulib-tool --import $modules
 autopoint --force && aclocal -I m4 && autoconf && autoheader && automake --add-missing
@@ -246,15 +253,15 @@ sed -i "/bool parse_combination/ s/\bint\b/chtype/g" src/rcfile.c
 echo -e "${GREEN}[${BWHITE}wincon & vt${GREEN}] ${BWHITE}PDC_display_utf8 = TRUE${NC}"
 sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wincon/*.c
 sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/vt/*.c
-#sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wingui/*.c
+sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wingui/*.c
 
 echo -e "${GREEN}[${BWHITE}pdckbd.c${GREEN}] ${BWHITE}Forced for 64-bit chtype${NC}"
 sed -i 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/vt/pdckbd.c
 sed -i 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/wincon/pdckbd.c
-#sed -i 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/wingui/pdckbd.c
+sed -i 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/wingui/pdckbd.c
 
-#echo -e "${GREEN}[${BWHITE}curspriv.h${GREEN}] ${BWHITE}Make MAX_UNICODE suck less.${NC}"
-#sed -i 's|MAX_UNICODE 0x110000|MAX_UNICODE 0x10ffff|g' curses/curspriv.h
+echo -e "${GREEN}[${BWHITE}curspriv.h${GREEN}] ${BWHITE}Make MAX_UNICODE suck less.${NC}"
+sed -i 's|MAX_UNICODE 0x110000|MAX_UNICODE 0x10ffff|g' curses/curspriv.h
 
 # --- 6. Build Binaries ---
 for TRIPLET in "${TARGETS[@]}"; do
@@ -267,7 +274,7 @@ for TRIPLET in "${TARGETS[@]}"; do
     SHORT=$(echo "$ARCH" | cut -d'-' -f1 | sed 's/aarch64/a64/;s/armv7/a32/;s/x86_64/w64/;s/i686/w32/')
 
     echo -e "${TEAL}Building for ${ARCH} (Target: ${TRIPLET})${NC}"
-    
+
     # Build PDCurses
     cd "$BUILDDIR/nano/curses/$PDTERM"
     make clean || true
