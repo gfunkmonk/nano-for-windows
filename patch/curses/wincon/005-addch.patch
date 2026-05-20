@@ -1,6 +1,6 @@
 --- a/curses/pdcurses/addch.c   2026-05-10 00:00:00.000000000 -0400
 +++ b/curses/pdcurses/addch.c   2026-05-10 00:00:00.000000000 -0400
-@@ -537,8 +537,45 @@
+@@ -537,8 +537,35 @@
      {
          const bool is_combining = (text && !text_width);
 +        /* Bypass broken combining system for ZWJ sequences and emoji */
