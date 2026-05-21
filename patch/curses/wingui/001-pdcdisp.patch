@@ -22,7 +22,7 @@
  
  #include "../common/acs_defs.h"
  
-@@ -220,7 +235,9 @@
+@@ -220,7 +236,9 @@
      lf.lfPitchAndFamily = FF_MODERN;
      lf.lfWeight = ((font_idx & 1) ? FW_EXTRABOLD : FW_NORMAL);
      lf.lfItalic = ((font_idx & 2) ? TRUE : FALSE);
@@ -33,7 +33,7 @@
      lf.lfQuality = PROOF_QUALITY;
      lf.lfOutPrecision = OUT_RASTER_PRECIS;
      return( lf);
-@@ -327,6 +344,223 @@
+@@ -327,6 +344,235 @@
  
  #define BUFFSIZE 50
  
@@ -185,6 +185,8 @@
 +    RECT bind_rect;
 +    D2D1_COLOR_F bg_color, fg_color;
 +    D2D1_RECT_F  layout_rect;
++    extern int PDC_cxChar;
++    int pad = PDC_cxChar;
 +    D2D1_POINT_2F origin = {0.0f, 0.0f};
 +    IDWriteTextLayout *layout = NULL;
 +    HRESULT hr;
@@ -194,9 +196,16 @@
 +    if (nchars <= 0) return;
 +
 +    /* Bind the DC render target to the exact cell rectangle on the window DC. */
-+    bind_rect.left   = dst_x;
++    float desired_left = dst_x - pad;
++    float max_right = (float)(SP->cols * PDC_cxChar);
++    float desired_right = dst_x + px_w + cell_w + pad;
++    bind_rect.right = (desired_right < max_right) ? desired_right : max_right;
++    if (bind_rect.right <= bind_rect.left) 
++    {
++        bind_rect.right = bind_rect.left + PDC_cxChar; /* safe fallback */
++    }
++    bind_rect.left = (desired_left > 0.0f) ? desired_left : 0.0f;
 +    bind_rect.top    = dst_y;
-+    bind_rect.right  = dst_x + px_w + cell_w;
 +    bind_rect.bottom = dst_y + cell_h;
 +    hr = ID2D1DCRenderTarget_BindDC(g_d2d_rt, hdc, &bind_rect);
 +    if (FAILED(hr)) return;
@@ -237,6 +246,9 @@
 +    ID2D1DCRenderTarget_DrawTextLayout(g_d2d_rt, origin, layout,
 +            (ID2D1Brush *)g_d2d_brush,
 +            D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT);
++
++    /* Flush ensures complete rendering to avoid partial-frame artifacts. */
++    ID2D1DCRenderTarget_Flush(g_d2d_rt, &t1, &t2);
 +
 +    ID2D1DCRenderTarget_EndDraw(g_d2d_rt, &t1, &t2);
 +    IDWriteTextLayout_Release(layout);
