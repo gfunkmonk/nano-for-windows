@@ -14,6 +14,7 @@ BWHITE="\x1b[1;37m"
 GREEN="\x1b[1;32m"
 CYAN="\x1b[1;36m"
 RED="\x1b[1;31m"
+BLUE="\x1b[1;34m"
 NC="\x1b[0m"
 
 # --- 1. Check Dependencies ---
@@ -33,13 +34,25 @@ esac
 # Map PDTERM
 PDTERM="$2"
 case "$PDTERM" in
-     vt)	export PDT_PRETTY="VT" ;;
-     wincon)    export PDT_PRETTY="WinCon" ;;
-     wingui)    export PDT_PRETTY="WinGUI" ;;
+     vt)
+	export PDT_PRETTY="VT"
+        export BANNER_NAME="VT    "
+	;;
+     wincon)
+	export PDT_PRETTY="WinCon"
+	export BANNER_NAME="WinCon"
+	;;
+     wingui)
+	export PDT_PRETTY="WinGUI"
+	export BANNER_NAME="WinGUI"
+	;;
     *) echo "Invalid PDTERM: $PDTERM (expected wincon, wingui, or vt)"; exit 1 ;;
 esac
 
-echo "Building for $1 with PDTERM=$PDTERM"
+echo -e "${BLUE}##############################################"
+echo -e "${BLUE}@@  ${BWHITE}Building for ${PURPLE}$1 ${GREEN}with ${YELLOW}PDTERM${BWHITE}=${RED}$BANNER_NAME  ${BLUE}@@${NC}"
+echo -e "${BLUE}##############################################"
+sleep 5
 
 # --- 2. Configuration & Environment ---
 BASE_DIR="$(pwd)"
