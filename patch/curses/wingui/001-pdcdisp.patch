@@ -33,7 +33,7 @@
      lf.lfQuality = PROOF_QUALITY;
      lf.lfOutPrecision = OUT_RASTER_PRECIS;
      return( lf);
-@@ -327,6 +344,235 @@
+@@ -327,6 +344,268 @@
  
  #define BUFFSIZE 50
  
@@ -310,7 +310,7 @@
          for( i = 0; i < N_CACHED_FONTS; i++)
              if( hFonts[i])
              {
-@@ -357,7 +604,55 @@
+@@ -357,7 +604,35 @@
      assert( x >= 0);
      assert( len <= SP->cols - x);
      assert( lineno < SP->lines && len > 0 && lineno >= 0);
@@ -479,7 +479,7 @@
  #ifdef WA_TOP
          if( *srcp & (WA_UNDERLINE | WA_RIGHT | WA_LEFT | WA_TOP | WA_STRIKEOUT))
  #else
-@@ -557,6 +951,27 @@
+@@ -557,6 +951,11 @@
  
          assert( len);
  #ifdef PDC_WIDE
