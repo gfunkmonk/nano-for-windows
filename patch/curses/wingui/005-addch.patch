@@ -1,8 +1,9 @@
 --- a/curses/pdcurses/addch.c   2026-05-10 00:00:00.000000000 -0400
 +++ b/curses/pdcurses/addch.c   2026-05-10 00:00:00.000000000 -0400
-@@ -537,8 +537,34 @@
+@@ -537,8 +537,35 @@
      {
-+        /* Treat ZWJ/emoji-related codepoints separately from combining logic. */
++        /* Identify ZWJ/emoji-related codepoints and force single-cell width,
++         * while still running normal dirty-cell update flow. */
          const bool is_combining = (text && !text_width);
 +        const bool is_zwj = (text == 0x200D);
 +        const bool is_variation_selector = (text >= 0xFE00 && text <= 0xFE0F);
@@ -36,7 +37,7 @@
          {
              chtype prev_char;
  
-@@ -546,6 +576,14 @@
+@@ -546,6 +577,14 @@
                  x--;
              else
              {
@@ -51,7 +52,7 @@
                  y--;
                  x = win->_maxx - 1;
              }
-@@ -553,6 +591,11 @@
+@@ -553,6 +592,11 @@
              if( is_combining)
                  text = COMBINED_CHAR_START
                           + PDC_find_combined_char_idx( prev_char, text);
