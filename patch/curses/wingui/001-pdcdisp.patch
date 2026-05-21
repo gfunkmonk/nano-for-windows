@@ -304,7 +304,7 @@
 +     * This adjusts the local `x`, `len`, and `srcp` variables only and
 +     * is intentionally conservative to avoid changing global behavior.
 +     */
-+    if (len <= 4 && srcp && PDC_has_emoji_or_joiner(*srcp))
++    if (len <= 4 && (srcp && PDC_has_emoji_or_joiner(*srcp)))
 +    {
 +        const int expand = 8;
 +        int new_x = x - expand;
