@@ -304,7 +304,7 @@
 +     * This adjusts the local `x`, `len`, and `srcp` variables only and
 +     * is intentionally conservative to avoid changing global behavior.
 +     */
-+    if (len <= 4)
++    if (len <= 4 && (srcp && PDC_has_emoji_or_joiner(*srcp)) && !SP->drawing_cursor)
 +    {
 +        const int expand = 8;
 +        int new_x = x - expand;
@@ -383,7 +383,7 @@
 +         * Expand the run against the full line buffer so DWrite sees the
 +         * whole cluster.
 +         * ---------------------------------------------------------------- */
-+        if (has_emoji_or_joiner && g_d2d_available)
++        if (has_emoji_or_joiner && g_d2d_available && (!SP->drawing_cursor || i != 1))
 +        {
 +            PACKED_RGB fg_rgb, bg_rgb;
 +            const chtype *full_line = srcp - x;
@@ -396,11 +396,11 @@
 +                end_col = SP->cols;
 +
 +            while (start_col > 0
-+                && PDC_has_emoji_or_joiner(full_line[start_col - 1]))
++                && PDC_has_emoji_or_joiner(full_line[start_col - 1]) && attrib == (attr_t)(full_line[start_col - 1] & ~A_CHARTEXT))
 +                start_col--;
 +
 +            while (end_col < SP->cols
-+                && PDC_has_emoji_or_joiner(full_line[end_col]))
++                && PDC_has_emoji_or_joiner(full_line[end_col]) && attrib == (attr_t)(full_line[end_col] & ~A_CHARTEXT))
 +                end_col++;
 +
 +            int run_cells = end_col - start_col;
