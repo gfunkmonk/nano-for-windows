@@ -1,8 +1,21 @@
---- a/curses/pdcurses/refresh.c	2026-05-17 16:26:55.383658253 -0400
-+++ b/curses/pdcurses/refresh.c	2026-05-17 16:39:39.873653232 -0400
-@@ -184,11 +184,28 @@
+--- a/curses/pdcurses/refresh.c	2026-05-21 00:27:30.751189999 -0400
++++ b/curses/pdcurses/refresh.c	2026-05-21 00:30:21.971188874 -0400
+@@ -183,12 +183,41 @@
+             SP->drawing_cursor = vis;
          }
      }
++
++    /* Expand small update regions (ligature/context) before boundary checks */
++    if( len > 0 && len <= 4)
++    {
++        int exp_left = (x > 0) ? 1 : 0;
++        int exp_right = (x + len < COLS) ? 1 : 0;
++
++        x -= exp_left;
++        srcp -= exp_left;
++        len += exp_left + exp_right;
++    }
++
  #ifdef PDC_WIDE
 -    if( x && (*srcp & A_CHARTEXT) == DUMMY_CHAR_NEXT_TO_FULLWIDTH)
 -    {                   /* starting on a dummy next to a fullwidth */
@@ -34,7 +47,7 @@
      }
  #endif
      while( len)
-@@ -202,8 +219,14 @@
+@@ -202,8 +231,14 @@
                       && i < len)
             i++;
          if( i == 1 && ch == MAX_UNICODE)
@@ -51,3 +64,4 @@
          PDC_transform_line( lineno, x,
                            i - ((ch == MAX_UNICODE) ? 1 : 0), srcp);
  #else
+

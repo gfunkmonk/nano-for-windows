@@ -1,0 +1,10 @@
+--- a/curses/wincon/pdcdisp.c	2026-05-21 00:46:19.891182584 -0400
++++ b/curses/wincon/pdcdisp.c	2026-05-21 00:49:37.121181288 -0400
+@@ -472,4 +472,7 @@
+ 
+ void PDC_doupdate(void)
+ {
++    /* Flush any pending output to prevent display artifacts during scrolling */
++    /* For WinCon, we ensure the cursor position is updated which triggers a refresh */
++    PDC_gotoyx(SP->cursrow, SP->curscol);
+ }
