@@ -33,7 +33,7 @@
      lf.lfQuality = PROOF_QUALITY;
      lf.lfOutPrecision = OUT_RASTER_PRECIS;
      return( lf);
-@@ -327,6 +344,235 @@
+@@ -327,6 +344,272 @@
  
  #define BUFFSIZE 50
  
@@ -266,6 +266,43 @@
 +         || (c >= 0x2600 && c <= 0x27bf));  /* misc symbols/dingbats */
 +}
 +
++#ifdef PDC_WIDE
++/* Normalize partial repaint ranges so they do not start/end on continuation
++ * cells. We derive line_start from (srcp - x) and never back up before it. */
++static bool PDC_normalize_wide_range( int *x, int *len, const chtype **srcp)
++{
++    const chtype *line_start = *srcp - *x;
++    const chtype *line_end = line_start + SP->cols;
++
++    /* Include lead cell when starting on a continuation cell. */
++    while( *len > 0 && ((*srcp)[0] & A_CHARTEXT) == MAX_UNICODE)
++    {
++        if( *srcp <= line_start || (*srcp + *len - 1) >= line_end)
++            break;
++        (*x)--;
++        (*srcp)--;
++        (*len)++;
++    }
++
++    /* Likewise when ending on a continuation cell. */
++    while( *len > 0 && (*srcp + *len - 1) < line_end
++            && ((*srcp)[*len - 1] & A_CHARTEXT) == MAX_UNICODE)
++    {
++        if( *srcp <= line_start)
++            break;
++        (*x)--;
++        (*srcp)--;
++        (*len)++;
++    }
++
++    /* Trim any trailing continuation-only tail. */
++    while( *len > 0 && ((*srcp)[*len - 1] & A_CHARTEXT) == MAX_UNICODE)
++        (*len)--;
++
++    return( *len > 0);
++}
++#endif
++
  static void PDC_transform_line_given_hdc( const HDC hdc, const int lineno,
                               int x, int len, const chtype *srcp)
  {
@@ -277,7 +314,7 @@
          for( i = 0; i < N_CACHED_FONTS; i++)
              if( hFonts[i])
              {
-@@ -357,7 +604,55 @@
+@@ -357,7 +604,35 @@
      assert( x >= 0);
      assert( len <= SP->cols - x);
      assert( lineno < SP->lines && len > 0 && lineno >= 0);
@@ -307,27 +344,7 @@
 +    /* Lazy-init Direct2D + DirectWrite on first render call. */
 +    PDC_d2d_init();
 +
-+    /* If a partial repaint starts on a wide-char continuation cell,
-+     * include its leading cell so the glyph is redrawn atomically. */
-+    while( x > 0 && len > 0 && (srcp[0] & A_CHARTEXT) == MAX_UNICODE)
-+    {
-+        x--;
-+        srcp--;
-+        len++;
-+    }
-+
-+    /* Likewise for a repaint that ends on a continuation cell. */
-+    while( len > 0 && (srcp[len - 1] & A_CHARTEXT) == MAX_UNICODE && x > 0)
-+    {
-+        x--;
-+        srcp--;
-+        len++;
-+    }
-+
-+    /* Last-resort guard: don't let an all-continuation tail through. */
-+    while( len > 0 && (srcp[len - 1] & A_CHARTEXT) == MAX_UNICODE)
-+        len--;
-+    if( !len)
++    if( !PDC_normalize_wide_range( &x, &len, &srcp))
 +        return;
 +
      assert( (srcp[len - 1] & A_CHARTEXT) != MAX_UNICODE);
@@ -466,27 +483,11 @@
  #ifdef WA_TOP
          if( *srcp & (WA_UNDERLINE | WA_RIGHT | WA_LEFT | WA_TOP | WA_STRIKEOUT))
  #else
-@@ -557,6 +951,27 @@
+@@ -557,6 +951,11 @@
  
          assert( len);
  #ifdef PDC_WIDE
-+        /* Ensure repaint ranges that land on continuation cells include
-+         * the lead cell for full redraw of wide glyphs (emoji/CJK). */
-+        while( x > 0 && len > 0 && (srcp[0] & A_CHARTEXT) == MAX_UNICODE)
-+        {
-+            x--;
-+            srcp--;
-+            len++;
-+        }
-+        while( len > 0 && (srcp[len - 1] & A_CHARTEXT) == MAX_UNICODE && x > 0)
-+        {
-+            x--;
-+            srcp--;
-+            len++;
-+        }
-+        while( len > 0 && (srcp[len - 1] & A_CHARTEXT) == MAX_UNICODE)
-+            len--;
-+        if( !len)
++        if( !PDC_normalize_wide_range( &x, &len, &srcp))
 +        {
 +            ReleaseDC( PDC_hWnd, hdc);
 +            return;
