@@ -443,14 +443,14 @@ jobs:
         _diff
 
         # PDCurses uses 64bit (chtype) for cell attributes instead of 32bit (int)
-        #echo -e "\n\nPATCH: Improving from 256colors to true color."
-        #sed -i.bak "/interface_color_pair/ s/\bint\b/chtype/g" src/prototypes.h src/global.c
-        #_diff
-        #sed -i.bak "/int attributes/ s/\bint\b/chtype/g" src/definitions.h
-        #_diff
-        #sed -i.bak "/int attributes/ s/\bint\b/chtype/g" src/rcfile.c
-        #sed -i.bak "/bool parse_combination/ s/\bint\b/chtype/g" src/rcfile.c
-        #_diff
+        echo -e "\n\nPATCH: Improving from 256colors to true color."
+        sed -i.bak "/interface_color_pair/ s/\bint\b/chtype/g" src/prototypes.h src/global.c
+        _diff
+        sed -i.bak "/int attributes/ s/\bint\b/chtype/g" src/definitions.h
+        _diff
+        sed -i.bak "/int attributes/ s/\bint\b/chtype/g" src/rcfile.c
+        sed -i.bak "/bool parse_combination/ s/\bint\b/chtype/g" src/rcfile.c
+        _diff
 
         # Desambiguation of BACKSPACE vs ^H, or ENTER vs ^M and certain CTRL+key combos             //o//
         echo -e "\n\nPATCH: Full key modifiers detection."

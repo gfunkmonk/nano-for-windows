@@ -1,0 +1,22 @@
+--- a/curses/wingui/pdcdisp.c	2026-05-20 18:29:46.058654133 -0400
++++ b/curses/wingui/pdcdisp.c	2026-05-20 18:29:34.998654205 -0400
+@@ -218,16 +218,16 @@
+ #ifdef PDC_WIDE
+     if( !*PDC_font_name)
+         wcscpy( PDC_font_name, _T("Courier New"));
+-    if( font_idx & 4)
+-        wcscpy( lf.lfFaceName, _T("Unifont"));
++    if( font_idx & 8)
++        wcscpy( lf.lfFaceName, _T("Segoe UI Emoji"));
+     else
+         wcscpy( lf.lfFaceName, PDC_font_name );
+ /*  wprintf( L"New font: %s\n", PDC_font_name); */
+ #else
+     if( !*PDC_font_name)
+         strcpy( PDC_font_name, "Courier New");
+-    if( font_idx & 4)
+-        strcpy( lf.lfFaceName, "Unifont");
++    if( font_idx & 8)
++        strcpy( lf.lfFaceName, "Segoe UI Emoji");
+     else
+         strcpy( lf.lfFaceName, PDC_font_name);

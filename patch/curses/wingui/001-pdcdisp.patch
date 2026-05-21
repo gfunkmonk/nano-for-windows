@@ -196,7 +196,7 @@
 +    /* Bind the DC render target to the exact cell rectangle on the window DC. */
 +    bind_rect.left   = dst_x;
 +    bind_rect.top    = dst_y;
-+    bind_rect.right  = dst_x + px_w + (cell_w * 4);
++    bind_rect.right  = dst_x + px_w + cell_w;
 +    bind_rect.bottom = dst_y + cell_h;
 +    hr = ID2D1DCRenderTarget_BindDC(g_d2d_rt, hdc, &bind_rect);
 +    if (FAILED(hr)) return;
@@ -204,7 +204,7 @@
 +    /* Build text layout. */
 +    hr = IDWriteFactory_CreateTextLayout(
 +            g_dw_factory, u16, (UINT32)nchars,
-+            g_dw_fmt, (FLOAT)(px_w + (cell_w * 4)), (FLOAT)cell_h, &layout);
++            g_dw_fmt, (FLOAT)(px_w + cell_w), (FLOAT)cell_h, &layout);
 +    if (FAILED(hr) || !layout) return;
 +
 +    /* Keep the emoji run on one line; wrapped text would be clipped by the
@@ -222,7 +222,7 @@
 +    fg_color.a = 1.0f;
 +
 +    layout_rect.left = layout_rect.top = 0.0f;
-+    layout_rect.right  = (FLOAT)(px_w + (cell_w * 4));
++    layout_rect.right  = (FLOAT)(px_w + cell_w);
 +    layout_rect.bottom = (FLOAT)cell_h;
 +
 +    ID2D1DCRenderTarget_BeginDraw(g_d2d_rt);
@@ -277,13 +277,13 @@
 +     * This adjusts the local `x`, `len`, and `srcp` variables only and
 +     * is intentionally conservative to avoid changing global behavior.
 +     */
-+    if (len <= 3)
++    if (len <= 4)
 +    {
-+        const int expand = 2;
++        const int expand = 3;
 +        int new_x = x - expand;
 +        if (new_x < 0) new_x = 0;
 +        int shift = x - new_x; /* how many cells we moved back */
-+        int new_len = len + shift + expand; /* add both left and right expansion */
++        int new_len = len + shift + expand + 1; /* add both left and right expansion */
 +        if (new_len > SP->cols - new_x) new_len = SP->cols - new_x;
 +
 +        /* Move the src pointer back by `shift` cells so it points at new_x. */
