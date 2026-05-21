@@ -1,5 +1,5 @@
---- a/curses/wingui/pdcdisp.c	2026-05-21 12:46:44.870898725 -0400
-+++ b/curses/wingui/pdcdisp.c	2026-05-21 12:59:12.460893816 -0400
+--- a/curses/wingui/pdcdisp.c
++++ b/curses/wingui/pdcdisp.c
 @@ -2,6 +2,21 @@
  
  #include "pdcwin.h"
@@ -33,7 +33,7 @@
      lf.lfQuality = PROOF_QUALITY;
      lf.lfOutPrecision = OUT_RASTER_PRECIS;
      return( lf);
-@@ -327,6 +344,242 @@
+@@ -327,6 +344,238 @@
  
  #define BUFFSIZE 50
  
@@ -272,7 +272,7 @@
  static void PDC_transform_line_given_hdc( const HDC hdc, const int lineno,
                               int x, int len, const chtype *srcp)
  {
-@@ -339,6 +592,7 @@
+@@ -339,6 +588,7 @@
  
      if( !srcp)             /* just freeing up fonts */
      {
@@ -280,7 +280,7 @@
          for( i = 0; i < N_CACHED_FONTS; i++)
              if( hFonts[i])
              {
-@@ -357,7 +611,37 @@
+@@ -357,7 +607,16 @@
      assert( x >= 0);
      assert( len <= SP->cols - x);
      assert( lineno < SP->lines && len > 0 && lineno >= 0);
@@ -297,7 +297,7 @@
      assert( (srcp[len - 1] & A_CHARTEXT) != MAX_UNICODE);
  #endif
  
-@@ -369,6 +653,7 @@
+@@ -369,6 +628,7 @@
          RECT clip_rect;
          wchar_t buff[BUFFSIZE];
          int lpDx[BUFFSIZE + 1];
@@ -305,7 +305,7 @@
          int olen = 0;
  #ifdef USE_FALLBACK_FONT
          const bool in_font = character_is_in_font( *srcp);
-@@ -383,6 +668,8 @@
+@@ -383,6 +643,8 @@
          {
              chtype ch = srcp[i] & A_CHARTEXT;
  
@@ -314,7 +314,7 @@
  #ifdef USING_COMBINING_CHARACTER_SCHEME
              if( ch > 0xffff && ch < MAX_UNICODE)  /* use Unicode surrogates to fit */
              {               /* >64K values into 16-bit wchar_t: */
-@@ -477,15 +764,86 @@
+@@ -477,15 +739,90 @@
          prev_ch = *srcp;
          clip_rect.left = x * PDC_cxChar;
          clip_rect.top = lineno * PDC_cyChar;
@@ -409,7 +409,7 @@
  #ifdef WA_TOP
          if( *srcp & (WA_UNDERLINE | WA_RIGHT | WA_LEFT | WA_TOP | WA_STRIKEOUT))
  #else
-@@ -557,6 +918,13 @@
+@@ -557,6 +894,13 @@
  
          assert( len);
  #ifdef PDC_WIDE
