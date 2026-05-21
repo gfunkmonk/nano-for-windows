@@ -332,7 +332,7 @@
  #ifdef USING_COMBINING_CHARACTER_SCHEME
              if( ch > 0xffff && ch < MAX_UNICODE)  /* use Unicode surrogates to fit */
              {               /* >64K values into 16-bit wchar_t: */
-@@ -477,15 +740,117 @@
+@@ -477,15 +740,111 @@
          prev_ch = *srcp;
          clip_rect.left = x * PDC_cxChar;
          clip_rect.top = lineno * PDC_cyChar;
