@@ -304,7 +304,7 @@
 +     * This adjusts the local `x`, `len`, and `srcp` variables only and
 +     * is intentionally conservative to avoid changing global behavior.
 +     */
-+    if (len <= 4)
++    if (FALSE && len <= 4)
 +    {
 +        const int expand = 8;
 +        int new_x = x - expand;
@@ -396,11 +396,13 @@
 +                end_col = SP->cols;
 +
 +            while (start_col > 0
-+                && PDC_has_emoji_or_joiner(full_line[start_col - 1]))
++                && PDC_has_emoji_or_joiner(full_line[start_col - 1])
++                && attrib == (attr_t)(full_line[start_col - 1] & ~A_CHARTEXT))
 +                start_col--;
 +
 +            while (end_col < SP->cols
-+                && PDC_has_emoji_or_joiner(full_line[end_col]))
++                && PDC_has_emoji_or_joiner(full_line[end_col])
++                && attrib == (attr_t)(full_line[end_col] & ~A_CHARTEXT))
 +                end_col++;
 +
 +            int run_cells = end_col - start_col;
