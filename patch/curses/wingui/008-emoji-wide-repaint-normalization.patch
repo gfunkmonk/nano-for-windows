@@ -1,0 +1,52 @@
+--- a/curses/wingui/pdcdisp.c
++++ b/curses/wingui/pdcdisp.c
+@@ -630,7 +630,25 @@
+     /* Lazy-init Direct2D + DirectWrite on first render call. */
+     PDC_d2d_init();
+ 
+-    while( len && (srcp[len - 1] & A_CHARTEXT) == MAX_UNICODE)
++    /* If a partial repaint starts on a wide-char continuation cell,
++     * include its leading cell so the glyph is redrawn atomically. */
++    while( x > 0 && len > 0 && (srcp[0] & A_CHARTEXT) == MAX_UNICODE)
++    {
++        x--;
++        srcp--;
++        len++;
++    }
++
++    /* Likewise for a repaint that ends on a continuation cell. */
++    while( len > 0 && (srcp[len - 1] & A_CHARTEXT) == MAX_UNICODE && x > 0)
++    {
++        x--;
++        srcp--;
++        len++;
++    }
++
++    /* Last-resort guard: don't let an all-continuation tail through. */
++    while( len > 0 && (srcp[len - 1] & A_CHARTEXT) == MAX_UNICODE)
+         len--;
+     if( !len)
+         return;
+@@ -933,7 +951,21 @@
+ 
+         assert( len);
+ #ifdef PDC_WIDE
+-        while( len && (srcp[len - 1] & A_CHARTEXT) == MAX_UNICODE)
++        /* Ensure repaint ranges that land on continuation cells include
++         * the lead cell for full redraw of wide glyphs (emoji/CJK). */
++        while( x > 0 && len > 0 && (srcp[0] & A_CHARTEXT) == MAX_UNICODE)
++        {
++            x--;
++            srcp--;
++            len++;
++        }
++        while( len > 0 && (srcp[len - 1] & A_CHARTEXT) == MAX_UNICODE && x > 0)
++        {
++            x--;
++            srcp--;
++            len++;
++        }
++        while( len > 0 && (srcp[len - 1] & A_CHARTEXT) == MAX_UNICODE)
+             len--;
+         if( !len)
+         {
