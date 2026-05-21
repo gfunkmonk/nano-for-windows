@@ -33,7 +33,7 @@
      lf.lfQuality = PROOF_QUALITY;
      lf.lfOutPrecision = OUT_RASTER_PRECIS;
      return( lf);
-@@ -327,6 +344,249 @@
+@@ -327,6 +344,250 @@
  
  #define BUFFSIZE 50
  
@@ -272,6 +272,7 @@
 +    if ((c >= '0' && c <= '9') || c == '#' || c == '*') return TRUE;
 +    return( c == 0x200d                     /* ZWJ */
 +         || c == 0x20e3                     /* combining enclosing keycap */
++         || c == MAX_UNICODE                /* Wide character continuation */
 +         || (c >= 0xfe00 && c <= 0xfe0f)    /* variation selectors */
 +         || (c >= 0x1f3fb && c <= 0x1f3ff)  /* skin tone modifiers */
 +         || (c >= 0x1f1e6 && c <= 0x1f1ff)  /* regional indicators */
@@ -303,13 +304,13 @@
 +     * This adjusts the local `x`, `len`, and `srcp` variables only and
 +     * is intentionally conservative to avoid changing global behavior.
 +     */
-+    if (len <= 3)
++    if (len <= 4)
 +    {
-+        const int expand = 6;
++        const int expand = 8;
 +        int new_x = x - expand;
 +        if (new_x < 0) new_x = 0;
 +        int shift = x - new_x; /* how many cells we moved back */
-+        int new_len = len + shift + expand; /* add both left and right expansion */
++        int new_len = len + shift + expand + 1; /* add both left and right expansion */
 +        if (new_len > SP->cols - new_x) new_len = SP->cols - new_x;
 +
 +        /* Move the src pointer back by `shift` cells so it points at new_x. */
