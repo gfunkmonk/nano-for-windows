@@ -1,5 +1,5 @@
---- a/curses/wingui/pdcdisp.c	2026-05-21 12:46:44.870898725 -0400
-+++ b/curses/wingui/pdcdisp.c	2026-05-21 12:59:12.460893816 -0400
+--- a/curses/wingui/pdcdisp.c
++++ b/curses/wingui/pdcdisp.c
 @@ -2,6 +2,21 @@
  
  #include "pdcwin.h"
@@ -33,7 +33,7 @@
      lf.lfQuality = PROOF_QUALITY;
      lf.lfOutPrecision = OUT_RASTER_PRECIS;
      return( lf);
-@@ -327,6 +344,242 @@
+@@ -327,6 +344,238 @@
  
  #define BUFFSIZE 50
  
@@ -185,8 +185,6 @@
 +    RECT bind_rect;
 +    D2D1_COLOR_F bg_color, fg_color;
 +    D2D1_RECT_F  layout_rect;
-+    extern int PDC_cxChar;
-+    int pad = PDC_cxChar;
 +    D2D1_POINT_2F origin = {0.0f, 0.0f};
 +    IDWriteTextLayout *layout = NULL;
 +    HRESULT hr;
@@ -195,24 +193,20 @@
 +    nchars = PDC_srcp_to_utf16(srcp, src_cells, u16, BUFFSIZE * 2);
 +    if (nchars <= 0) return;
 +
-+    /* Bind the DC render target to the exact cell rectangle on the window DC. */
-+    float desired_left = dst_x - pad;
-+    float max_right = (float)(SP->cols * PDC_cxChar);
-+    float desired_right = dst_x + px_w + cell_w + pad;
-+    bind_rect.left = (desired_left > 0.0f) ? desired_left : 0.0f;
-+    bind_rect.right = (desired_right < max_right) ? desired_right : max_right;
++    /* Bind to the exact run rectangle; avoid clearing neighboring cells. */
++    bind_rect.left = dst_x;
++    bind_rect.right = dst_x + px_w;
 +    if (bind_rect.right <= bind_rect.left)
 +    {
-+        bind_rect.right = bind_rect.left + PDC_cxChar; /* safe fallback */
++        bind_rect.right = bind_rect.left + cell_w; /* safe fallback */
 +    }
 +    bind_rect.top    = dst_y;
 +    bind_rect.bottom = dst_y + cell_h;
 +    hr = ID2D1DCRenderTarget_BindDC(g_d2d_rt, hdc, &bind_rect);
 +    if (FAILED(hr)) return;
 +
-+   /* Pin the drawing origin relative to the bind_rect.
-+     * This prevents the "one letter at a time" shift and disappearing text. */
-+    origin.x = (float)dst_x - (float)bind_rect.left;
++    /* Draw relative to the bound rectangle origin. */
++    origin.x = 0.0f;
 +    origin.y = 0.0f;
 +
 +    /* Build text layout. */
@@ -236,13 +230,15 @@
 +    fg_color.a = 1.0f;
 +
 +    layout_rect.left = layout_rect.top = 0.0f;
-+    layout_rect.right  = (FLOAT)(px_w + cell_w);
++    layout_rect.right  = (FLOAT)px_w;
 +    layout_rect.bottom = (FLOAT)cell_h;
 +
 +    ID2D1DCRenderTarget_BeginDraw(g_d2d_rt);
 +
-+    /* Fill background. */
-+    ID2D1DCRenderTarget_Clear(g_d2d_rt, &bg_color);
++    /* Fill only this run's background; don't clear the entire bound DC area. */
++    ID2D1SolidColorBrush_SetColor(g_d2d_brush, &bg_color);
++    ID2D1DCRenderTarget_FillRectangle(g_d2d_rt, &layout_rect,
++            (ID2D1Brush *)g_d2d_brush);
 +
 +    /* Set brush color to foreground (used for monochrome fallback glyphs). */
 +    ID2D1SolidColorBrush_SetColor(g_d2d_brush, &fg_color);
@@ -276,7 +272,7 @@
  static void PDC_transform_line_given_hdc( const HDC hdc, const int lineno,
                               int x, int len, const chtype *srcp)
  {
-@@ -339,6 +592,7 @@
+@@ -339,6 +588,7 @@
  
      if( !srcp)             /* just freeing up fonts */
      {
@@ -284,32 +280,11 @@
          for( i = 0; i < N_CACHED_FONTS; i++)
              if( hFonts[i])
              {
-@@ -357,7 +611,37 @@
+@@ -357,7 +607,16 @@
      assert( x >= 0);
      assert( len <= SP->cols - x);
      assert( lineno < SP->lines && len > 0 && lineno >= 0);
 +
-+    /* Quick conservative fix: when only a very small slice is being
-+     * redrawn (e.g. length <= 3 cells), expand the slice by +/-2 columns
-+     * so grapheme clusters (ZWJ, variation selectors, skin-tone modifiers,
-+     * regional indicators) are less likely to be split by the clip region.
-+     * This adjusts the local `x`, `len`, and `srcp` variables only and
-+     * is intentionally conservative to avoid changing global behavior.
-+     */
-+    if (len <= 3)
-+    {
-+        const int expand = 2;
-+        int new_x = x - expand;
-+        if (new_x < 0) new_x = 0;
-+        int shift = x - new_x; /* how many cells we moved back */
-+        int new_len = len + shift + expand; /* add both left and right expansion */
-+        if (new_len > SP->cols - new_x) new_len = SP->cols - new_x;
-+
-+        /* Move the src pointer back by `shift` cells so it points at new_x. */
-+        srcp = srcp - shift;
-+        x = new_x;
-+        len = new_len;
-+    }
  #ifdef PDC_WIDE
 +    /* Lazy-init Direct2D + DirectWrite on first render call. */
 +    PDC_d2d_init();
@@ -322,7 +297,7 @@
      assert( (srcp[len - 1] & A_CHARTEXT) != MAX_UNICODE);
  #endif
  
-@@ -369,6 +653,7 @@
+@@ -369,6 +628,7 @@
          RECT clip_rect;
          wchar_t buff[BUFFSIZE];
          int lpDx[BUFFSIZE + 1];
@@ -330,7 +305,7 @@
          int olen = 0;
  #ifdef USE_FALLBACK_FONT
          const bool in_font = character_is_in_font( *srcp);
-@@ -383,6 +668,8 @@
+@@ -383,6 +643,8 @@
          {
              chtype ch = srcp[i] & A_CHARTEXT;
  
@@ -339,7 +314,7 @@
  #ifdef USING_COMBINING_CHARACTER_SCHEME
              if( ch > 0xffff && ch < MAX_UNICODE)  /* use Unicode surrogates to fit */
              {               /* >64K values into 16-bit wchar_t: */
-@@ -477,15 +764,86 @@
+@@ -477,15 +739,90 @@
          prev_ch = *srcp;
          clip_rect.left = x * PDC_cxChar;
          clip_rect.top = lineno * PDC_cyChar;
@@ -387,10 +362,14 @@
 +            if (end_col > SP->cols)
 +                end_col = SP->cols;
 +
-+            while (start_col > 0 && PDC_has_emoji_or_joiner(full_line[start_col - 1]))
++            while (start_col > 0
++                && PDC_has_emoji_or_joiner(full_line[start_col - 1])
++                && ((full_line[start_col - 1] & ~A_CHARTEXT) == (srcp[0] & ~A_CHARTEXT)))
 +                start_col--;
 +
-+            while (end_col < SP->cols && PDC_has_emoji_or_joiner(full_line[end_col]))
++            while (end_col < SP->cols
++                && PDC_has_emoji_or_joiner(full_line[end_col])
++                && ((full_line[end_col] & ~A_CHARTEXT) == (srcp[0] & ~A_CHARTEXT)))
 +                end_col++;
 +
 +            int run_cells = end_col - start_col;
@@ -430,7 +409,7 @@
  #ifdef WA_TOP
          if( *srcp & (WA_UNDERLINE | WA_RIGHT | WA_LEFT | WA_TOP | WA_STRIKEOUT))
  #else
-@@ -557,6 +918,13 @@
+@@ -557,6 +894,13 @@
  
          assert( len);
  #ifdef PDC_WIDE
