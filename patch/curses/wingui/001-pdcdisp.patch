@@ -412,11 +412,16 @@
 +            }
 +
 +            int run_cells = end_col - start_col;
-+            if (run_cells <= 0)
-+                run_cells = i;
++            const chtype *draw_srcp = full_line + start_col;
++            int draw_cells = run_cells;
++            if (draw_cells <= 0)
++            {
++                draw_srcp = srcp;
++                draw_cells = i;
++            }
 +
 +            int px_w = 0;
-+            for (int t = start_col; t < start_col + run_cells; t++)
++            for (int t = start_col; t < start_col + draw_cells; t++)
 +            {
 +                uint32_t cp = (uint32_t)(full_line[t] & A_CHARTEXT);
 +                int w = PDC_wcwidth(cp);
@@ -426,22 +431,11 @@
 +            clip_rect.left = start_col * PDC_cxChar;
 +            clip_rect.right = clip_rect.left + px_w;
 +
-+            if (start_col < x)
-+            {
-+                int left_shift = x - start_col;
-+                srcp -= left_shift;
-+                i += left_shift;
-+                x = start_col;
-+            }
-+
-+            if (run_cells > i)
-+                i = run_cells;
-+
-+            PDC_get_rgb_values(*srcp, &fg_rgb, &bg_rgb);
++            PDC_get_rgb_values(*draw_srcp, &fg_rgb, &bg_rgb);
 +            PDC_d2d_render_emoji(
 +                hdc,
 +                clip_rect.left, clip_rect.top,
-+                srcp, i, px_w,
++                draw_srcp, draw_cells, px_w,
 +                (COLORREF)fg_rgb, (COLORREF)bg_rgb,
 +                PDC_cxChar, PDC_cyChar);
 +        }
