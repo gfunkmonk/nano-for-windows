@@ -1,9 +1,10 @@
 --- a/curses/pdcurses/addch.c   2026-05-10 00:00:00.000000000 -0400
 +++ b/curses/pdcurses/addch.c   2026-05-10 00:00:00.000000000 -0400
-@@ -537,8 +537,34 @@
+@@ -537,8 +537,35 @@
      {
++        /* Identify ZWJ/emoji-related codepoints and force single-cell width,
++         * while still running normal dirty-cell update flow. */
          const bool is_combining = (text && !text_width);
-+        /* Bypass broken combining system for ZWJ sequences and emoji */
 +        const bool is_zwj = (text == 0x200D);
 +        const bool is_variation_selector = (text >= 0xFE00 && text <= 0xFE0F);
 +        const bool is_skin_tone_modifier = (text >= 0x1F3FB && text <= 0x1F3FF);
@@ -19,24 +20,24 @@
 +                              (text >= 0x1F680 && text <= 0x1F6FF) ||  /* Transport */
 +                              (text >= 0x1F700 && text <= 0x1F77F) ||  /* Alchemical */
 +                              (text >= 0x1F900 && text <= 0x1F9FF) ||  /* Supplemental Symbols and Pictographs */
-+                              (text >= 0x1FA00 && text <= 0x1FAFF);    /* Symbols and Pictographs Extended-A */ 
++                              (text >= 0x1FA00 && text <= 0x1FAFF);    /* Symbols and Pictographs Extended-A */
 +
-+        /* Store emoji/joiner/modifier sequences directly in separate cells. 
-+         * The renderer in pdcdisp.c will expand the run to glue them back 
-+         * into a single cluster for DirectWrite. */
-+        if (is_emoji || is_zwj || is_skin_tone_modifier || is_variation_selector || is_keycap_joiner) {
-+            win->_y[y][x] = ch;
-+            win->_curx = x + 1;
-+            return OK;
-+        }
++        /* Keep emoji/joiner/modifier codepoints as standalone cells so the
++         * renderer can rebuild full grapheme clusters from adjacent cells.
++         * We do NOT return early here; normal path must still mark cells dirty. */
++        if (is_emoji || is_zwj || is_skin_tone_modifier || is_variation_selector || is_keycap_joiner)
++            text_width = 1;
++
          const bool is_low_surrogate = PDC_IS_LOW_SURROGATE( text);
-
+ 
 -        if( is_combining || is_low_surrogate)
-+        if( (is_combining && !is_zwj && !is_variation_selector && !is_skin_tone_modifier) || is_low_surrogate)
++        if( (is_combining && !is_zwj && !is_variation_selector
++                        && !is_skin_tone_modifier && !is_keycap_joiner)
++                        || is_low_surrogate)
          {
              chtype prev_char;
-
-@@ -546,6 +548,14 @@
+ 
+@@ -546,6 +577,14 @@
                  x--;
              else
              {
@@ -51,7 +52,7 @@
                  y--;
                  x = win->_maxx - 1;
              }
-@@ -553,6 +564,11 @@
+@@ -553,6 +592,11 @@
              if( is_combining)
                  text = COMBINED_CHAR_START
                           + PDC_find_combined_char_idx( prev_char, text);
