@@ -199,12 +199,12 @@
 +    float desired_left = dst_x - pad;
 +    float max_right = (float)(SP->cols * PDC_cxChar);
 +    float desired_right = dst_x + px_w + cell_w + pad;
++    bind_rect.left = (desired_left > 0.0f) ? desired_left : 0.0f;
 +    bind_rect.right = (desired_right < max_right) ? desired_right : max_right;
-+    if (bind_rect.right <= bind_rect.left) 
++    if (bind_rect.right <= bind_rect.left)
 +    {
 +        bind_rect.right = bind_rect.left + PDC_cxChar; /* safe fallback */
 +    }
-+    bind_rect.left = (desired_left > 0.0f) ? desired_left : 0.0f;
 +    bind_rect.top    = dst_y;
 +    bind_rect.bottom = dst_y + cell_h;
 +    hr = ID2D1DCRenderTarget_BindDC(g_d2d_rt, hdc, &bind_rect);
@@ -468,4 +468,3 @@
          assert( (srcp[len - 1] & A_CHARTEXT) != MAX_UNICODE);
  #endif
          PDC_transform_line_given_hdc( hdc, lineno, x, len, srcp);
-
