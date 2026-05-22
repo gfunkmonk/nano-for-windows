@@ -21,18 +21,28 @@
 +#endif
  
  #include "../common/acs_defs.h"
- 
-@@ -220,7 +235,9 @@
-     lf.lfPitchAndFamily = FF_MODERN;
-     lf.lfWeight = ((font_idx & 1) ? FW_EXTRABOLD : FW_NORMAL);
-     lf.lfItalic = ((font_idx & 2) ? TRUE : FALSE);
--    lf.lfCharSet = ANSI_CHARSET;
-+    /* Allow full Unicode glyph selection (including emoji) instead of
-+       restricting font matching to ANSI code pages. */
-+    lf.lfCharSet = DEFAULT_CHARSET;
-     lf.lfQuality = PROOF_QUALITY;
-     lf.lfOutPrecision = OUT_RASTER_PRECIS;
-     return( lf);
+
+@@ -218,16 +218,16 @@
+ #ifdef PDC_WIDE
+     if( !*PDC_font_name)
+         wcscpy( PDC_font_name, _T("Courier New"));
+-    if( font_idx & 4)
+-        wcscpy( lf.lfFaceName, _T("Unifont"));
++    if( font_idx & 8)
++        wcscpy( lf.lfFaceName, _T("Segoe UI Emoji"));
+     else
+         wcscpy( lf.lfFaceName, PDC_font_name );
+ /*  wprintf( L"New font: %s\n", PDC_font_name); */
+ #else
+     if( !*PDC_font_name)
+         strcpy( PDC_font_name, "Courier New");
+-    if( font_idx & 4)
+-        strcpy( lf.lfFaceName, "Unifont");
++    if( font_idx & 8)
++        strcpy( lf.lfFaceName, "Segoe UI Emoji");
+     else
+         strcpy( lf.lfFaceName, PDC_font_name); 
+
 @@ -327,6 +344,250 @@
  
  #define BUFFSIZE 50
