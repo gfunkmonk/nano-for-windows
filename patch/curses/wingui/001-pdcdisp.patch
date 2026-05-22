@@ -318,7 +318,6 @@
 +        x = new_x;
 +        len = new_len;
 +    }
-+
  #ifdef PDC_WIDE
 +    /* Lazy-init Direct2D + DirectWrite on first render call. */
 +    PDC_d2d_init();
@@ -385,7 +384,6 @@
 +         * whole cluster.
 +         * ---------------------------------------------------------------- */
 +        if (has_emoji_or_joiner && g_d2d_available && (!SP->drawing_cursor || i != 1))
-+            && i > 4 && requested_x == 0 && requested_len == SP->cols)
 +        {
 +            PACKED_RGB fg_rgb, bg_rgb;
 +            const chtype *full_line = srcp - x;
