@@ -297,27 +297,6 @@
      assert( len <= SP->cols - x);
      assert( lineno < SP->lines && len > 0 && lineno >= 0);
 +
-+    /* Quick conservative fix: when only a very small slice is being
-+     * redrawn (e.g. length <= 3 cells), expand the slice by +/-2 columns
-+     * so grapheme clusters (ZWJ, variation selectors, skin-tone modifiers,
-+     * regional indicators) are less likely to be split by the clip region.
-+     * This adjusts the local `x`, `len`, and `srcp` variables only and
-+     * is intentionally conservative to avoid changing global behavior.
-+     */
-+    if (len <= 4 && (srcp && PDC_has_emoji_or_joiner(*srcp)) && !SP->drawing_cursor)
-+    {
-+        const int expand = 8;
-+        int new_x = x - expand;
-+        if (new_x < 0) new_x = 0;
-+        int shift = x - new_x; /* how many cells we moved back */
-+        int new_len = len + shift + expand + 1; /* add both left and right expansion */
-+        if (new_len > SP->cols - new_x) new_len = SP->cols - new_x;
-+
-+        /* Move the src pointer back by `shift` cells so it points at new_x. */
-+        srcp = srcp - shift;
-+        x = new_x;
-+        len = new_len;
-+    }
  #ifdef PDC_WIDE
 +    /* Lazy-init Direct2D + DirectWrite on first render call. */
 +    PDC_d2d_init();
@@ -383,7 +362,7 @@
 +         * Expand the run against the full line buffer so DWrite sees the
 +         * whole cluster.
 +         * ---------------------------------------------------------------- */
-+        if (has_emoji_or_joiner && g_d2d_available && !SP->drawing_cursor)
++        if (has_emoji_or_joiner && g_d2d_available && !SP->drawing_cursor && i > 4)
 +        {
 +            PACKED_RGB fg_rgb, bg_rgb;
 +            const chtype *full_line = srcp - x;
