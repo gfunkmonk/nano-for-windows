@@ -49,9 +49,9 @@ case "$PDTERM" in
     *) echo "Invalid PDTERM: $PDTERM (expected wincon, wingui, or vt)"; exit 1 ;;
 esac
 
-echo -e "${BLUE}##############################################"
-echo -e "${BLUE}@@  ${BWHITE}Building for ${PURPLE}$1 ${GREEN}with ${YELLOW}PDTERM${BWHITE}=${RED}$BANNER_NAME  ${BLUE}@@${NC}"
-echo -e "${BLUE}##############################################"
+echo -e "${BLUE}#############################################"
+echo -e "${BLUE}@@  ${BWHITE}Building for ${PURPLE}$1 ${GREEN}with ${YELLOW}PDTERM ${RED}$BANNER_NAME  ${BLUE}@@${NC}"
+echo -e "${BLUE}#############################################"
 sleep 5
 
 # --- 2. Configuration & Environment ---
@@ -61,7 +61,7 @@ BUILDDIR="${BASE_DIR}/build"
 mkdir -p "$BUILDDIR"
 
 # Global variables from your workflow
-export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DCHTYPE_64 -DPDC_WIDE -DPDC_FORCE_UTF8 -D_GNU_SOURCE"
+export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DCHTYPE_64 -DPDC_WIDE -DPDC_FORCE_UTF8 -D_GNU_SOURCEx"
 export LDFLAGS="-L${BUILDDIR}/nano/curses/$PDTERM -static -static-libgcc $BUILDDIR/nano/curses/$PDTERM/pdcurses.a"
 export LIBS="-l:pdcurses.a -lwinmm -lbcrypt"
 export NCURSES_CFLAGS="-I${BUILDDIR}/nano/curses/ -DNCURSES_STATIC -DENABLE_MOUSE"
@@ -275,6 +275,14 @@ sed -i 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/vt
 
 #echo -e "${GREEN}[${BWHITE}curspriv.h${GREEN}] ${BWHITE}Make MAX_UNICODE suck less.${NC}"
 #sed -i 's|MAX_UNICODE 0x110000|MAX_UNICODE 0x10ffff|g' curses/curspriv.h
+
+#echo -e "${GREEN}[${BWHITE}definitions.h${GREEN}] ${BWHITE}time shit workaround applied.${NC}"
+#cp -p ./src/definitions.h{,.bak}
+#echo " " >> ./src/definitions.h
+#echo "#ifdef _WIN32" >> ./src/definitions.h
+#echo "#define st_atim  st_atimespe"  >> ./src/definitions.h
+#echo "#define st_mtim  st_mtimespec"  >> ./src/definitions.h
+#echo "#endif" >> ./src/definitions.h
 
 # --- 6. Build Binaries ---
 for TRIPLET in "${TARGETS[@]}"; do

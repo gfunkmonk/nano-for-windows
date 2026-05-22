@@ -33,6 +33,28 @@
      lf.lfQuality = PROOF_QUALITY;
      lf.lfOutPrecision = OUT_RASTER_PRECIS;
      return( lf);
+--- a/curses/wingui/pdcdisp.c	2026-05-20 18:29:46.058654133 -0400
++++ b/curses/wingui/pdcdisp.c	2026-05-20 18:29:34.998654205 -0400
+@@ -218,15 +218,15 @@
+ #ifdef PDC_WIDE
+     if( !*PDC_font_name)
+         wcscpy( PDC_font_name, _T("Courier New"));
+-    if( font_idx & 4)
+-        wcscpy( lf.lfFaceName, _T("Unifont"));
++    if( font_idx & 8)
++        wcscpy( lf.lfFaceName, _T("Segoe UI Emoji"));
+     else
+         wcscpy( lf.lfFaceName, PDC_font_name );
+ /*  wprintf( L"New font: %s\n", PDC_font_name); */
+ #else
+     if( !*PDC_font_name)
+         strcpy( PDC_font_name, "Courier New");
+-    if( font_idx & 4)
+-        strcpy( lf.lfFaceName, "Unifont");
++    if( font_idx & 8)
++        strcpy( lf.lfFaceName, "Segoe UI Emoji");
+     else
+         strcpy( lf.lfFaceName, PDC_font_name);
 @@ -327,6 +344,250 @@
  
  #define BUFFSIZE 50
@@ -304,13 +326,13 @@
 +     * This adjusts the local `x`, `len`, and `srcp` variables only and
 +     * is intentionally conservative to avoid changing global behavior.
 +     */
-+    if (len <= 2)
++    if (len <= 4)
 +    {
-+        const int expand = 8;
++        const int expand = 7;
 +        int new_x = x - expand;
 +        if (new_x < 0) new_x = 0;
 +        int shift = x - new_x; /* how many cells we moved back */
-+        int new_len = len + shift + expand; /* add both left and right expansion */
++        int new_len = len + shift + expand + 1; /* add both left and right expansion */
 +        if (new_len > SP->cols - new_x) new_len = SP->cols - new_x;
 +
 +        /* Move the src pointer back by `shift` cells so it points at new_x. */

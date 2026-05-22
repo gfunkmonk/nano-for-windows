@@ -13,6 +13,7 @@ TEAL="\x1b[2;36m"
 BWHITE="\x1b[1;37m"
 GREEN="\x1b[1;32m"
 CYAN="\x1b[1;36m"
+RED="\x1b[1;31m"
 NC="\x1b[0m"
 
 # Map PDTERM
@@ -25,10 +26,10 @@ case "$PDTERM" in
     *) echo "Invalid PDTERM: $PDTERM (expected wincon, wingui, or vt)"; exit 1 ;;
 esac
 
-echo -e "${YELLOW}#######################################"
-echo -e "${YELLOW}%%  ${BWHITE}Patching for ${PURPLE}with PDTERM=${CYAN}${_NAME}  ${YELLOW}%%${NC}"
-echo -e "${YELLOW}#######################################"
-sleep 5
+echo -e "${YELLOW}##############################################"
+echo -e "${YELLOW}%%  ${BWHITE}Patching for ${PURPLE}nano ${BWHITE}and PDTERM is ${CYAN}${_NAME}  ${YELLOW}%%${NC}"
+echo -e "${YELLOW}##############################################"
+sleep 3
 
 # --- 2. Configuration & Environment ---
 BASE_DIR="$(pwd)"
