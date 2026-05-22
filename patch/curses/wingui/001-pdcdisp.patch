@@ -329,7 +329,7 @@
  #ifdef USING_COMBINING_CHARACTER_SCHEME
              if( ch > 0xffff && ch < MAX_UNICODE)  /* use Unicode surrogates to fit */
              {               /* >64K values into 16-bit wchar_t: */
-@@ -477,15 +764,93 @@
+@@ -477,15 +764,92 @@
          prev_ch = *srcp;
          clip_rect.left = x * PDC_cxChar;
          clip_rect.top = lineno * PDC_cyChar;
@@ -360,12 +360,11 @@
 +         * glyphs.  GDI ExtTextOutW and IDWriteBitmapRenderTarget are both
 +         * monochrome-only regardless of font.
 +         *
-+         * Keep this path on full-line redraws only; cursor-over and other
-+         * partial redraws can cut through grapheme clusters and cause
-+         * transient corruption/disappearing emoji.
++         * Keep cursor rendering on the legacy path; it can redraw tiny slices
++         * and we avoid introducing color-font instability there.
 +         * ---------------------------------------------------------------- */
 +        if (has_emoji_or_joiner && g_d2d_available && !SP->drawing_cursor
-+            && i > 4 && requested_x == 0 && requested_len == SP->cols)
++            && i > 4)
 +        {
 +            PACKED_RGB fg_rgb, bg_rgb;
 +            const chtype *full_line = srcp - x;
