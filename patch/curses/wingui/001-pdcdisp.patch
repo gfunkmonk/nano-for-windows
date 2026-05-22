@@ -329,7 +329,7 @@
  #ifdef USING_COMBINING_CHARACTER_SCHEME
              if( ch > 0xffff && ch < MAX_UNICODE)  /* use Unicode surrogates to fit */
              {               /* >64K values into 16-bit wchar_t: */
-@@ -477,15 +764,92 @@
+@@ -477,15 +764,91 @@
          prev_ch = *srcp;
          clip_rect.left = x * PDC_cxChar;
          clip_rect.top = lineno * PDC_cyChar;
@@ -363,8 +363,7 @@
 +         * Keep cursor rendering on the legacy path; it can redraw tiny slices
 +         * and we avoid introducing color-font instability there.
 +         * ---------------------------------------------------------------- */
-+        if (has_emoji_or_joiner && g_d2d_available && !SP->drawing_cursor
-+            && i > 4)
++        if (has_emoji_or_joiner && g_d2d_available && !SP->drawing_cursor)
 +        {
 +            PACKED_RGB fg_rgb, bg_rgb;
 +            const chtype *full_line = srcp - x;
