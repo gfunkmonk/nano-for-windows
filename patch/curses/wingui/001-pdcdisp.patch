@@ -292,10 +292,13 @@
          for( i = 0; i < N_CACHED_FONTS; i++)
              if( hFonts[i])
              {
-@@ -357,7 +611,37 @@
+@@ -357,7 +611,18 @@
      assert( x >= 0);
      assert( len <= SP->cols - x);
      assert( lineno < SP->lines && len > 0 && lineno >= 0);
++
++    const int requested_x = x;
++    const int requested_len = len;
 +
  #ifdef PDC_WIDE
 +    /* Lazy-init Direct2D + DirectWrite on first render call. */
@@ -357,12 +360,12 @@
 +         * glyphs.  GDI ExtTextOutW and IDWriteBitmapRenderTarget are both
 +         * monochrome-only regardless of font.
 +         *
-+         * When a partial line refresh lands in the middle of a grapheme
-+         * cluster, DirectWrite can receive only part of a ZWJ sequence.
-+         * Expand the run against the full line buffer so DWrite sees the
-+         * whole cluster.
++         * Keep this path on full-line redraws only; cursor-over and other
++         * partial redraws can cut through grapheme clusters and cause
++         * transient corruption/disappearing emoji.
 +         * ---------------------------------------------------------------- */
-+        if (has_emoji_or_joiner && g_d2d_available && !SP->drawing_cursor && i > 4)
++        if (has_emoji_or_joiner && g_d2d_available && !SP->drawing_cursor
++            && i > 4 && requested_x == 0 && requested_len == SP->cols)
 +        {
 +            PACKED_RGB fg_rgb, bg_rgb;
 +            const chtype *full_line = srcp - x;
