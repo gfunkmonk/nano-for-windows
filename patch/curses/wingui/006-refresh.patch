@@ -1,6 +1,31 @@
---- a/curses/pdcurses/refresh.c	2026-05-21 00:27:30.751189999 -0400
-+++ b/curses/pdcurses/refresh.c	2026-05-21 00:30:21.971188874 -0400
-@@ -183,12 +183,30 @@
+--- a/curses/pdcurses/refresh.c
++++ b/curses/pdcurses/refresh.c
+@@ -158,10 +158,19 @@
+ void PDC_transform_line_sliced( int lineno, int x, int len, const chtype *srcp)
+ {
+-    assert( x >= 0);
+-    assert( len > 0);
+-    assert( x + len <= COLS);
+-    assert( lineno >= 0);
+-    assert( lineno < SP->lines);
++    /* Clamp instead of assert: during resize there is a window where
++       HandleSize has updated PDC_n_rows/cols but resize_term() has not yet
++       updated LINES/COLS/SP->lines.  Hard asserts here cause 100%
++       reproducible crashes on maximize and after font changes. */
++    if( !SP || lineno < 0 || lineno >= SP->lines)
++        return;
++    if( x < 0)
++        x = 0;
++    if( len <= 0)
++        return;
++    if( x + len > COLS)
++        len = COLS - x;
++    if( len <= 0)
++        return;
+     if( lineno == SP->cursrow && x <= SP->curscol && x + len > SP->curscol)
+     {
+         const int vis = (SP->visibility >> (SP->blink_state ? 8 : 0)) & 0xff;
+@@ -183,12 +192,30 @@
              SP->drawing_cursor = vis;
          }
      }
@@ -36,7 +61,7 @@
      }
  #endif
      while( len)
-@@ -202,8 +220,14 @@
+@@ -202,8 +229,14 @@
                       && i < len)
             i++;
          if( i == 1 && ch == MAX_UNICODE)
