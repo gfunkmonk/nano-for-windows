@@ -378,10 +378,12 @@
 +         * D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT renders COLR/PNG color
 +         * glyphs.  GDI ExtTextOutW and IDWriteBitmapRenderTarget are both
 +         * monochrome-only regardless of font.
++         *
 +         * When a partial line refresh lands in the middle of a grapheme
 +         * cluster, DirectWrite can receive only part of a ZWJ sequence.
 +         * Expand the run against the full line buffer so DWrite sees the
 +         * whole cluster.
++         * ---------------------------------------------------------------- */
 +        if (has_emoji_or_joiner && g_d2d_available && (!SP->drawing_cursor || i != 1))
 +            && i > 4 && requested_x == 0 && requested_len == SP->cols)
 +        {
