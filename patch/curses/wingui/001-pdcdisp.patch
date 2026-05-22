@@ -21,28 +21,7 @@
 +#endif
  
  #include "../common/acs_defs.h"
-
-@@ -218,16 +218,16 @@
- #ifdef PDC_WIDE
-     if( !*PDC_font_name)
-         wcscpy( PDC_font_name, _T("Courier New"));
--    if( font_idx & 4)
--        wcscpy( lf.lfFaceName, _T("Unifont"));
-+    if( font_idx & 8)
-+        wcscpy( lf.lfFaceName, _T("Segoe UI Emoji"));
-     else
-         wcscpy( lf.lfFaceName, PDC_font_name );
- /*  wprintf( L"New font: %s\n", PDC_font_name); */
- #else
-     if( !*PDC_font_name)
-         strcpy( PDC_font_name, "Courier New");
--    if( font_idx & 4)
--        strcpy( lf.lfFaceName, "Unifont");
-+    if( font_idx & 8)
-+        strcpy( lf.lfFaceName, "Segoe UI Emoji");
-     else
-         strcpy( lf.lfFaceName, PDC_font_name); 
-
+ 
 @@ -220,7 +235,9 @@
      lf.lfPitchAndFamily = FF_MODERN;
      lf.lfWeight = ((font_idx & 1) ? FW_EXTRABOLD : FW_NORMAL);
@@ -54,7 +33,7 @@
      lf.lfQuality = PROOF_QUALITY;
      lf.lfOutPrecision = OUT_RASTER_PRECIS;
      return( lf);
-@@ -327,6 +344,260 @@
+@@ -327,6 +344,250 @@
  
  #define BUFFSIZE 50
  
@@ -156,9 +135,6 @@
 +            DWRITE_FONT_STRETCH_NORMAL, pt_size, L"", &g_dw_fmt);
 +    if (FAILED(hr) || !g_dw_fmt) return;
 +
-+    IDWriteTextFormat_SetTextAlignment(g_dw_fmt, DWRITE_TEXT_ALIGNMENT_CENTER);
-+    IDWriteTextFormat_SetParagraphAlignment(g_dw_fmt, DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
-+
 +    g_d2d_available = TRUE;
 +}
 +
@@ -211,7 +187,7 @@
 +    D2D1_RECT_F  layout_rect;
 +    extern int PDC_cxChar;
 +    int pad = PDC_cxChar;
-+    D2D1_POINT_2F origin = {0.0f, 0.0f};;
++    D2D1_POINT_2F origin;
 +    IDWriteTextLayout *layout = NULL;
 +    HRESULT hr;
 +    D2D1_TAG t1, t2;
@@ -221,10 +197,8 @@
 +
 +    /* Bind the DC render target to the exact cell rectangle on the window DC. */
 +    float desired_left = dst_x - pad;
-+    float max_right = (float)(SP->cols * PDC_cxChar);
-+    float desired_right = dst_x + px_w + cell_w + pad;
-+    bind_rect.left = (desired_left > 0.0f) ? desired_left : 0.0f;
-+    bind_rect.right = (desired_right < max_right) ? desired_right : max_right;
++    bind_rect.left = dst_x - pad;
++    bind_rect.right = min(dst_x + px_w + cell_w + pad, SP->cols * PDC_cxChar);
 +    if (bind_rect.right <= bind_rect.left)
 +    {
 +        bind_rect.right = bind_rect.left + PDC_cxChar; /* safe fallback */
@@ -248,15 +222,12 @@
 +     * single-cell-high DC render target and look like truncated glyphs. */
 +    IDWriteTextLayout_SetWordWrapping(layout, DWRITE_WORD_WRAPPING_NO_WRAP);
 +
-+    /* Anchor text to the left edge to prevent sub-pixel position drift
-+     * between redraws (e.g. cursor-on vs cursor-off renders). */
-+    IDWriteTextLayout_SetTextAlignment(layout, DWRITE_TEXT_ALIGNMENT_LEADING);
++     /* Anchor text to the left edge to prevent sub-pixel position drift
++      * between redraws (e.g. cursor-on vs cursor-off renders). */
++     IDWriteTextLayout_SetTextAlignment(layout, DWRITE_TEXT_ALIGNMENT_LEADING);
 +
-+    /* Anchor text to the top edge to prevent vertical shimmy. */
-+    IDWriteTextLayout_SetParagraphAlignment(layout, DWRITE_PARAGRAPH_ALIGNMENT_NEAR);
-+
-+    /* Anchor text to the start to prevent sub-pixel "bouncing". */
-+    IDWriteTextLayout_SetTextAlignment(layout, DWRITE_TEXT_ALIGNMENT_LEADING);
++     /* Anchor text to the top edge to prevent vertical shimmy. */
++     IDWriteTextLayout_SetParagraphAlignment(layout, DWRITE_PARAGRAPH_ALIGNMENT_NEAR);
 +
 +    /* Convert COLORREF to D2D1_COLOR_F (0..1 range, BGRA→RGBA). */
 +    bg_color.r = (float)GetRValue(bg) / 255.0f;
@@ -269,7 +240,7 @@
 +    fg_color.a = 1.0f;
 +
 +    layout_rect.left = layout_rect.top = 0.0f;
-+    layout_rect.right  = (FLOAT)(bind_rect.right - bind_rect.left);
++    layout_rect.right  = (FLOAT)px_w;
 +    layout_rect.bottom = (FLOAT)cell_h;
 +
 +    ID2D1DCRenderTarget_BeginDraw(g_d2d_rt);
@@ -298,12 +269,10 @@
 +{
 +    const uint32_t c = (uint32_t)(ch & A_CHARTEXT);
 +
-+    /* Include digits and symbols used in keycap emojis so the expansion scan
-+       captures the full cluster (e.g., 1 + VS16 + Keycap). */
 +    if ((c >= '0' && c <= '9') || c == '#' || c == '*') return TRUE;
 +    return( c == 0x200d                     /* ZWJ */
 +         || c == 0x20e3                     /* combining enclosing keycap */
-+         || c == MAX_UNICODE                /* Wide character continuation */
++         || c == MAX_UNICODE               /* wide character continuation marker */
 +         || (c >= 0xfe00 && c <= 0xfe0f)    /* variation selectors */
 +         || (c >= 0x1f3fb && c <= 0x1f3ff)  /* skin tone modifiers */
 +         || (c >= 0x1f1e6 && c <= 0x1f1ff)  /* regional indicators */
@@ -335,13 +304,13 @@
 +     * This adjusts the local `x`, `len`, and `srcp` variables only and
 +     * is intentionally conservative to avoid changing global behavior.
 +     */
-+    if (len <= 4)
++    if (len <= 2)
 +    {
-+        const int expand = 4;
++        const int expand = 8;
 +        int new_x = x - expand;
 +        if (new_x < 0) new_x = 0;
 +        int shift = x - new_x; /* how many cells we moved back */
-+        int new_len = len + shift + expand + 1; /* add both left and right expansion */
++        int new_len = len + shift + expand; /* add both left and right expansion */
 +        if (new_len > SP->cols - new_x) new_len = SP->cols - new_x;
 +
 +        /* Move the src pointer back by `shift` cells so it points at new_x. */
@@ -378,7 +347,7 @@
  #ifdef USING_COMBINING_CHARACTER_SCHEME
              if( ch > 0xffff && ch < MAX_UNICODE)  /* use Unicode surrogates to fit */
              {               /* >64K values into 16-bit wchar_t: */
-@@ -477,15 +764,93 @@
+@@ -477,15 +764,90 @@
          prev_ch = *srcp;
          clip_rect.left = x * PDC_cxChar;
          clip_rect.top = lineno * PDC_cyChar;
@@ -427,11 +396,13 @@
 +                end_col = SP->cols;
 +
 +            while (start_col > 0
-+                && PDC_has_emoji_or_joiner(full_line[start_col - 1]))
++                && PDC_has_emoji_or_joiner(full_line[start_col - 1])
++                && ((full_line[start_col - 1] & ~A_CHARTEXT) == (srcp[0] & ~A_CHARTEXT)))
 +                start_col--;
 +
 +            while (end_col < SP->cols
-+                && PDC_has_emoji_or_joiner(full_line[end_col]))
++                && PDC_has_emoji_or_joiner(full_line[end_col])
++                && ((full_line[end_col] & ~A_CHARTEXT) == (srcp[0] & ~A_CHARTEXT)))
 +                end_col++;
 +
 +            int run_cells = end_col - start_col;
@@ -446,14 +417,9 @@
 +            int px_w = 0;
 +            for (int t = start_col; t < start_col + draw_cells; t++)
 +            {
-+               const uint32_t cp = (uint32_t)(full_line[t] & A_CHARTEXT);
-+                /* Skip placeholders for the second half of wide characters.
-+                   Their width is already accounted for by the base character. */
-+                if (cp != MAX_UNICODE)
-+                {
-+                    int w = PDC_wcwidth(cp);
-+                    px_w += (w == 2) ? 2 * PDC_cxChar : PDC_cxChar;
-+                }
++                uint32_t cp = (uint32_t)(full_line[t] & A_CHARTEXT);
++                int w = PDC_wcwidth(cp);
++                px_w += (w == 2) ? 2 * PDC_cxChar : PDC_cxChar;
 +            }
 +
 +            clip_rect.left = start_col * PDC_cxChar;

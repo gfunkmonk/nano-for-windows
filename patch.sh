@@ -12,20 +12,23 @@ YELLOW="\x1b[1;33m"
 TEAL="\x1b[2;36m"
 BWHITE="\x1b[1;37m"
 GREEN="\x1b[1;32m"
+CYAN="\x1b[1;36m"
 NC="\x1b[0m"
-
-# Map the input to the full triplet
-#case "$1" in
-#    x86_64)  TARGETS=("x86_64-w64-mingw32") ;;
-#    i686)    TARGETS=("i686-w64-mingw32") ;;
-#    aarch64) TARGETS=("aarch64-w64-mingw32") ;;
-#    armv7) TARGETS=("armv7-w64-mingw32") ;;
-#    *) echo "Invalid architecture: $1"; exit 1 ;;
-#esac
 
 # Map PDTERM
 PDTERM="$1"
-echo "Building for $1 with PDTERM=$PDTERM"
+
+case "$PDTERM" in
+     vt)      export _NAME="VT    " ;;
+     wincon)  export _NAME="WinCon" ;;
+     wingui)  export _NAME="WinGUI" ;;
+    *) echo "Invalid PDTERM: $PDTERM (expected wincon, wingui, or vt)"; exit 1 ;;
+esac
+
+echo -e "${YELLOW}#######################################"
+echo -e "${YELLOW}%%  ${BWHITE}Patching for ${PURPLE}with PDTERM=${CYAN}${_NAME}  ${YELLOW}%%${NC}"
+echo -e "${YELLOW}#######################################"
+sleep 5
 
 # --- 2. Configuration & Environment ---
 BASE_DIR="$(pwd)"
