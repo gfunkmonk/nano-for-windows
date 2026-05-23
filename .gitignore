@@ -8,4 +8,9 @@ llvm/
 *.tar
 *.exe
 *.diff
-
+.vscode
+build/
+nano
+pdcurses/
+PDCursesMOD/
+gnulib/

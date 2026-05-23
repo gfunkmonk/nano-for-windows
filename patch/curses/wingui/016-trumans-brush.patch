@@ -1,0 +1,26 @@
+--- a/curses/wingui/pdcdisp.c	2026-05-22 16:59:29.100231753 -0400
++++ b/curses/wingui/pdcdisp.c	2026-05-22 17:05:54.720229220 -0400
+@@ -495,6 +495,8 @@
+     D2D1_COLOR_F bg_color, fg_color;
+     D2D1_RECT_F  layout_rect;
+     extern int PDC_cxChar;
++    static HBRUSH cached_bg_brush = NULL;
++    static COLORREF cached_bg_color = 0;
+     int pad = PDC_cxChar;
+     D2D1_POINT_2F origin;
+     IDWriteTextLayout *layout = NULL;
+@@ -523,6 +525,14 @@
+     origin.x = 0.0f;
+     origin.y = 0.0f;
+ 
++    if (bg != cached_bg_color || !cached_bg_brush) {
++        if (cached_bg_brush) {
++            DeleteObject(cached_bg_brush);
++        }
++        cached_bg_brush = CreateSolidBrush(bg);
++        cached_bg_color = bg;
++    }
++
+     /* Build text layout. */
+     hr = IDWriteFactory_CreateTextLayout(
+             g_dw_factory, u16, (UINT32)nchars,

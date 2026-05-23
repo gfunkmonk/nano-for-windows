@@ -49,9 +49,9 @@ case "$PDTERM" in
     *) echo "Invalid PDTERM: $PDTERM (expected wincon, wingui, or vt)"; exit 1 ;;
 esac
 
-echo -e "${BLUE}#############################################"
+echo -e "${BLUE}##############################################"
 echo -e "${BLUE}@@  ${BWHITE}Building for ${PURPLE}$1 ${GREEN}with ${YELLOW}PDTERM ${RED}$BANNER_NAME  ${BLUE}@@${NC}"
-echo -e "${BLUE}#############################################"
+echo -e "${BLUE}##############################################"
 sleep 5
 
 # --- 2. Configuration & Environment ---
@@ -239,6 +239,14 @@ sed -i '/setlocale(LC_ALL, "");/a #ifdef _WIN32\n\tSetConsoleOutputCP(65001);\n\
 echo -e "${GREEN}[${BWHITE}chars.c/winio.c${GREEN}] ${BWHITE}Swapping wcwidth for uc_width${NC}"
 sed -i 's|wcwidth(wc)|uc_width(wc, "UTF-8")|g' src/chars.c src/winio.c
 
+# 1. Inject the OUTLAW_WIDTH macro into definitions.h
+#echo -e "${GREEN}[${BWHITE}definitions.h${GREEN}] ${BWHITE}Injecting OUTLAW_WIDTH macro${NC}"
+#sed -i '/#include "uniwidth.h"/a #define OUTLAW_WIDTH(wc) ((wc == 0x200D || wc == 0xFE0F || (wc >= 0x1F3FB \&\& wc <= 0x1F3FF)) ? 0 : uc_width(wc, "UTF-8"))' src/definitions.h
+
+# 2. Swap all width checks to use the new macro instead of standard uc_width
+#echo -e "${GREEN}[${BWHITE}chars.c/winio.c${GREEN}] ${BWHITE}Applying OUTLAW_WIDTH override${NC}"
+#sed -i 's|wcwidth(wc)|OUTLAW_WIDTH(wc)|g' src/chars.c src/winio.c
+
 echo -e "${GREEN}[${BWHITE}chars.c${GREEN}] ${BWHITE}Including uniwidth.h${NC}"
 sed -i '/prototypes.h/a#include "uniwidth.h"' src/chars.c
 
@@ -247,14 +255,14 @@ sed -i "/0x42[1234]/d" src/definitions.h
 
 # 1. Force nano to treat the character range for Emojis as double-width (2 columns)
 # This patches the wide-character width detection logic.
-##echo -e "${GREEN}[${BWHITE}chars.c${GREEN}] ${BWHITE}fix wcwidth${NC}"
-##sed -i 's/return wcwidth(wc);/if (wc >= 0x1F300 \&\& wc <= 0x1F9FF) return 2; return wcwidth(wc);/' src/chars.c
+echo -e "${GREEN}[${BWHITE}chars.c${GREEN}] ${BWHITE}fix wcwidth${NC}"
+sed -i 's/return wcwidth(wc);/if (wc >= 0x1F300 \&\& wc <= 0x1F9FF) return 2; return wcwidth(wc);/' src/chars.c
 # 2. Adjust winio.c to prevent PDCurses from truncating high-plane characters
 # This ensures that characters outside the BMP (Basic Multilingual Plane) aren't filtered.
-##echo -e "${GREEN}[${BWHITE}winio.c${GREEN}] ${BWHITE}fix wcwidth${NC}"
-##sed -i '/if (is_extended_char(wc))/i \    if (wc > 0xFFFF) return true;' src/winio.c
+echo -e "${GREEN}[${BWHITE}winio.c${GREEN}] ${BWHITE}fix wcwidth${NC}"
+sed -i '/if (is_extended_char(wc))/i \    if (wc > 0xFFFF) return true;' src/winio.c
 # 3. Ensure the title bar and status bar allow for multi-column character spacing
-##sed -i 's/waddnwstr(window, \&widechar, 1);/waddnwstr(window, \&widechar, wcwidth(widechar));/' src/winio.c
+sed -i 's/waddnwstr(window, \&widechar, 1);/waddnwstr(window, \&widechar, wcwidth(widechar));/' src/winio.c
 
 # PDCurses uses 64bit (chtype) for cell attributes instead of 32bit (int)
 echo -e "${GREEN}[${BWHITE}various${GREEN}] ${BWHITE}Improving from 256colors to true color${NC}"
@@ -264,25 +272,17 @@ sed -i "/int attributes/ s/\bint\b/chtype/g" src/rcfile.c
 sed -i "/bool parse_combination/ s/\bint\b/chtype/g" src/rcfile.c
 
 echo -e "${GREEN}[${BWHITE}wincon & vt${GREEN}] ${BWHITE}PDC_display_utf8 = TRUE${NC}"
-#sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wincon/*.c
+sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wincon/*.c
 sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/vt/*.c
-#sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wingui/*.c
+sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wingui/*.c
 
 echo -e "${GREEN}[${BWHITE}pdckbd.c${GREEN}] ${BWHITE}Forced for 64-bit chtype${NC}"
 sed -i 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/vt/pdckbd.c
-#sed -i 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/wincon/pdckbd.c
-#sed -i 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/wingui/pdckbd.c
+sed -i 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/wincon/pdckbd.c
+sed -i 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/wingui/pdckbd.c
 
-#echo -e "${GREEN}[${BWHITE}curspriv.h${GREEN}] ${BWHITE}Make MAX_UNICODE suck less.${NC}"
-#sed -i 's|MAX_UNICODE 0x110000|MAX_UNICODE 0x10ffff|g' curses/curspriv.h
-
-#echo -e "${GREEN}[${BWHITE}definitions.h${GREEN}] ${BWHITE}time shit workaround applied.${NC}"
-#cp -p ./src/definitions.h{,.bak}
-#echo " " >> ./src/definitions.h
-#echo "#ifdef _WIN32" >> ./src/definitions.h
-#echo "#define st_atim  st_atimespe"  >> ./src/definitions.h
-#echo "#define st_mtim  st_mtimespec"  >> ./src/definitions.h
-#echo "#endif" >> ./src/definitions.h
+echo -e "${GREEN}[${BWHITE}curspriv.h${GREEN}] ${BWHITE}Make MAX_UNICODE suck less.${NC}"
+sed -i 's|MAX_UNICODE 0x110000|MAX_UNICODE 0x10ffff|g' curses/curspriv.h
 
 # --- 6. Build Binaries ---
 for TRIPLET in "${TARGETS[@]}"; do

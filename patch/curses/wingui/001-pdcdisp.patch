@@ -22,40 +22,7 @@
  
  #include "../common/acs_defs.h"
  
-@@ -220,7 +235,9 @@
-     lf.lfPitchAndFamily = FF_MODERN;
-     lf.lfWeight = ((font_idx & 1) ? FW_EXTRABOLD : FW_NORMAL);
-     lf.lfItalic = ((font_idx & 2) ? TRUE : FALSE);
--    lf.lfCharSet = ANSI_CHARSET;
-+    /* Allow full Unicode glyph selection (including emoji) instead of
-+       restricting font matching to ANSI code pages. */
-+    lf.lfCharSet = DEFAULT_CHARSET;
-     lf.lfQuality = PROOF_QUALITY;
-     lf.lfOutPrecision = OUT_RASTER_PRECIS;
-     return( lf);
---- a/curses/wingui/pdcdisp.c	2026-05-20 18:29:46.058654133 -0400
-+++ b/curses/wingui/pdcdisp.c	2026-05-20 18:29:34.998654205 -0400
-@@ -218,15 +218,15 @@
- #ifdef PDC_WIDE
-     if( !*PDC_font_name)
-         wcscpy( PDC_font_name, _T("Courier New"));
--    if( font_idx & 4)
--        wcscpy( lf.lfFaceName, _T("Unifont"));
-+    if( font_idx & 8)
-+        wcscpy( lf.lfFaceName, _T("Segoe UI Emoji"));
-     else
-         wcscpy( lf.lfFaceName, PDC_font_name );
- /*  wprintf( L"New font: %s\n", PDC_font_name); */
- #else
-     if( !*PDC_font_name)
-         strcpy( PDC_font_name, "Courier New");
--    if( font_idx & 4)
--        strcpy( lf.lfFaceName, "Unifont");
-+    if( font_idx & 8)
-+        strcpy( lf.lfFaceName, "Segoe UI Emoji");
-     else
-         strcpy( lf.lfFaceName, PDC_font_name);
-@@ -327,6 +344,250 @@
+@@ -327,6 +344,245 @@
  
  #define BUFFSIZE 50
  
@@ -209,7 +176,7 @@
 +    D2D1_RECT_F  layout_rect;
 +    extern int PDC_cxChar;
 +    int pad = PDC_cxChar;
-+    D2D1_POINT_2F origin;
++    D2D1_POINT_2F origin = {0.0f, 0.0f};
 +    IDWriteTextLayout *layout = NULL;
 +    HRESULT hr;
 +    D2D1_TAG t1, t2;
@@ -219,8 +186,10 @@
 +
 +    /* Bind the DC render target to the exact cell rectangle on the window DC. */
 +    float desired_left = dst_x - pad;
-+    bind_rect.left = dst_x - pad;
-+    bind_rect.right = min(dst_x + px_w + cell_w + pad, SP->cols * PDC_cxChar);
++    float max_right = (float)(SP->cols * PDC_cxChar);
++    float desired_right = dst_x + px_w + cell_w + pad;
++    bind_rect.left = (desired_left > 0.0f) ? desired_left : 0.0f;
++    bind_rect.right = (desired_right < max_right) ? desired_right : max_right;
 +    if (bind_rect.right <= bind_rect.left)
 +    {
 +        bind_rect.right = bind_rect.left + PDC_cxChar; /* safe fallback */
@@ -243,13 +212,6 @@
 +    /* Keep the emoji run on one line; wrapped text would be clipped by the
 +     * single-cell-high DC render target and look like truncated glyphs. */
 +    IDWriteTextLayout_SetWordWrapping(layout, DWRITE_WORD_WRAPPING_NO_WRAP);
-+
-+     /* Anchor text to the left edge to prevent sub-pixel position drift
-+      * between redraws (e.g. cursor-on vs cursor-off renders). */
-+     IDWriteTextLayout_SetTextAlignment(layout, DWRITE_TEXT_ALIGNMENT_LEADING);
-+
-+     /* Anchor text to the top edge to prevent vertical shimmy. */
-+     IDWriteTextLayout_SetParagraphAlignment(layout, DWRITE_PARAGRAPH_ALIGNMENT_NEAR);
 +
 +    /* Convert COLORREF to D2D1_COLOR_F (0..1 range, BGRA→RGBA). */
 +    bg_color.r = (float)GetRValue(bg) / 255.0f;
@@ -291,10 +253,10 @@
 +{
 +    const uint32_t c = (uint32_t)(ch & A_CHARTEXT);
 +
-+    if ((c >= '0' && c <= '9') || c == '#' || c == '*') return TRUE;
++    if ((c >= '0' && c <= '9') || c == '#' || c == '*') return true;
 +    return( c == 0x200d                     /* ZWJ */
 +         || c == 0x20e3                     /* combining enclosing keycap */
-+         || c == MAX_UNICODE               /* wide character continuation marker */
++         || c == MAX_UNICODE                /* Wide character continuation */
 +         || (c >= 0xfe00 && c <= 0xfe0f)    /* variation selectors */
 +         || (c >= 0x1f3fb && c <= 0x1f3ff)  /* skin tone modifiers */
 +         || (c >= 0x1f1e6 && c <= 0x1f1ff)  /* regional indicators */
@@ -326,9 +288,9 @@
 +     * This adjusts the local `x`, `len`, and `srcp` variables only and
 +     * is intentionally conservative to avoid changing global behavior.
 +     */
-+    if (len <= 4)
++    if (len <= 3)
 +    {
-+        const int expand = 7;
++        const int expand = 6;
 +        int new_x = x - expand;
 +        if (new_x < 0) new_x = 0;
 +        int shift = x - new_x; /* how many cells we moved back */
