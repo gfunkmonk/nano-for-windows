@@ -31,9 +31,10 @@
          const bool is_low_surrogate = PDC_IS_LOW_SURROGATE( text);
  
 -        if( is_combining || is_low_surrogate)
-+        if( (is_combining && !is_zwj && !is_variation_selector
-+                        && !is_skin_tone_modifier && !is_keycap_joiner)
-+                        || is_low_surrogate)
++        const bool combines_with_previous = is_combining || is_low_surrogate
++                        || is_zwj || is_variation_selector
++                        || is_skin_tone_modifier || is_keycap_joiner;
++        if( combines_with_previous)
          {
              chtype prev_char;
  
@@ -43,7 +44,8 @@
              {
 +                /* For ZWJ and variation selectors at line start, we need to ensure
 +                 * they get combined with the next character rather than being lost */
-+                if( is_zwj || is_variation_selector || is_skin_tone_modifier)
++                if( is_zwj || is_variation_selector || is_skin_tone_modifier
++                        || is_keycap_joiner)
 +                {
 +                    /* Store as a special marker that will be combined with next char */
 +                    win->_y[y][x] = COMBINED_CHAR_START + PDC_find_combined_char_idx( 0, text);
@@ -56,7 +58,8 @@
              if( is_combining)
                  text = COMBINED_CHAR_START
                           + PDC_find_combined_char_idx( prev_char, text);
-+            else if( is_zwj || is_variation_selector || is_skin_tone_modifier)
++            else if( is_zwj || is_variation_selector || is_skin_tone_modifier
++                        || is_keycap_joiner)
 +                /* ZWJ and variation selectors should combine with previous character
 +                 * to maintain the emoji sequence integrity */
 +                text = COMBINED_CHAR_START
