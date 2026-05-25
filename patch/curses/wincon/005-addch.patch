@@ -1,6 +1,6 @@
 --- a/curses/pdcurses/addch.c   2026-05-10 00:00:00.000000000 -0400
 +++ b/curses/pdcurses/addch.c   2026-05-10 00:00:00.000000000 -0400
-@@ -537,8 +537,35 @@
+@@ -537,8 +537,36 @@
      {
 +        /* Identify ZWJ/emoji-related codepoints and force single-cell width,
 +         * while still running normal dirty-cell update flow. */
@@ -38,7 +38,7 @@
          {
              chtype prev_char;
  
-@@ -546,6 +577,14 @@
+@@ -546,6 +577,15 @@
                  x--;
              else
              {
@@ -54,7 +54,7 @@
                  y--;
                  x = win->_maxx - 1;
              }
-@@ -553,6 +592,11 @@
+@@ -553,6 +593,12 @@
              if( is_combining)
                  text = COMBINED_CHAR_START
                           + PDC_find_combined_char_idx( prev_char, text);
