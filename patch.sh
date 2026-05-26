@@ -78,7 +78,7 @@ fi
 if [ -d "$BASE_DIR/patch/curses/common" ]; then
     while IFS= read -r p; do
         [ -n "$p" ] || continue
-        echo -e "${YELLOW}Applying $(basename "$p") to curses${NC}"
+        echo -e "${CYAN}Applying $(basename "$p") to curses${NC}"
         patch -p1 < "$p" || exit 1
     done < <(find "$BASE_DIR/patch/curses/common" -maxdepth 1 -type f -name '*.patch' | sort -V)
 fi

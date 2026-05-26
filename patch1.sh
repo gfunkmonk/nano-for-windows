@@ -12,6 +12,8 @@ YELLOW="\x1b[1;33m"
 TEAL="\x1b[2;36m"
 BWHITE="\x1b[1;37m"
 GREEN="\x1b[1;32m"
+CYAN="\x1b[1;36m"
+RED="\x1b[1;31m"
 NC="\x1b[0m"
 
 # Map the input to the full triplet
@@ -74,7 +76,7 @@ fi
 if [ -d "$BASE_DIR/patch/curses/common" ]; then
     while IFS= read -r p; do
         [ -n "$p" ] || continue
-        echo -e "${YELLOW}Applying $(basename "$p") to curses${NC}"
+        echo -e "${CYAN}Applying $(basename "$p") to curses${NC}"
         patch -p1 < "$p" || exit 1
     done < <(find "$BASE_DIR/patch/curses/common" -maxdepth 1 -type f -name '*.patch' | sort -V)
 fi
