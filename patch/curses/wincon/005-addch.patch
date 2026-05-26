@@ -1,21 +1,17 @@
---- a/curses/pdcurses/addch.c	2026-05-26 01:45:38.868322267 -0400
-+++ b/curses/pdcurses/addch.c	2026-05-26 01:48:21.478321199 -0400
-@@ -535,10 +535,30 @@
+--- a/curses/pdcurses/addch.c
++++ b/curses/pdcurses/addch.c
+@@ -535,6 +535,22 @@ int waddch( WINDOW *win, const chtype ch)
  
      if( x || y)
      {
-+        /* Identify ZWJ/emoji-related codepoints and force single-cell width,
-+         * while still running normal dirty-cell update flow. */
++        /* Keep emoji joiners/modifiers in the combining path. */
 +        const bool is_zwj = (text == 0x200D);
 +        const bool is_variation_selector = (text >= 0xFE00 && text <= 0xFE0F);
 +        const bool is_skin_tone_modifier = (text >= 0x1F3FB && text <= 0x1F3FF);
 +        const bool is_keycap_joiner = (text == 0x20E3);
 +
-+        /* Keep joiner/modifier codepoints as standalone cells so the
-+         * renderer can rebuild full grapheme clusters from adjacent cells.
-+         * We do NOT return early here; normal path must still mark cells dirty. */
-+        if (is_zwj || is_skin_tone_modifier || is_keycap_joiner)
-+            text_width = 0;
++        if( is_zwj || is_skin_tone_modifier || is_keycap_joiner)
++            text_width = 1;
 +
 +        if (is_variation_selector)
 +        {
@@ -27,35 +23,16 @@
          const bool is_combining = (text && !text_width);
          const bool is_low_surrogate = PDC_IS_LOW_SURROGATE( text);
  
--        if( is_combining || is_low_surrogate)
-+        if( (is_combining && !is_zwj && !is_variation_selector && !is_skin_tone_modifier && !is_keycap_joiner) || is_low_surrogate)
-         {
-             chtype prev_char;
- 
-@@ -546,6 +578,14 @@
-                 x--;
-             else
-             {
-+                /* For ZWJ and variation selectors at line start, we need to ensure
-+                 * they get combined with the next character rather than being lost */
-+                if( is_zwj || is_skin_tone_modifier || is_keycap_joiner)
-+                {
-+                    /* Store as a special marker that will be combined with next char */
-+                    win->_y[y][x] = COMBINED_CHAR_START + PDC_find_combined_char_idx( 0, text);
-+                    return OK;
-+                }
-                 y--;
+@@ -550,6 +566,11 @@ int waddch( WINDOW *win, const chtype ch)
                  x = win->_maxx - 1;
              }
-@@ -553,6 +593,11 @@
+             prev_char = win->_y[y][x] & A_CHARTEXT;
++            if( prev_char == DUMMY_CHAR_NEXT_TO_FULLWIDTH && x)
++            {
++                x--;
++                prev_char = win->_y[y][x] & A_CHARTEXT;
++            }
              if( is_combining)
                  text = COMBINED_CHAR_START
                           + PDC_find_combined_char_idx( prev_char, text);
-+            else if( is_zwj || is_skin_tone_modifier || is_keycap_joiner)
-+                /* ZWJ and variation selectors should combine with previous character
-+                 * to maintain the emoji sequence integrity */
-+                text = COMBINED_CHAR_START
-+                         + PDC_find_combined_char_idx( prev_char, text);
-             else if( PDC_IS_HIGH_SURROGATE( prev_char))
-                 text = 0x10000 + ((prev_char - 0xd800) << 10) + (text - 0xdc00);
-             else     /* low surrogate after a non-high surrogate;  not */
+
