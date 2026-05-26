@@ -45,7 +45,7 @@
              {
 +                /* For ZWJ and variation selectors at line start, we need to ensure
 +                 * they get combined with the next character rather than being lost */
-+                if( is_zwj || is_variation_selector || is_keycap_joiner)
++                if( is_zwj || is_variation_selector || is_skin_tone_modifier || is_keycap_joiner)
 +                {
 +                    /* Store as a special marker that will be combined with next char */
 +                    win->_y[y][x] = COMBINED_CHAR_START + PDC_find_combined_char_idx( 0, text);
@@ -58,7 +58,7 @@
              if( is_combining)
                  text = COMBINED_CHAR_START
                           + PDC_find_combined_char_idx( prev_char, text);
-+            else if( is_zwj || is_variation_selector || is_keycap_joiner)
++            else if( is_zwj || is_variation_selector || is_skin_tone_modifier || is_keycap_joiner)
 +                /* ZWJ and variation selectors should combine with previous character
 +                 * to maintain the emoji sequence integrity */
 +                text = COMBINED_CHAR_START
