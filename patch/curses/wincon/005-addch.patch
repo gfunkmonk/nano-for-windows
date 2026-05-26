@@ -1,6 +1,6 @@
 --- a/curses/pdcurses/addch.c
 +++ b/curses/pdcurses/addch.c
-@@ -535,6 +535,22 @@ int waddch( WINDOW *win, const chtype ch)
+@@ -535,10 +535,26 @@ int waddch( WINDOW *win, const chtype ch)
  
      if( x || y)
      {
@@ -13,7 +13,7 @@
 +        if( is_zwj || is_skin_tone_modifier || is_keycap_joiner)
 +            text_width = 1;
 +
-+        if (is_variation_selector)
++        if( is_variation_selector)
 +        {
 +            if( x > 0)
 +                win->_y[y][x - 1] = COMBINED_CHAR_START
@@ -23,16 +23,23 @@
          const bool is_combining = (text && !text_width);
          const bool is_low_surrogate = PDC_IS_LOW_SURROGATE( text);
  
-@@ -550,6 +566,11 @@ int waddch( WINDOW *win, const chtype ch)
+-        if( is_combining || is_low_surrogate)
++        if( (is_combining && !is_zwj && !is_variation_selector && !is_skin_tone_modifier && !is_keycap_joiner) || is_low_surrogate)
+         {
+             chtype prev_char;
+ 
+@@ -550,7 +566,12 @@ int waddch( WINDOW *win, const chtype ch)
                  x = win->_maxx - 1;
              }
              prev_char = win->_y[y][x] & A_CHARTEXT;
+-            if( is_combining)
 +            if( prev_char == DUMMY_CHAR_NEXT_TO_FULLWIDTH && x)
 +            {
 +                x--;
 +                prev_char = win->_y[y][x] & A_CHARTEXT;
 +            }
-             if( is_combining)
++            if( is_combining || is_zwj || is_skin_tone_modifier || is_keycap_joiner)
                  text = COMBINED_CHAR_START
                           + PDC_find_combined_char_idx( prev_char, text);
+             else if( PDC_IS_HIGH_SURROGATE( prev_char))
 
