@@ -1,10 +1,11 @@
---- a/curses/pdcurses/addch.c   2026-05-10 00:00:00.000000000 -0400
-+++ b/curses/pdcurses/addch.c   2026-05-10 00:00:00.000000000 -0400
-@@ -537,8 +537,40 @@
+--- a/curses/pdcurses/addch.c	2026-05-26 01:45:38.868322267 -0400
++++ b/curses/pdcurses/addch.c	2026-05-26 01:48:21.478321199 -0400
+@@ -535,10 +535,42 @@
+ 
+     if( x || y)
      {
 +        /* Identify ZWJ/emoji-related codepoints and force single-cell width,
 +         * while still running normal dirty-cell update flow. */
--        const bool is_combining = (text && !text_width);
 +        const bool is_zwj = (text == 0x200D);
 +        const bool is_variation_selector = (text >= 0xFE00 && text <= 0xFE0F);
 +        const bool is_skin_tone_modifier = (text >= 0x1F3FB && text <= 0x1F3FF);
@@ -35,15 +36,15 @@
 +                                    + PDC_find_combined_char_idx( win->_y[y][x - 1], text);
 +            return OK;
 +        }
+         const bool is_combining = (text && !text_width);
          const bool is_low_surrogate = PDC_IS_LOW_SURROGATE( text);
-+        const bool is_combining = (text && !text_width);
  
 -        if( is_combining || is_low_surrogate)
 +        if( (is_combining && !is_zwj && !is_variation_selector && !is_skin_tone_modifier && !is_keycap_joiner) || is_low_surrogate)
          {
              chtype prev_char;
  
-@@ -546,6 +577,14 @@
+@@ -546,6 +578,14 @@
                  x--;
              else
              {
@@ -58,7 +59,7 @@
                  y--;
                  x = win->_maxx - 1;
              }
-@@ -553,6 +592,11 @@
+@@ -553,6 +593,11 @@
              if( is_combining)
                  text = COMBINED_CHAR_START
                           + PDC_find_combined_char_idx( prev_char, text);

@@ -49,9 +49,9 @@ case "$PDTERM" in
     *) echo "Invalid PDTERM: $PDTERM (expected wincon, wingui, or vt)"; exit 1 ;;
 esac
 
-echo -e "${BLUE}##############################################"
+echo -e "${BLUE}#############################################"
 echo -e "${BLUE}@@  ${BWHITE}Building for ${PURPLE}$1 ${GREEN}with ${YELLOW}PDTERM ${RED}$BANNER_NAME  ${BLUE}@@${NC}"
-echo -e "${BLUE}##############################################"
+echo -e "${BLUE}#############################################"
 sleep 5
 
 # --- 2. Configuration & Environment ---

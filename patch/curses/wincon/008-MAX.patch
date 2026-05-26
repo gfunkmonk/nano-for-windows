@@ -5,7 +5,7 @@
  {
  #ifdef PDC_WIDE
 -    WCHAR buffer[MAX_PACKET_LEN];
-+    WCHAR buffer[MAX_PACKET_LEN*2];
++    WCHAR buffer[MAX_PACKET_LEN*8];
  #else
      char buffer[MAX_PACKET_LEN];
  #endif
