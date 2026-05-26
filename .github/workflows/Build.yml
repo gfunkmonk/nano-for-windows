@@ -274,6 +274,16 @@ jobs:
           patch -p1 < "$p" || exit 1
         done < <(find "${CWD}/patch/nano" -maxdepth 1 -type f -name '*.patch' | sort -V)
 
+    - name: ❤️‍🩹 PDCurses Patcheses (common)
+      run: |
+        CWD=$(pwd)
+        cd nano
+        while IFS= read -r p; do
+          [ -n "$p" ] || continue
+          echo -e "\033[1;33mApplying $(basename "$p")...\033[0m"
+          patch -p1 < "$p" || exit 1
+        done < <(find "${CWD}/patch/curses/common" -maxdepth 1 -type f -name '*.patch' | sort -V)
+
     - name: ❤️‍🩹 PDCurses Patches
       run: |
         CWD=$(pwd)

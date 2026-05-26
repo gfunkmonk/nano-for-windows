@@ -1,6 +1,6 @@
 --- a/curses/pdcurses/addch.c	2026-05-26 01:45:38.868322267 -0400
 +++ b/curses/pdcurses/addch.c	2026-05-26 01:48:21.478321199 -0400
-@@ -535,10 +535,42 @@
+@@ -535,10 +535,44 @@
  
      if( x || y)
      {
@@ -26,8 +26,10 @@
 +        /* Keep emoji/joiner/modifier codepoints as standalone cells so the
 +         * renderer can rebuild full grapheme clusters from adjacent cells.
 +         * We do NOT return early here; normal path must still mark cells dirty. */
-+        if (is_emoji || is_zwj || is_skin_tone_modifier || is_keycap_joiner)
++        if (is_emoji)
 +            text_width = 1;
++        if (is_zwj || is_skin_tone_modifier || is_keycap_joiner)
++            text_width = 0;
 +
 +        if (is_variation_selector)
 +        {
