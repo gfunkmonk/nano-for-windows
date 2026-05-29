@@ -1,6 +1,6 @@
 --- a/curses/pdcurses/addch.c	2026-05-26 01:45:38.868322267 -0400
 +++ b/curses/pdcurses/addch.c	2026-05-26 01:48:21.478321199 -0400
-@@ -535,10 +535,44 @@
+@@ -535,10 +535,55 @@
  
      if( x || y)
      {
@@ -10,11 +10,11 @@
 +        const bool is_variation_selector = (text >= 0xFE00 && text <= 0xFE0F);
 +        const bool is_skin_tone_modifier = (text >= 0x1F3FB && text <= 0x1F3FF);
 +        const bool is_keycap_joiner = (text == 0x20E3);
++        const bool is_regional = (text >= 0x1F1E6 && text <= 0x1F1FF);
 +        const bool is_emoji = (text >= 0x238C && text <= 0x2454) ||    /* Misc items */
 +                              (text >= 0x2600 && text <= 0x26FF) ||    /* Misc symbols */
 +                              (text >= 0x2700 && text <= 0x27BF) ||    /* Dingbats */
 +                              (text >= 0x1F018 && text <= 0x1F270) ||  /* Various asian characters */
-+                              (text >= 0x1F1E6 && text <= 0x1F1FF) ||  /* Regional country flags */
 +                              (text >= 0x1F300 && text <= 0x1F3FA) ||  /* Misc Symbols and Pictographs (excl skin tones) */
 +                              (text >= 0x1F400 && text <= 0x1F5FF) ||  /* Misc Symbols and Pictographs (cont) */
 +                              (text >= 0x1F600 && text <= 0x1F64F) ||  /* Emoticons */
@@ -26,18 +26,29 @@
 +        /* Keep emoji/joiner/modifier codepoints as standalone cells so the
 +         * renderer can rebuild full grapheme clusters from adjacent cells.
 +         * We do NOT return early here; normal path must still mark cells dirty. */
-+        if (is_emoji)
++        if (is_emoji || is_regional)
 +            text_width = 1;
 +        if (is_zwj || is_skin_tone_modifier || is_keycap_joiner)
 +            text_width = 0;
-+
-+        if (is_variation_selector)
-+        {
++        if (is_keycap_joiner) {
 +            if( x > 0)
 +                win->_y[y][x - 1] = COMBINED_CHAR_START
 +                                    + PDC_find_combined_char_idx( win->_y[y][x - 1], text);
 +            return OK;
 +        }
++        if (is_variation_selector) {
++            if (x > 0) {
++                chtype prev = win->_y[y][x - 1] & A_CHARTEXT;
++                /* Only upgrade genuine text-style symbols (< 0x2800 or
++                 * known ranges), not already-wide emoji. */
++                if (prev != DUMMY_CHAR_NEXT_TO_FULLWIDTH && prev <= 0x2BFF) {
++                    win->_y[y][x - 1] = COMBINED_CHAR_START
++                        + PDC_find_combined_char_idx(win->_y[y][x - 1], text);
++                }
++            }
++            return OK;
++        }
++
          const bool is_combining = (text && !text_width);
          const bool is_low_surrogate = PDC_IS_LOW_SURROGATE( text);
  
@@ -52,7 +63,7 @@
              {
 +                /* For ZWJ and variation selectors at line start, we need to ensure
 +                 * they get combined with the next character rather than being lost */
-+                if(!is_emoji)
++                if(is_zwj || is_skin_tone_modifier)
 +                {
 +                    /* Store as a special marker that will be combined with next char */
 +                    win->_y[y][x] = COMBINED_CHAR_START + PDC_find_combined_char_idx( 0, text);
@@ -65,7 +76,7 @@
              if( is_combining)
                  text = COMBINED_CHAR_START
                           + PDC_find_combined_char_idx( prev_char, text);
-+            else if(!is_emoji)
++            else if(is_zwj || is_skin_tone_modifier)
 +                /* ZWJ and variation selectors should combine with previous character
 +                 * to maintain the emoji sequence integrity */
 +                text = COMBINED_CHAR_START
