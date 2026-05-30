@@ -16,10 +16,9 @@ on:
       pdterm:
         description: Terminal type
         required: true
-        default: all
+        default: wincon
         type: choice
         options:
-          - all
           - wincon
           - wingui
           - vt
@@ -48,21 +47,11 @@ jobs:
       body: ${{ steps.checks.outputs.body }}
       build: ${{ steps.checks.outputs.build }}
       cancel: ${{ steps.checks.outputs.cancel }}
-      pdterms: ${{ steps.checks.outputs.pdterms }}
-      tag_suffix: ${{ steps.checks.outputs.tag_suffix }}
     steps:
     - name: "✔️ Pre-build checks"
       id: checks
       shell: bash
       run: |
-        # Generate the pdterms matrix based on input
-        if [[ "${{ github.event.inputs.pdterm }}" == "all" ]] || [[ -z "${{ github.event.inputs.pdterm }}" ]]; then
-          echo 'pdterms=["wincon", "wingui", "vt"]' >> $GITHUB_OUTPUT
-          echo "tag_suffix=" >> $GITHUB_OUTPUT
-        else
-          echo 'pdterms=["${{ github.event.inputs.pdterm }}"]' >> $GITHUB_OUTPUT
-          echo "tag_suffix=-${{ github.event.inputs.pdterm }}" >> $GITHUB_OUTPUT
-        fi
         git clone --depth=1 -n https://github.com/GitMirroring/nano.git
         cd nano
         LAST_NANO=$( TZ=UTC git show --quiet --date='format-local:%Y-%m-%dT%H:%M:%SZ' --format="%cd" )
@@ -140,37 +129,17 @@ jobs:
   build:
     needs: [ checks ]
     if: needs.checks.outputs.cancel != 'true'
-    name: "⚙️ nano4Win ${{ matrix.pretty }} (${{ matrix.term_pretty }}) build"
+    name: "⚙️ nano4Win ${{ matrix.pretty }} build"
     runs-on: ubuntu-latest
     container: alpine:edge
     strategy:
       fail-fast: false
       matrix:
-        pdterm: ${{ fromJson(needs.checks.outputs.pdterms) }}
-        arch: [i686, x86_64, aarch64, armv7]
         include:
-          - arch: i686
-            name: Win32
-            short: w32
-            pretty: 32 bits
-          - arch: x86_64
-            name: Win64
-            short: w64
-            pretty: 64 bits
-          - arch: aarch64
-            name: ARM64
-            short: a64
-            pretty: on Arm64
-          - arch: armv7
-            name: ARM32
-            short: a32
-            pretty: on Arm32
-          - pdterm: wincon
-            term_pretty: Windows Console
-          - pdterm: wingui
-            term_pretty: Windows GUI
-          - pdterm: vt
-            term_pretty: Virtual Terminal
+          - { arch: i686,    name: Win32,  short: w32, pretty: 32 bits  }
+          - { arch: x86_64,  name: Win64,  short: w64, pretty: 64 bits  }
+          - { arch: aarch64, name: ARM64,    short: a64, pretty: on Arm64 }
+          - { arch: armv7,   name: ARM32,    short: a32, pretty: on Arm32 }
     defaults:
       run:
         shell: bash
@@ -223,7 +192,7 @@ jobs:
         git clone https://github.com/GitMirroring/nano.git --depth=1
         cd nano
         git clone https://github.com/Bill-Gray/PDCursesMod.git  curses
-        git clone https://github.com/coreutils/gnulib.git --depth 1
+        git clone https://git.savannah.gnu.org/git/gnulib.git --depth 1
         autopoint --force
         glibmodules="
             base32
@@ -274,16 +243,6 @@ jobs:
           patch -p1 < "$p" || exit 1
         done < <(find "${CWD}/patch/nano" -maxdepth 1 -type f -name '*.patch' | sort -V)
 
-    - name: ❤️‍🩹 PDCurses Patcheses (common)
-      run: |
-        CWD=$(pwd)
-        cd nano
-        while IFS= read -r p; do
-          [ -n "$p" ] || continue
-          echo -e "\033[1;33mApplying $(basename "$p")...\033[0m"
-          patch -p1 < "$p" || exit 1
-        done < <(find "${CWD}/patch/curses/common" -maxdepth 1 -type f -name '*.patch' | sort -V)
-
     - name: ❤️‍🩹 PDCurses Patches
       run: |
         CWD=$(pwd)
@@ -292,7 +251,7 @@ jobs:
           [ -n "$p" ] || continue
           echo -e "\033[1;33mApplying $(basename "$p")...\033[0m"
           patch -p1 < "$p" || exit 1
-        done < <(find "${CWD}/patch/curses/${{ matrix.pdterm }}" -maxdepth 1 -type f -name '*.patch' | sort -V)
+        done < <(find "${CWD}/patch/curses/${{ inputs.pdterm }}" -maxdepth 1 -type f -name '*.patch' | sort -V)
 
     - name: "🪄 Apply Windows Portability Magic"
       run: |
@@ -320,9 +279,9 @@ jobs:
         cd nano
 
         ##########################
-        ##                      ##
-        ##     APPLY PATCHES    ##
-        ##                      ##
+        ##                        ##
+        ##     APPLY PATCHES      ##
+        ##                        ##
         ##########################
         # 1. >realpath< function doesn't exist on Windows, which isn't fully POSIX compliant.
         echo -e "\n\nPATCH: realpath() workaround applied."
@@ -453,14 +412,14 @@ jobs:
         _diff
 
         # PDCurses uses 64bit (chtype) for cell attributes instead of 32bit (int)
-        echo -e "\n\nPATCH: Improving from 256colors to true color."
-        sed -i.bak "/interface_color_pair/ s/\bint\b/chtype/g" src/prototypes.h src/global.c
-        _diff
-        sed -i.bak "/int attributes/ s/\bint\b/chtype/g" src/definitions.h
-        _diff
-        sed -i.bak "/int attributes/ s/\bint\b/chtype/g" src/rcfile.c
-        sed -i.bak "/bool parse_combination/ s/\bint\b/chtype/g" src/rcfile.c
-        _diff
+        #echo -e "\n\nPATCH: Improving from 256colors to true color."
+        #sed -i.bak "/interface_color_pair/ s/\bint\b/chtype/g" src/prototypes.h src/global.c
+        #_diff
+        #sed -i.bak "/int attributes/ s/\bint\b/chtype/g" src/definitions.h
+        #_diff
+        #sed -i.bak "/int attributes/ s/\bint\b/chtype/g" src/rcfile.c
+        #sed -i.bak "/bool parse_combination/ s/\bint\b/chtype/g" src/rcfile.c
+        #_diff
 
         # Desambiguation of BACKSPACE vs ^H, or ENTER vs ^M and certain CTRL+key combos             //o//
         echo -e "\n\nPATCH: Full key modifiers detection."
@@ -556,22 +515,30 @@ jobs:
         sed -i.bak 's|Compiled options|Project info at https://github.com/gfunkmonk/nano-for-windows\\n Using '"${CURSES}"'\\n &|' src/nano.c
         _diff
 
-    - name: 🚩 Set PDTerm Flags
+    - if: ${{ inputs.pdterm == 'vt' }}
+      name: 🚩 Set vt Flags
       run: |
-        case "${{ matrix.pdterm }}" in
-          vt)     echo "PDT_PRETTY=VT"     >> $GITHUB_ENV ;;
-          wincon) echo "PDT_PRETTY=WinCon" >> $GITHUB_ENV ;;
-          wingui) echo "PDT_PRETTY=WinGUI" >> $GITHUB_ENV ;;
-        esac
+        echo "PDC_VT=RGB UNDERLINE BLINK DIM STANDOUT" >> $GITHUB_ENV
+        echo "PDT_PRETTY=VT" >> $GITHUB_ENV
+
+    - if: ${{ inputs.pdterm == 'wincon' }}
+      name: 🚩 Set wincon Flags
+      run: |
+        echo "PDT_PRETTY=WinCon" >> $GITHUB_ENV
+
+    - if: ${{ inputs.pdterm == 'wingui' }}
+      name: 🚩 Set wingui Flags
+      run: |
+        echo "PDT_PRETTY=WinGUI" >> $GITHUB_ENV
 
     - name: "⚙️ Compile curses lib for ${{ matrix.name}}"
       run: |
         ##########################
-        ##                      ##
-        ##     COMPILE CURSES   ##
-        ##                      ##
+        ##                        ##
+        ##     COMPILE CURSES     ##
+        ##                        ##
         ##########################
-        PDTERM=${{ matrix.pdterm }}
+        PDTERM=${{ inputs.pdterm }}
         echo "PDTERM=${PDTERM}" >> $GITHUB_ENV
         export CFLAGS="${{ env.CFLAGS }}"
         export CXXFLAGS="${CFLAGS}"
@@ -588,15 +555,15 @@ jobs:
     - name: "🔧 Configure Nano Build"
       run: |
         ##########################
-        ##                      ##
-        ##     CONFIGURE BUILD  ##
-        ##                      ##
+        ##                        ##
+        ##     CONFIGURE BUILD    ##
+        ##                        ##
         ##########################
         # FIX: capture CWD at step start and export to GITHUB_ENV so subsequent
         # steps can reference it even after cd calls shift the working directory.
         CWD=$(pwd)
         echo "BUILD_CWD=${CWD}" >> $GITHUB_ENV
-        PDTERM="${{ matrix.pdterm }}"
+        PDTERM="${{ inputs.pdterm }}"
         TARGET="${{ matrix.arch }}-w64-mingw32"
         OUTDIR="${CWD}/nano/pkg"
         CURSES_DIR="${CWD}/nano/curses"
@@ -637,9 +604,9 @@ jobs:
     - name: "⚙️ Build for Windows ${{ matrix.pretty }}"
       run: |
         ##########################
-        ##                      ##
-        ##     BUILD NANO       ##
-        ##                      ##
+        ##                        ##
+        ##     BUILD NANO         ##
+        ##                        ##
         ##########################
         cd nano/build
           make -j$(($(nproc)*2)) && \
@@ -687,6 +654,19 @@ jobs:
       run:
         shell: bash
     steps:
+    - if: ${{ inputs.pdterm == 'vt' }}
+      name: 🚩 Set vt Flags
+      run: |
+        echo "PDT_PRETTY=VT" >> $GITHUB_ENV
+    - if: ${{ inputs.pdterm == 'wincon' }}
+      name: 🚩 Set wincon Flags
+      run: |
+        echo "PDT_PRETTY=WinCon" >> $GITHUB_ENV
+    - if: ${{ inputs.pdterm == 'wingui' }}
+      name: 🚩 Set wingui Flags
+      run: |
+        echo "PDT_PRETTY=WinGUI" >> $GITHUB_ENV
+
     - name: "📬 Receive Packages"
       uses: actions/download-artifact@v8
       with:
@@ -699,20 +679,20 @@ jobs:
 
     - name: "📦 Prepare Final Package"
       run: |
-        mv nano-for*/* . || true
+        mv nano-for*/* .
         sha256sum *.zip > hashes.txt
         echo "${{ needs.checks.outputs.body }}" | base64 -d > body.txt
 
-    - name: "👍 Upload nano-for-windows_${{ needs.checks.outputs.build }} as Artifact"
+    - name: "👍 Upload nano-for-windows_${{ needs.checks.outputs.build }}-${{ env.PDT_PRETTY }} as Artifact"
       uses: actions/upload-artifact@v7
       if: github.event.inputs.release == 'Artifact'
       with:
-        name: nano-for-windows_${{ needs.checks.outputs.build }}${{ needs.checks.outputs.tag_suffix }}
+        name: nano-for-windows_${{ needs.checks.outputs.build }}-${{ env.PDT_PRETTY }}
         path: |
           *.zip
           *.txt
 
-    - name: "🎉 Publish Release ${{ needs.checks.outputs.build }}"
+    - name: "🎉 Publish Release ${{ needs.checks.outputs.build }}-${{ env.PDT_PRETTY }}"
       uses: softprops/action-gh-release@v3
       # WARNING: before using this action go to https://github.com/OWNER/REPO/settings/actions
       # and in **Workflow Permissions** section give actions **Read and Write permissions**.
@@ -723,9 +703,8 @@ jobs:
         prerelease: false
         draft: false
         make_latest: true
-        tag_name: ${{ needs.checks.outputs.build }}${{ needs.checks.outputs.tag_suffix }}
+        tag_name: ${{ needs.checks.outputs.build }}-${{ env.PDT_PRETTY }}
         body_path: body.txt
         files: |
           ./*.zip
           ./hashes.txt
-

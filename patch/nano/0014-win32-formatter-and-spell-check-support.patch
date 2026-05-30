@@ -1,18 +1,6 @@
-From bf583942e9d447c9d3aa6e90d88696bd6e2ed533 Mon Sep 17 00:00:00 2001
-From: Chawye Hsu <su+git@chawyehsu.com>
-Date: Thu, 16 Apr 2026 03:48:29 +0800
-Subject: [PATCH 14/16] win32: formatter and spell check support
-
-Signed-off-by: Chawye Hsu <su+git@chawyehsu.com>
----
- src/text.c | 173 ++++++++++++++++++++++++++++++++++++++++++++++++++++-
- 1 file changed, 171 insertions(+), 2 deletions(-)
-
-diff --git a/src/text.c b/src/text.c
-index b8899da..e4bff6b 100644
---- a/src/text.c
-+++ b/src/text.c
-@@ -2237,6 +2237,172 @@ void treat(char *tempfile_name, char *theprogram, bool spelling)
+--- a/src/text.c	2026-05-30 14:04:46.716678002 -0400
++++ b/src/text.c	2026-05-30 14:06:45.576677222 -0400
+@@ -2233,6 +2233,172 @@
  		statusline(REMARK, _("Finished checking spelling"));
  	else
  		statusline(REMARK, _("Buffer has been processed"));
@@ -185,20 +173,18 @@ index b8899da..e4bff6b 100644
  #endif
  }
  #endif /* ENABLE_SPELLER || ENABLE_FORMATTER */
-@@ -2572,8 +2738,11 @@ void do_spell(void)
+@@ -2576,9 +2742,11 @@
  
  	if (alt_speller && *alt_speller)
  		treat(temp_name, alt_speller, TRUE);
 -	else
--		do_int_speller(temp_name);
-+	else {
-+		// do_int_speller(temp_name);
-+		statusline(ALERT, _("Internal spell checker is not supported in this build"));
-+		return;
-+	}
- 
+-		spell_check(temp_name);
+-
++       else {
++               // spell_check(temp_name);
++               statusline(ALERT, _("Internal spell checker is not supported in this build"));
++               return;
++       }
  	unlink(temp_name);
  	free(temp_name);
--- 
-2.53.0.windows.3
-
+ 

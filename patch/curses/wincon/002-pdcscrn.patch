@@ -1,23 +1,20 @@
---- a/curses/wincon/pdcscrn.c
-+++ b/curses/wincon/pdcscrn.c
-@@ -30,6 +30,12 @@
-
+diff -ruN curses/wincon/pdcscrn.c cursesb/wincon/pdcscrn.c
+--- a/curses/wincon/pdcscrn.c	2026-05-15 06:42:07.805023451 -0400
++++ b/curses/wincon/pdcscrn.c	2026-05-15 06:44:15.225022614 -0400
+@@ -389,6 +389,9 @@
+ 
  int PDC_scr_open(void)
  {
-+    /* Enable proper UTF-8 support for emoji display */
-+    SetConsoleOutputCP(65001); // UTF-8 code page
-+    SetConsoleCP(65001);       // UTF-8 code page
 +
 +    /* Enable virtual terminal processing for modern emoji support */
 +    DWORD mode = 0;
      const char *str;
      CONSOLE_SCREEN_BUFFER_INFO csbi;
      HMODULE h_kernel;
-@@ -37,6 +43,14 @@
-     int i;
-
+@@ -397,6 +400,14 @@
+ 
      PDC_LOG(("PDC_scr_open() - called\n"));
-+
+ 
 +    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
 +    if (hOut != INVALID_HANDLE_VALUE) {
 +        if (GetConsoleMode(hOut, &mode)) {
@@ -25,13 +22,14 @@
 +            SetConsoleMode(hOut, mode);
 +        }
 +    }
-
++
      for (i = 0; i < 16; i++)
-
-@@ -437,6 +437,18 @@
+     {
+         pdc_curstoreal[realtocurs[i]] = (short)i;
+@@ -434,6 +446,19 @@
  #endif
          pdc_conemu ? !strcmp(str, "ON") : FALSE;
-
+ 
 +    /* Enable VT mode and UTF-8 after handles are open and flags are set */
 +    if (pdc_con_out != INVALID_HANDLE_VALUE) {
 +        DWORD mode = 0;
@@ -41,8 +39,9 @@
 +        }
 +    }
 +
-+    SetConsoleOutputCP(65001);
-+    SetConsoleCP(65001);
++    /* Enable proper UTF-8 support for emoji display */
++    SetConsoleOutputCP(65001); // UTF-8 code page
++    SetConsoleCP(65001);       // UTF-8 code page
 +
      GetConsoleScreenBufferInfo(pdc_con_out, &csbi);
      GetConsoleScreenBufferInfo(pdc_con_out, &orig_scr);

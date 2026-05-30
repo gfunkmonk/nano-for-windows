@@ -1,0 +1,11 @@
+--- a/curses/wincon/pdcdisp.c	2026-05-16 05:38:39.704481070 -0400
++++ b/curses/wincon/pdcdisp.c	2026-05-16 06:08:10.664469440 -0400
+@@ -163,7 +163,7 @@
+                            const int lineno, const int x, const chtype *srcp, const int len)
+ {
+ #ifdef PDC_WIDE
+-    WCHAR buffer[MAX_PACKET_LEN];
++    WCHAR buffer[MAX_PACKET_LEN*8];
+ #else
+     char buffer[MAX_PACKET_LEN];
+ #endif

@@ -1,0 +1,21 @@
+--- a/curses/wincon/pdcwin.h	2026-05-15 06:29:11.805028547 -0400
++++ b/curses/wincon/pdcwin.h	2026-05-16 05:49:20.234476863 -0400
+@@ -12,8 +12,16 @@
+    #define PDC_WIDE
+ #endif
+ 
+-#if defined(PDC_WIDE) && !defined(UNICODE)
+-# define UNICODE
++#if defined( PDC_WIDE) || defined( UNICODE) || defined( _UNICODE)
++   #if !defined( PDC_WIDE)
++      # define PDC_WIDE
++   #endif
++   #if !defined( UNICODE)
++      # define UNICODE
++   #endif
++   #if !defined( _UNICODE)
++      # define _UNICODE
++   #endif
+ #endif
+ 
+ #define WIN32_LEAN_AND_MEAN

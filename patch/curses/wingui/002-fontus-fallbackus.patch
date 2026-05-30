@@ -1,0 +1,31 @@
+--- a/curses/wingui/pdcdisp.c	2026-05-22 16:10:33.070251034 -0400
++++ b/curses/wingui/pdcdisp.c	2026-05-22 16:15:32.390249068 -0400
+@@ -219,7 +219,7 @@
+     if( !*PDC_font_name)
+         wcscpy( PDC_font_name, _T("Courier New"));
+     if( font_idx & 4)
+-        wcscpy( lf.lfFaceName, _T("Unifont"));
++        wcscpy( lf.lfFaceName, _T("Segoe UI Emoji"));
+     else
+         wcscpy( lf.lfFaceName, PDC_font_name );
+ /*  wprintf( L"New font: %s\n", PDC_font_name); */
+@@ -227,7 +227,7 @@
+     if( !*PDC_font_name)
+         strcpy( PDC_font_name, "Courier New");
+     if( font_idx & 4)
+-        strcpy( lf.lfFaceName, "Unifont");
++        strcpy( lf.lfFaceName, "Segoe UI Emoji");
+     else
+         strcpy( lf.lfFaceName, PDC_font_name);
+ #endif
+@@ -235,6 +235,10 @@
+     lf.lfPitchAndFamily = FF_MODERN;
+     lf.lfWeight = ((font_idx & 1) ? FW_EXTRABOLD : FW_NORMAL);
+     lf.lfItalic = ((font_idx & 2) ? TRUE : FALSE);
++    /* Fallback font (font_idx & 4): use Segoe UI Emoji for color emoji
++       coverage.  It is proportional so relax pitch/family constraints. */
++    if( font_idx & 4)
++        lf.lfPitchAndFamily = FF_DONTCARE | DEFAULT_PITCH;
+     lf.lfCharSet = ANSI_CHARSET;
+     lf.lfQuality = PROOF_QUALITY;
+     lf.lfOutPrecision = OUT_RASTER_PRECIS;

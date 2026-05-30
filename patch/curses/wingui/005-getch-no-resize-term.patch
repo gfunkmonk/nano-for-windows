@@ -1,0 +1,38 @@
+--- a/curses/pdcurses/getch.c	2026-05-30 14:48:52.146660630 -0400
++++ b/curses/pdcurses/getch.c	2026-05-30 14:50:17.186660071 -0400
+@@ -550,7 +550,7 @@
+     /* refresh window when wgetch is called if there have been changes
+        to it and it is not a pad */
+ 
+-    if (!(win->_flags & _PAD) && ((!win->_leaveit &&
++    if (!SP->resized && !(win->_flags & _PAD) && ((!win->_leaveit &&
+          (win->_begx + win->_curx != SP->curscol ||
+           win->_begy + win->_cury != SP->cursrow)) || is_wintouched(win)))
+         wrefresh(win);
+@@ -567,8 +567,6 @@
+ 
+     if( key != ERR)
+     {
+-        if( key == KEY_RESIZE)
+-            resize_term( 0, 0);
+         return( key);
+     }
+     /* prepare to buffer data */
+@@ -664,8 +662,6 @@
+ 
+         if( SP->cbreak)
+         {
+-            if( key == KEY_RESIZE)
+-                resize_term( 0, 0);
+             return key;
+         }
+ 
+@@ -684,8 +680,6 @@
+ 
+         if (key == '\n' || key == '\r')
+         {
+-            if( SP->c_buffer[SP->c_gindex] == KEY_RESIZE)
+-                resize_term( 0, 0);
+             return SP->c_buffer[SP->c_gindex++];
+         }
+     }
