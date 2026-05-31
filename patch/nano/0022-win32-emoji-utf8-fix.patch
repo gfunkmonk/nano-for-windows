@@ -60,7 +60,7 @@
  
  		/* Represent an invalid character with the Replacement Character. */
  		if (charlength < 0) {
-@@ -1919,7 +1955,50 @@
+@@ -1919,7 +1955,49 @@
  		}
  
  		/* Determine whether the character takes zero, one, or two columns. */
@@ -102,8 +102,7 @@
 +                               nextwc = (wchar_t)codepoint;
 +                 }
 +
-+                 if (nextwc == 0xFE0F || true_cp == 0xFE0F ||
-+                     ((uint32_t)nextwc >= 0x1F3FB && (uint32_t)nextwc <= 0x1F3FF))
++                 if (nextwc == 0xFE0F || true_cp == 0xFE0F || true_cp >= 0x1F3FB && true_cp <= 0x1F3FF)
 +                       charwidth = 2;
 +               }
 +

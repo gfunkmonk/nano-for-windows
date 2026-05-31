@@ -1,6 +1,6 @@
 --- a/curses/pdcurses/addch.c	2026-05-26 01:45:38.868322267 -0400
 +++ b/curses/pdcurses/addch.c	2026-05-26 01:48:21.478321199 -0400
-@@ -535,10 +535,55 @@
+@@ -535,10 +535,50 @@
  
      if( x || y)
      {
@@ -10,23 +10,18 @@
 +        const bool is_variation_selector = (text >= 0xFE00 && text <= 0xFE0F);
 +        const bool is_skin_tone_modifier = (text >= 0x1F3FB && text <= 0x1F3FF);
 +        const bool is_keycap_joiner = (text == 0x20E3);
-+        const bool is_regional = (text >= 0x1F1E6 && text <= 0x1F1FF);
-+        const bool is_emoji = (text >= 0x238C && text <= 0x2454) ||    /* Misc items */
-+                              (text >= 0x2600 && text <= 0x26FF) ||    /* Misc symbols */
-+                              (text >= 0x2700 && text <= 0x27BF) ||    /* Dingbats */
-+                              (text >= 0x1F018 && text <= 0x1F270) ||  /* Various asian characters */
-+                              (text >= 0x1F300 && text <= 0x1F3FA) ||  /* Misc Symbols and Pictographs (excl skin tones) */
-+                              (text >= 0x1F400 && text <= 0x1F5FF) ||  /* Misc Symbols and Pictographs (cont) */
-+                              (text >= 0x1F600 && text <= 0x1F64F) ||  /* Emoticons */
-+                              (text >= 0x1F680 && text <= 0x1F6FF) ||  /* Transport */
-+                              (text >= 0x1F700 && text <= 0x1F77F) ||  /* Alchemical */
-+                              (text >= 0x1F900 && text <= 0x1F9FF) ||  /* Supplemental Symbols and Pictographs */
-+                              (text >= 0x1FA00 && text <= 0x1FAFF);    /* Symbols and Pictographs Extended-A */
++        const bool is_low_surrogates = (text >= 0xDC00 && text <= 0xDFFF);
++        const bool is_high_surrogates = (text >= 0xD800 && text <= 0xDB7F);
++        const bool is_bmp_symbol =
++                           !is_high_surrogates && !is_low_surrogates
++                           && (  (text >= 0x0000 && text <= 0xFFFF));
++        const bool is_emoji = !is_zwj && !is_variation_selector && !is_skin_tone_modifier && !is_keycap_joiner
++                           && (  (text >= 0x10000 && text <= 0x110000));
 +
 +        /* Keep emoji/joiner/modifier codepoints as standalone cells so the
 +         * renderer can rebuild full grapheme clusters from adjacent cells.
 +         * We do NOT return early here; normal path must still mark cells dirty. */
-+        if (is_emoji || is_regional)
++        if (is_emoji)
 +            text_width = 1;
 +        if (is_zwj || is_skin_tone_modifier || is_keycap_joiner)
 +            text_width = 0;
@@ -53,17 +48,17 @@
          const bool is_low_surrogate = PDC_IS_LOW_SURROGATE( text);
  
 -        if( is_combining || is_low_surrogate)
-+        if( (is_combining && !is_zwj && !is_variation_selector && !is_skin_tone_modifier && !is_keycap_joiner) || is_low_surrogate)
++        if( (is_combining && !is_zwj && !is_skin_tone_modifier && !is_variation_selector && !is_keycap_joiner) || is_low_surrogate)
          {
              chtype prev_char;
- 
-@@ -546,6 +578,14 @@
+
+@@ -546,13 +578,27 @@
                  x--;
              else
              {
 +                /* For ZWJ and variation selectors at line start, we need to ensure
 +                 * they get combined with the next character rather than being lost */
-+                if(is_zwj || is_skin_tone_modifier)
++                if(is_zwj || is_variation_selector || is_keycap_joiner)
 +                {
 +                    /* Store as a special marker that will be combined with next char */
 +                    win->_y[y][x] = COMBINED_CHAR_START + PDC_find_combined_char_idx( 0, text);
@@ -72,11 +67,12 @@
                  y--;
                  x = win->_maxx - 1;
              }
-@@ -553,6 +593,11 @@
++
+             prev_char = win->_y[y][x] & A_CHARTEXT;
              if( is_combining)
                  text = COMBINED_CHAR_START
                           + PDC_find_combined_char_idx( prev_char, text);
-+            else if(is_zwj || is_skin_tone_modifier)
++            else if(is_zwj || is_variation_selector || is_keycap_joiner)
 +                /* ZWJ and variation selectors should combine with previous character
 +                 * to maintain the emoji sequence integrity */
 +                text = COMBINED_CHAR_START
@@ -84,3 +80,4 @@
              else if( PDC_IS_HIGH_SURROGATE( prev_char))
                  text = 0x10000 + ((prev_char - 0xd800) << 10) + (text - 0xdc00);
              else     /* low surrogate after a non-high surrogate;  not */
+

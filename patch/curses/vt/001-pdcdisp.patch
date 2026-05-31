@@ -14,7 +14,7 @@
      if( force_reset_all_attribs || (!x && !lineno))
      {
          force_reset_all_attribs = FALSE;
-@@ -320,6 +327,17 @@
+@@ -320,6 +327,30 @@
         size_t bytes_out = 0;
  
  #ifdef PDC_WIDE
@@ -29,6 +29,19 @@
 +           continue;
 +       }
 +#endif
++       if( (ch >= 0x1F3FB && ch <= 0x1F3FF) || ch == 0xFE0F)
++       {
++           char zbuf[8];
++           size_t zlen = PDC_wc_to_utf8( zbuf, (int32_t)ch);
++           if( zlen > 0)
++           {
++               zbuf[zlen] = '\0';
++               PDC_puts_to_stdout( zbuf);
++           }
++           srcp++;
++           len--;
++           continue;
++       }
         assert( ch != MAX_UNICODE);
         assert( len == 1 || ch < MAX_UNICODE);
  #endif

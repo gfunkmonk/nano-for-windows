@@ -29,7 +29,7 @@
 +            else if (b0 >= 0xC0)           { seqlen = 2; codepoint = b0 & 0x1F; }
 +            if (seqlen > 0) {
 +                int lim = n >= 0 ? n : (int)strlen(str);
-+                if (i + seqlen <= lim) {
++                if (i + seqlen - 1 < lim) {
 +                    int k;
 +                    for (k = 1; k < seqlen; k++) {
 +                        if ((str[i+k] & 0xC0) != 0x80) break;

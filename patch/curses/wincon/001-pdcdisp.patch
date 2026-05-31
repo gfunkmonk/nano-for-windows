@@ -1,10 +1,21 @@
 diff -ruN curses/wincon/pdcdisp.c cursesb/wincon/pdcdisp.c
 --- a/curses/wincon/pdcdisp.c   2026-05-15 06:33:11.555026972 -0400
 +++ b/curses/wincon/pdcdisp.c   2026-05-15 06:36:43.195025583 -0400
-@@ -181,6 +181,58 @@
+@@ -181,6 +181,69 @@
 
  #ifdef PDC_WIDE
          ch &= A_CHARTEXT;
++        if ((ch >= 0x1F3FB && ch <= 0x1F3FF) || ch == 0xFE0F)
++        {
++            if (IS_SUPPLEMENTAL_MULTILINGUAL_PLANE(ch))
++            {
++                buffer[n_out++] = (WCHAR)((ch - 0x10000) >> 10 | 0xD800);
++                buffer[n_out++] = (WCHAR)((ch & 0x3FF) | 0xDC00);
++            }
++            else
++                buffer[n_out++] = (WCHAR)ch;
++            continue;
++        }
 +#ifdef USING_COMBINING_CHARACTER_SCHEME
 +        /* Skip the placeholder cell that follows a fullwidth character.
 +         * Writing the noncharacter U+10FFFF here would (a) display garbage
@@ -86,4 +97,3 @@ diff -ruN curses/wincon/pdcdisp.c cursesb/wincon/pdcdisp.c
      if (blink)
      {
          attr &= ~A_BLINK;
-

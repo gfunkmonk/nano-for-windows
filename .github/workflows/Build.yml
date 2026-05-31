@@ -75,8 +75,14 @@ jobs:
         CHANGES_CURSES="$(git log -1 --pretty=%B)"
         cd ../..
         rm -rf nano
-        LAST_RELEASE=$( curl -fsSL https://github.com/$GITHUB_REPOSITORY/releases | sed -nE 's|^.*datetime="([0-9TZ.:-]+).*|\1|p' | head -1 ) \
-          || LAST_RELEASE="2000.01.01T00:00:00Z"
+        LAST_RELEASE_JSON=$(curl -fsSL -H "Accept: application/vnd.github+json" "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/latest" 2>/dev/null || true)
+        LAST_RELEASE=""
+        LAST_BUILD=""
+        if [ -n "$LAST_RELEASE_JSON" ]; then
+          LAST_RELEASE=$(echo "$LAST_RELEASE_JSON" | jq -r '.published_at // empty')
+          LAST_BUILD=$(echo "$LAST_RELEASE_JSON" | jq -r '.tag_name // empty')
+        fi
+        [ -z "$LAST_RELEASE" ] && LAST_RELEASE="2000-01-01T00:00:00Z"
         echo "n4win last release DATE:  $LAST_RELEASE"
         if [[ $LAST_NANO > $LAST_RELEASE ]]; then
           echo "NEW NANO SOURCE!!!!"
@@ -108,22 +114,23 @@ jobs:
           echo "Nano SUBVERSION: $NANO_SUBVER"
           [[ "$NANO_SUBVER" =~ ^[0-9]+$ ]] && [ "$NANO_SUBVER" -gt 0 ] && NANO_VERSION="${NANO_VERSION}-${NANO_SUBVER}"
           echo "Current nano version: ${NANO_VERSION}"
-          LAST_BUILD=$( curl -fsSL https://github.com/$GITHUB_REPOSITORY/releases | sed -nE "s|^.*tag/(v[0-9.-]+).*|\1|p" | head -1 || true )
-          [ -z "${LAST_BUILD}" ] && LAST_BUILD="v0.0"
-          echo "Last Nano for Windows build: ${LAST_BUILD}"
-          LAST_VERSION=$( echo "${LAST_BUILD}" | awk -F '-' '{print $1}' )
-          echo "Last Nano for Windows main Version: ${LAST_VERSION}"
-          LAST_SUBVER=$(echo "${LAST_BUILD}" | awk -F '[.-]' '{print $3}' )
-          echo "Last Nano for Windows Subversion: ${LAST_SUBVER}"
-          [[ "$LAST_SUBVER" =~ ^[0-9]+$ ]] && [ "$LAST_SUBVER" -gt 0 ] && LAST_VERSION="${LAST_VERSION}-${LAST_SUBVER}"
-          echo "Last Nano version: ${LAST_VERSION}"
-          if [ "${NANO_VERSION}" == "${LAST_VERSION}" ]; then
-            # This is a new Windows build based on the same nano build, probably because there is a new curses patch
-            SUBBUILD="$(echo $LAST_BUILD | awk -F . '{print $3}')"
-            ((SUBBUILD=SUBBUILD+1))
-            [ -z $(echo "$LAST_BUILD" |grep '-') ] \
-              && BUILD="${NANO_VERSION}-0.${SUBBUILD}" \
-              || BUILD="${NANO_VERSION}.${SUBBUILD}"
+          [ "$LAST_BUILD" == "null" ] && LAST_BUILD=""
+          echo "Last Nano for Windows build: ${LAST_BUILD:-<none>}"
+          NANO_VERSION_REGEX=$(printf '%s' "$NANO_VERSION" | sed -e 's/[][(){}.^$*+?|\\-]/\\&/g')
+          if [[ "$NANO_VERSION" == *-* ]]; then
+            SUBBUILD_PATTERN="^${NANO_VERSION_REGEX}(\\.([0-9]+))?$"
+            SUBBUILD_SEPARATOR="."
+          else
+            SUBBUILD_PATTERN="^${NANO_VERSION_REGEX}(-0\\.([0-9]+))?$"
+            SUBBUILD_SEPARATOR="-0."
+          fi
+          if [[ "$LAST_BUILD" =~ $SUBBUILD_PATTERN ]]; then
+            PREV_SUBBUILD="${BASH_REMATCH[2]}"
+            if [ -n "$PREV_SUBBUILD" ]; then
+              BUILD="${NANO_VERSION}${SUBBUILD_SEPARATOR}$((PREV_SUBBUILD + 1))"
+            else
+              BUILD="${NANO_VERSION}${SUBBUILD_SEPARATOR}1"
+            fi
           else
             BUILD="${NANO_VERSION}"
           fi
@@ -140,7 +147,7 @@ jobs:
   build:
     needs: [ checks ]
     if: needs.checks.outputs.cancel != 'true'
-    name: "⚙️ nano4Win ${{ matrix.pretty }} (${{ matrix.term_pretty }}) build"
+    name: "⚙️ nano4Win ${{ matrix.pretty }} (${{ matrix.pdterm == 'wincon' && 'Windows Console' || matrix.pdterm == 'wingui' && 'Windows GUI' || 'Virtual Terminal' }}) build"
     runs-on: ubuntu-latest
     container: alpine:edge
     strategy:
@@ -149,28 +156,10 @@ jobs:
         pdterm: ${{ fromJson(needs.checks.outputs.pdterms) }}
         arch: [i686, x86_64, aarch64, armv7]
         include:
-          - arch: i686
-            name: Win32
-            short: w32
-            pretty: 32 bits
-          - arch: x86_64
-            name: Win64
-            short: w64
-            pretty: 64 bits
-          - arch: aarch64
-            name: ARM64
-            short: a64
-            pretty: on Arm64
-          - arch: armv7
-            name: ARM32
-            short: a32
-            pretty: on Arm32
-          - pdterm: wincon
-            term_pretty: Windows Console
-          - pdterm: wingui
-            term_pretty: Windows GUI
-          - pdterm: vt
-            term_pretty: Virtual Terminal
+          - { arch: i686, name: Win32, short: w32, pretty: 32 bits }
+          - { arch: x86_64, name: Win64, short: w64, pretty: 64 bits }
+          - { arch: aarch64, name: Arm64, short: a64, pretty: on Arm64 }
+          - { arch: armv7, name: Arm32, short: a32, pretty: on Arm32 }
     defaults:
       run:
         shell: bash
@@ -276,13 +265,15 @@ jobs:
 
     - name: ❤️‍🩹 PDCurses Patcheses (common)
       run: |
-        CWD=$(pwd)
-        cd nano
-        while IFS= read -r p; do
-          [ -n "$p" ] || continue
-          echo -e "\033[1;33mApplying $(basename "$p")...\033[0m"
-          patch -p1 < "$p" || exit 1
-        done < <(find "${CWD}/patch/curses/common" -maxdepth 1 -type f -name '*.patch' | sort -V)
+        if [ "${{ matrix.pdterm }}" != "wingui" ]; then
+            CWD=$(pwd)
+            cd nano
+          while IFS= read -r p; do
+            [ -n "$p" ] || continue
+            echo -e "\033[1;33mApplying $(basename "$p")...\033[0m"
+            patch -p1 < "$p" || exit 1
+          done < <(find "${CWD}/patch/curses/common" -maxdepth 1 -type f -name '*.patch' | sort -V)
+        fi
 
     - name: ❤️‍🩹 PDCurses Patches
       run: |
@@ -573,6 +564,7 @@ jobs:
         ##########################
         PDTERM=${{ matrix.pdterm }}
         echo "PDTERM=${PDTERM}" >> $GITHUB_ENV
+        echo $GITHUB_ENV
         export CFLAGS="${{ env.CFLAGS }}"
         export CXXFLAGS="${CFLAGS}"
         unset NCURSESW_CFLAGS

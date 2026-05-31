@@ -1,6 +1,6 @@
 --- a/curses/wincon/pdcdisp.c	2026-05-21 00:46:19.891182584 -0400
 +++ b/curses/wincon/pdcdisp.c	2026-05-21 00:49:37.121181288 -0400
-@@ -476,4 +476,7 @@
+@@ -487,4 +487,7 @@
  
  void PDC_doupdate(void)
  {

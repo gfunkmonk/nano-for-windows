@@ -9,25 +9,30 @@ fi
 
 PURPLE="\x1b[1;35m"
 YELLOW="\x1b[1;33m"
+BROWN="\x1b[0;33m"
 TEAL="\x1b[2;36m"
 BWHITE="\x1b[1;37m"
 GREEN="\x1b[1;32m"
+BLUE="\x1b[1;34m"
 CYAN="\x1b[1;36m"
 RED="\x1b[1;31m"
 NC="\x1b[0m"
 
-# Map the input to the full triplet
-#case "$1" in
-#    x86_64)  TARGETS=("x86_64-w64-mingw32") ;;
-#    i686)    TARGETS=("i686-w64-mingw32") ;;
-#    aarch64) TARGETS=("aarch64-w64-mingw32") ;;
-#    armv7) TARGETS=("armv7-w64-mingw32") ;;
-#    *) echo "Invalid architecture: $1"; exit 1 ;;
-#esac
-
 # Map PDTERM
 PDTERM="$1"
-echo "Building for $1 with PDTERM=$PDTERM"
+
+case "$PDTERM" in
+     vt)      export _NAME="VT    " ;;
+     wincon)  export _NAME="WinCon" ;;
+     wingui)  export _NAME="WinGUI" ;;
+    *) echo "Invalid PDTERM: $PDTERM (expected wincon, wingui, or vt)"; exit 1 ;;
+esac
+
+echo -e "${GREEN}##############################################"
+echo -e "${GREEN}%%  ${BWHITE}Patching for ${CYAN}nano ${BWHITE}and PDTERM is ${BLUE}${_NAME}  ${GREEN}%%${NC}"
+echo -e "${GREEN}%%         ${RED}  without sed patches          ${GREEN}  %%"
+echo -e "${GREEN}##############################################"
+sleep 3
 
 # --- 2. Configuration & Environment ---
 BASE_DIR="$(pwd)"
@@ -44,7 +49,7 @@ sync_repo() {
     if [ ! -d "$dir" ]; then
         git clone "$url" --depth=1 "$dir"
     else
-        echo -e "${TEAL}Syncing $dir...${NC}"
+        echo -e "${YELLOW}Syncing $dir...${NC}"
         cd "$dir"
         git fetch --depth=1
         git reset --hard origin/$(git symbolic-ref --short HEAD)
@@ -67,23 +72,25 @@ sync_repo "https://github.com/coreutils/gnulib.git" "gnulib"
 if [ -d "$BASE_DIR/patch/nano" ]; then
     while IFS= read -r p; do
         [ -n "$p" ] || continue
-        echo -e "${PURPLE}Applying $(basename "$p") to nano${NC}"
+        echo -e "${BLUE}Applying $(basename "$p") to nano${NC}"
         patch -p1 < "$p" || exit 1
     done < <(find "$BASE_DIR/patch/nano" -maxdepth 1 -type f -name '*.patch' | sort -V)
 fi
 
 # Patch Curses
-if [ -d "$BASE_DIR/patch/curses/common" ]; then
-    while IFS= read -r p; do
-        [ -n "$p" ] || continue
-        echo -e "${CYAN}Applying $(basename "$p") to curses${NC}"
-        patch -p1 < "$p" || exit 1
-    done < <(find "$BASE_DIR/patch/curses/common" -maxdepth 1 -type f -name '*.patch' | sort -V)
+if [ "$PDTERM" != "wingui" ]; then
+  if [ -d "$BASE_DIR/patch/curses/common" ]; then
+      while IFS= read -r p; do
+          [ -n "$p" ] || continue
+          echo -e "${PURPLE}Applying $(basename "$p") to curses${NC}"
+          patch -p1 < "$p" || exit 1
+      done < <(find "$BASE_DIR/patch/curses/common" -maxdepth 1 -type f -name '*.patch' | sort -V)
+  fi
 fi
 if [ -d "$BASE_DIR/patch/curses/$PDTERM" ]; then
     while IFS= read -r p; do
         [ -n "$p" ] || continue
-        echo -e "${YELLOW}Applying $(basename "$p") to curses${NC}"
+        echo -e "${CYAN}Applying $(basename "$p") to curses${NC}"
         patch -p1 < "$p" || exit 1
     done < <(find "$BASE_DIR/patch/curses/$PDTERM" -maxdepth 1 -type f -name '*.patch' | sort -V)
 fi

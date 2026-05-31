@@ -19,9 +19,9 @@ NC="\x1b[0m"
 # --- 1. Banner & Confirmation ---
 clear
 echo -e ""
-echo -e "${RED}================================================${NC}"
-echo -e "${RED}||            NANO OUTLAW CLEANER             ${NC}${RED}||${NC}"
-echo -e "${RED}================================================${NC}"
+echo -e "${RED}===============================================${NC}"
+echo -e "${RED}||            NANO 4-WIN CLEANER             ${NC}${RED}||${NC}"
+echo -e "${RED}===============================================${NC}"
 echo -e ""
 echo -e "\x1b[5;31mWARNING!!:${NC} ${WHITE}This will run '${ORANGE}git reset --hard${WHITE}' and"
 echo -e "'${ORANGE}git clean -fd${WHITE}'. Uncommitted Frankenstein hacks"
