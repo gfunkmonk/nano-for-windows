@@ -175,9 +175,11 @@ checks:
     - when: on_success
   before_script:
     - apk update && apk upgrade
-    - apk add bash curl jq tar xz git make texinfo groff gettext-dev
+    - apk add bash curl jq tar xz git make texinfo groff gettext-dev bash
         automake autoconf pkgconf coreutils upx p7zip python3 sed patch
     - git config --global --add safe.directory '*'
+    - ln -snf /bin/bash /bin/sh
+
     # ── Restore LLVM-MinGW from a previous successful pipeline ──
     # Replace the job name/artifact path to match your toolchain pipeline.
     - |
@@ -279,7 +281,6 @@ checks:
         done
         return 0
       }
-
 
       echo -e "\n\nPATCH: realpath() workaround applied."
       cd nano
