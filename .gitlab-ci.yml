@@ -285,7 +285,6 @@ checks:
       '
 
       echo -e "\n\nPATCH: realpath() workaround applied."
-      cd nano
       cp -p ./src/definitions.h{,.bak}
       echo " "              >> ./src/definitions.h
       echo "#ifdef _WIN32"  >> ./src/definitions.h
