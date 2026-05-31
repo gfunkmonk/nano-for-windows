@@ -176,30 +176,13 @@ build:
       # this seems to be needed when running in a container (because of UID mismatch??)
       git config --global --add safe.directory '*'
 
-      # ⏬ Download LLVM-MinGW from Toolchain Workflow
-      # Note: Requires a GitLab CI variable $GH_TOKEN representing a GitHub PAT to use the gh cli
-      RUN_ID=$(gh run list \
-        --workflow toolchain-builder.yml \
-        --repo $GH_REPO_PATH \
-        --limit 20 \
-        --json databaseId,status,conclusion \
-        --jq '[.[] | select(.status == "completed" and .conclusion == "success")][0].databaseId')
-      if [ -z "$RUN_ID" ] || [ "$RUN_ID" == "null" ]; then
-        echo "::error::Could not find a successful completed run for toolchain-builder.yml"
-        exit 1
-      fi
-      echo "Attempting to download artifact from Run ID: $RUN_ID"
-      gh run download $RUN_ID \
-        --repo $GH_REPO_PATH \
-        --name llvm-mingw \
-        --dir llvm-mingw
-      if [ -d "llvm-mingw" ]; then
-        echo "Toolchain restored successfully."
-        export PATH="$(pwd)/llvm-mingw/bin:$PATH"
-      else
-        echo "::error::Directory 'llvm-mingw' not found after download!"
-        exit 1
-      fi
+      # ⏬ Download LLVM-MinGW
+      # Download the specific llvm-mingw release
+      curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20260519/llvm-mingw-20260519-ucrt-ubuntu-22.04-x86_64.tar.xz
+      # Extract the archive (requires xz-utils)
+      tar -xf llvm-mingw-20260519-ucrt-ubuntu-22.04-x86_64.tar.xz
+      # Add the extracted toolchain binaries to the PATH
+      export PATH="$PWD/llvm-mingw-20260519-ucrt-ubuntu-22.04-x86_64/bin:$PATH"
 
       # ⏬ Download Sources
       git clone https://github.com/GitMirroring/nano.git --depth=1
