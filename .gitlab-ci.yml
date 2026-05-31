@@ -293,8 +293,8 @@ checks:
       echo "#include \"uniwidth.h\""  >> ./src/definitions.h
       echo "#define realpath(N,R) _fullpath((R),(N),0)" >> ./src/definitions.h
       echo "#endif"         >> ./src/definitions.h
-      _diff
       '
+      _diff
 
       echo -e "\n\nPATCH: Forcing file management in binary mode like the Linux version."
       sed -i.bak 's/O_..ONLY/& | _O_BINARY/g' ./src/files.c
