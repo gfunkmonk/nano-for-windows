@@ -266,6 +266,7 @@ checks:
 
     # (identical to GitHub Actions "Apply Windows Portability Magic" step)
     - |
+      bash -c '
       function _diff() {
         mapfile -t < <(find . -type f -name '*.bak')
         for bak in "${MAPFILE[@]}"; do
@@ -281,6 +282,7 @@ checks:
         done
         return 0
       }
+      '
 
       echo -e "\n\nPATCH: realpath() workaround applied."
       cd nano
