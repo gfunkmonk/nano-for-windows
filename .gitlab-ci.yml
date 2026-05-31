@@ -184,8 +184,9 @@ checks:
       echo "Downloading toolchain"
       curl -fsSL \
         "https://github.com/mstorsjo/llvm-mingw/releases/download/20260519/llvm-mingw-20260519-ucrt-ubuntu-22.04-x86_64.tar.xz" \
-        -o llvm-mingw.zip
-      unzip -q llvm-mingw.zip -d llvm-mingw
+        -o llvm-mingw.tar.xz
+      mkdir llvm-mingw
+      tar -xJf llvm-mingw.tar.xz --strip-components=1 -C llvm-mingw/
       export PATH="$(pwd)/llvm-mingw/bin:$PATH"
       echo "$(pwd)/llvm-mingw/bin" >> llvm_path.env
   script:
