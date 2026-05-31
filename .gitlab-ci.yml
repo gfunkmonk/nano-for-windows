@@ -279,9 +279,10 @@ checks:
         done
         return 0
       }
-      cd nano
+
 
       echo -e "\n\nPATCH: realpath() workaround applied."
+      cd nano
       cp -p ./src/definitions.h{,.bak}
       echo " "              >> ./src/definitions.h
       echo "#ifdef _WIN32"  >> ./src/definitions.h
@@ -292,8 +293,10 @@ checks:
       _diff
 
       echo -e "\n\nPATCH: Forcing file management in binary mode like the Linux version."
-      sed -i.bak 's/O_..ONLY/& | _O_BINARY/g' ./src/files.c; _diff
-      sed -i.bak 's/O_..ONLY/& | _O_BINARY/g' ./src/text.c;  _diff
+      sed -i.bak 's/O_..ONLY/& | _O_BINARY/g' ./src/files.c
+      _diff
+      sed -i.bak 's/O_..ONLY/& | _O_BINARY/g' ./src/text.c
+      _diff
 
       echo -e "\n\nPATCH: configuring Windows temporal folder."
       sed -i.bak 's|TMPDIR|TEMP|g' ./src/files.c
@@ -310,13 +313,16 @@ checks:
       _diff
 
       echo -e "\n\nPATCH: Allow true color."
-      sed -i.bak "/COLORS == 256/ {s/==/>=/}" src/rcfile.c; _diff
+      sed -i.bak "/COLORS == 256/ {s/==/>=/}" src/rcfile.c
+      _diff
 
       echo -e "\n\nPATCH: solved deadlock with unicode characters."
-      sed -i.bak "/halfdelay(ISSET(QUICK_BLANK)/,/disable_kb_interrupt/d" src/winio.c; _diff
+      sed -i.bak "/halfdelay(ISSET(QUICK_BLANK)/,/disable_kb_interrupt/d" src/winio.c
+      _diff
 
       echo -e "\n\nPATCH: blank out nano's default terminal"
-      sed -i.bak 's|vt220||g' ./src/nano.c; _diff
+      sed -i.bak 's|vt220||g' ./src/nano.c
+      _diff
 
       echo -e "\n\nPATCH: Fix pipe in data in Windows console."
       sed -i.bak "s|/dev/tty|CON|" src/nano.c
@@ -344,10 +350,12 @@ checks:
       _diff
 
       echo -e "\n\nPATCH: Fixed browser folder change."
-      sed -i.bak 's/--selected/selected=0/' src/browser.c; _diff
+      sed -i.bak 's/--selected/selected=0/' src/browser.c
+      _diff
 
       echo -e "\n\nPATCH: More info for exit message."
-      sed -i.bak "s|Save modified buffer|& (Y/N/^C)|" src/nano.c; _diff
+      sed -i.bak "s|Save modified buffer|& (Y/N/^C)|" src/nano.c
+      _diff
 
       echo -e "\n\nPATCH: Enable UTF-8 console."
       sed -i.bak 's|vt220||g
@@ -370,13 +378,17 @@ checks:
       _diff
 
       echo -e "\n\nPATCH: remove duplicated definitions."
-      sed -i.bak "/0x42[1234]/d" src/definitions.h; _diff
+      sed -i.bak "/0x42[1234]/d" src/definitions.h
+      _diff
 
       echo -e "\n\nPATCH: Improving from 256colors to true color."
-      sed -i.bak "/interface_color_pair/ s/\bint\b/chtype/g" src/prototypes.h src/global.c; _diff
-      sed -i.bak "/int attributes/ s/\bint\b/chtype/g" src/definitions.h; _diff
+      sed -i.bak "/interface_color_pair/ s/\bint\b/chtype/g" src/prototypes.h src/global.c
+      _diff
+      sed -i.bak "/int attributes/ s/\bint\b/chtype/g" src/definitions.h
+      _diff
       sed -i.bak "/int attributes/ s/\bint\b/chtype/g" src/rcfile.c
-      sed -i.bak "/bool parse_combination/ s/\bint\b/chtype/g" src/rcfile.c; _diff
+      sed -i.bak "/bool parse_combination/ s/\bint\b/chtype/g" src/rcfile.c
+      _diff
 
       echo -e "\n\nPATCH: Full key modifiers detection."
       sed -i.bak "/get_kbinput(midwin, VISIBLE)/a\
@@ -430,10 +442,12 @@ checks:
       _diff
 
       echo -e "\n\nPATCH: Porting folder accessibility from executable to read access."
-      sed -i.bak "s/X_OK/R_OK/" src/files.c; _diff
+      sed -i.bak "s/X_OK/R_OK/" src/files.c
+      _diff
 
       echo -e "\n\nPATCH: fix GNUlib glob DIR* conflict in browser.c."
-      sed -i.bak 's/rewinddir(dir)/rewinddir((DIR *)dir)/' src/browser.c; _diff
+      sed -i.bak 's/rewinddir(dir)/rewinddir((DIR *)dir)/' src/browser.c
+      _diff
 
       # ── Branding ───────────────────────────────────────────────
       cd curses
