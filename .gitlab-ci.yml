@@ -174,8 +174,8 @@ checks:
       when: never
     - when: on_success
   before_script:
-    - apt-get update && apt-get upgrade
-    - apt-get install bash curl jq tar xz git make texinfo groff gettext-dev bash
+    - apt-get update -qq && apt-get upgrade -y -qq
+    - apt-get install -y -qq bash curl jq tar xz git make texinfo groff gettext-dev bash
         automake autoconf pkgconf coreutils upx p7zip python3 sed patch
     - git config --global --add safe.directory '*'
     - ln -snf /bin/bash /bin/sh
