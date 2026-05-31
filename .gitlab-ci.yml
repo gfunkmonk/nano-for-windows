@@ -430,9 +430,9 @@ checks:
     # ── Configure nano ──────────────────────────────────────────
     - |
       CWD=$(pwd)
-      TARGET="${ARCH}-w64-mingw32"
-      OUTDIR="${CWD}/nano/pkg"
-      CURSES_DIR="${CWD}/nano/curses"
+      export TARGET="${ARCH}-w64-mingw32"
+      export OUTDIR="${CWD}/nano/pkg"
+      export CURSES_DIR="${CWD}/nano/curses"
       export CFLAGS="${CFLAGS} -DPDC_NCMOUSE"
       export CXXFLAGS="${CFLAGS}"
       export LDFLAGS="-L${CURSES_DIR}/${PDTERM_MATRIX} -static -static-libgcc ${CURSES_DIR}/${PDTERM_MATRIX}/pdcurses.a"
@@ -470,6 +470,7 @@ checks:
 
     # ── Package ─────────────────────────────────────────────────
     - |
+      cd /builds/gfunkmonk/nano-for-windows/
       CWD=$(pwd)
       cd nano/pkg
       export UPX="--lzma --best"
