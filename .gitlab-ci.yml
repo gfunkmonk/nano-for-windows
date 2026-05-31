@@ -188,8 +188,12 @@ checks:
       mkdir llvm-mingw
       tar -xJf llvm-mingw.tar.xz --strip-components=1 -C llvm-mingw/
       export PATH="$(pwd)/llvm-mingw/bin:$PATH"
-      echo "$(pwd)/llvm-mingw/bin" >> llvm_path.env
+      echo "export PATH=$(pwd)/llvm-mingw/bin:\$PATH" > llvm_path.sh
+      echo "Toolchain ready: $(which aarch64-w64-mingw32-gcc || echo 'NOT FOUND')"
   script:
+    # ── Export PATH from before_script ──────────────────────────
+    - source llvm_path.sh
+
     # ── Determine PDT_PRETTY ────────────────────────────────────
     - |
       case "$PDTERM_MATRIX" in
@@ -198,10 +202,6 @@ checks:
         wingui) PDT_PRETTY=WinGUI ;;
       esac
       export PDT_PRETTY
-
-    # ── Export PATH from before_script ──────────────────────────
-    - source llvm_path.env 2>/dev/null || true
-    - export PATH="$(cat llvm_path.env 2>/dev/null):$PATH"
 
     # ── Clone sources ───────────────────────────────────────────
     - git clone https://github.com/GitMirroring/nano.git --depth=1
