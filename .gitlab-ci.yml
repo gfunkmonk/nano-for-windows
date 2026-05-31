@@ -40,6 +40,7 @@ checks:
   timeout: 3m
   before_script:
     - apt-get update -y && apt-get install -y jq curl
+    - ln -snf /bin/bash /bin/sh
   script:
     - |
       # Generate the pdterms matrix based on input
@@ -230,21 +231,14 @@ build:
       automake --add-missing
 
       # 🩹 Nano Patches
-      script:
-        - |
-          bash -c '
       CWD=$(pwd)
       while IFS= read -r p; do
         [ -n "$p" ] || continue
         echo -e "\033[1;35mApplying $(basename "$p")...\033[0m"
         patch -p1 < "$p" || exit 1
       done < <(find "${CWD}/patch/nano" -maxdepth 1 -type f -name '*.patch' | sort -V)
-      '
 
       # ❤️‍🩹 PDCurses Patcheses (common)
-      script:
-        - |
-          bash -c '
       if [ "$PDTERM_MATRIX" != "wingui" ]; then
         while IFS= read -r p; do
           [ -n "$p" ] || continue
@@ -252,18 +246,13 @@ build:
           patch -p1 < "$p" || exit 1
         done < <(find "${CWD}/patch/curses/common" -maxdepth 1 -type f -name '*.patch' | sort -V)
       fi
-      '
 
       # ❤️‍🩹 PDCurses Patches
-      script:
-        - |
-          bash -c '
       while IFS= read -r p; do
         [ -n "$p" ] || continue
         echo -e "\033[1;33mApplying $(basename "$p")...\033[0m"
         patch -p1 < "$p" || exit 1
       done < <(find "${CWD}/patch/curses/${PDTERM_MATRIX}" -maxdepth 1 -type f -name '*.patch' | sort -V)
-      '
 
       # 🪄 Apply Windows Portability Magic
       function _diff() {
