@@ -266,72 +266,43 @@ checks:
 
     # (identical to GitHub Actions "Apply Windows Portability Magic" step)
     - |
-      bash -c '
-      function _diff() {
-        mapfile -t < <(find . -type f -name '*.bak')
-        for bak in "${MAPFILE[@]}"; do
-          src=${bak/.bak/}
-          for ((n=1; ; n++)); do
-            patch=${src}-${n}.patch
-            test -f "${patch}" || break
-          done
-          diff -u -w "${bak}" "${src}" >"${patch}" || true
-          rm -f "${bak}" || true
-          if [[ ! -s "${patch}" ]]; then rm -f "${patch}" || true; continue; fi
-          echo "${patch}:"; cat "${patch}"
-        done
-        return 0
-      }
-      '
-
-      bash -c '
       echo -e "\n\nPATCH: realpath() workaround applied."
-      cp -p ./src/definitions.h{,.bak}
       echo " "              >> ./src/definitions.h
       echo "#ifdef _WIN32"  >> ./src/definitions.h
       echo "#include <windows.h>"     >> ./src/definitions.h
       echo "#include \"uniwidth.h\""  >> ./src/definitions.h
       echo "#define realpath(N,R) _fullpath((R),(N),0)" >> ./src/definitions.h
       echo "#endif"         >> ./src/definitions.h
-      '
-      _diff
 
       echo -e "\n\nPATCH: Forcing file management in binary mode like the Linux version."
-      sed -i.bak 's/O_..ONLY/& | _O_BINARY/g' ./src/files.c
-      _diff
-      sed -i.bak 's/O_..ONLY/& | _O_BINARY/g' ./src/text.c
-      _diff
+      sed -i 's/O_..ONLY/& | _O_BINARY/g' ./src/files.c
+      sed -i 's/O_..ONLY/& | _O_BINARY/g' ./src/text.c
 
       echo -e "\n\nPATCH: configuring Windows temporal folder."
-      sed -i.bak 's|TMPDIR|TEMP|g' ./src/files.c
+      sed -i 's|TMPDIR|TEMP|g' ./src/files.c
       echo -e "\n\nPATCH: Convert invalid filename characters to ! for backup files."
-      sed -i.bak "s~if (thename\[i\] == '/')~if (strchr(\"<>:\\\\\"/\\\\\\\\|?*\", thename[i]))~g" ./src/files.c
-      sed -i.bak 's|/tmp/|~/AppData/Local/Temp/|g' ./src/files.c
-      _diff
+      sed -i "s~if (thename\[i\] == '/')~if (strchr(\"<>:\\\\\"/\\\\\\\\|?*\", thename[i]))~g" ./src/files.c
+      sed -i 's|/tmp/|~/AppData/Local/Temp/|g' ./src/files.c
 
       echo -e "\n\nPATCH: Configuring backslashes for folders."
-      sed -i.bak "/free(tilded)/a\
+      sed -i "/free(tilded)/a\
           \\\\tfor(tilded = retval; \*tilded; ++tilded) if(\*tilded == '\\\\\\\\') \*tilded = '/';
 
           s|path\[i\] != '/'|path[i] != '/' \&\& path[i] != '\\\\\\\\'|" src/files.c
-      _diff
 
       echo -e "\n\nPATCH: Allow true color."
-      sed -i.bak "/COLORS == 256/ {s/==/>=/}" src/rcfile.c
-      _diff
+      sed -i "/COLORS == 256/ {s/==/>=/}" src/rcfile.c
 
       echo -e "\n\nPATCH: solved deadlock with unicode characters."
-      sed -i.bak "/halfdelay(ISSET(QUICK_BLANK)/,/disable_kb_interrupt/d" src/winio.c
-      _diff
+      sed -i "/halfdelay(ISSET(QUICK_BLANK)/,/disable_kb_interrupt/d" src/winio.c
 
       echo -e "\n\nPATCH: blank out nano's default terminal"
-      sed -i.bak 's|vt220||g' ./src/nano.c
-      _diff
+      sed -i 's|vt220||g' ./src/nano.c
 
       echo -e "\n\nPATCH: Fix pipe in data in Windows console."
-      sed -i.bak "s|/dev/tty|CON|" src/nano.c
-      sed -i.bak "s/stream, 0/stream, fd/" src/nano.c
-      sed -i.bak "/FILE \*stream/,/stop the reading/ c\
+      sed -i "s|/dev/tty|CON|" src/nano.c
+      sed -i "s/stream, 0/stream, fd/" src/nano.c
+      sed -i "/FILE \*stream/,/stop the reading/ c\
           \\\\t static FILE \*stream;\\n\
           static int fd\=0;\\n\
           if \(fd\=\=0){\\n\
@@ -348,54 +319,44 @@ checks:
           \\t int errnumber \= errno;\\n\
           \\t if\(fd \> -1) close\(fd);\\n\
           return FALSE;}" src/nano.c
-      sed -i.bak "/initscr/i\
+      sed -i "/initscr/i\
           for\(int optind_\=optind; optind_ \< argc;optind_\+\+)\\n\
           if \(strcmp\(argv\[optind_], \"\-\") \=\= 0){scoop_stdin\();break;}" src/nano.c
-      _diff
 
       echo -e "\n\nPATCH: Fixed browser folder change."
-      sed -i.bak 's/--selected/selected=0/' src/browser.c
-      _diff
+      sed -i 's/--selected/selected=0/' src/browser.c
 
       echo -e "\n\nPATCH: More info for exit message."
-      sed -i.bak "s|Save modified buffer|& (Y/N/^C)|" src/nano.c
-      _diff
+      sed -i "s|Save modified buffer|& (Y/N/^C)|" src/nano.c
 
       echo -e "\n\nPATCH: Enable UTF-8 console."
-      sed -i.bak 's|vt220||g
+      sed -i 's|vt220||g
           /x1B/d
           /nl_langinfo(CODESET)/ c\\tsetlocale(LC_ALL, "");' src/nano.c
-      _diff
 
       echo -e "\n\nPATCH: Enable FULL UTF-8"
-      sed -i.bak 's|setlocale(LC_ALL, "");|setlocale(LC_ALL, "");\
+      sed -i 's|setlocale(LC_ALL, "");|setlocale(LC_ALL, "");\
       /* Force UTF-8 console on Windows */\
       #ifdef _WIN32\
       SetConsoleOutputCP(65001);\
       SetConsoleCP(65001);\
       #endif|' src/nano.c
-      _diff
 
       echo -e "\n\nPATCH: unicode char width detection using GNUlib internal function."
-      sed -i.bak 's|wcwidth(wc)|uc_width(wc, "UTF-8")|g' src/chars.c src/winio.c
-      sed -i.bak '/prototypes.h/a#include "uniwidth.h"' src/chars.c
-      _diff
+      sed -i 's|wcwidth(wc)|uc_width(wc, "UTF-8")|g' src/chars.c src/winio.c
+      sed -i '/prototypes.h/a#include "uniwidth.h"' src/chars.c
 
       echo -e "\n\nPATCH: remove duplicated definitions."
-      sed -i.bak "/0x42[1234]/d" src/definitions.h
-      _diff
+      sed -i "/0x42[1234]/d" src/definitions.h
 
       echo -e "\n\nPATCH: Improving from 256colors to true color."
-      sed -i.bak "/interface_color_pair/ s/\bint\b/chtype/g" src/prototypes.h src/global.c
-      _diff
-      sed -i.bak "/int attributes/ s/\bint\b/chtype/g" src/definitions.h
-      _diff
-      sed -i.bak "/int attributes/ s/\bint\b/chtype/g" src/rcfile.c
-      sed -i.bak "/bool parse_combination/ s/\bint\b/chtype/g" src/rcfile.c
-      _diff
+      sed -i "/interface_color_pair/ s/\bint\b/chtype/g" src/prototypes.h src/global.c
+      sed -i "/int attributes/ s/\bint\b/chtype/g" src/definitions.h
+      sed -i "/int attributes/ s/\bint\b/chtype/g" src/rcfile.c
+      sed -i "/bool parse_combination/ s/\bint\b/chtype/g" src/rcfile.c
 
       echo -e "\n\nPATCH: Full key modifiers detection."
-      sed -i.bak "/get_kbinput(midwin, VISIBLE)/a\
+      sed -i "/get_kbinput(midwin, VISIBLE)/a\
           \\\\tif (\!((PDC_get_key_modifiers()) & (PDC_KEY_MODIFIER_SHIFT|PDC_KEY_MODIFIER_CONTROL|PDC_KEY_MODIFIER_ALT)) ) {\\n\
           \\tswitch (input) {\\n\
           \\t\\tcase 0x08:      input = KEY_BACKSPACE; break;\\n\
@@ -412,46 +373,38 @@ checks:
           s|(M-\{", )0|\1ALT_LBRACKET|
           s|(M-}", )0|\1ALT_RBRACKET|
           ' src/global.c
-      sed -i.bak "
+      sed -i "
           s/0x401/CTL_LEFT/;  s/0x402/CTL_RIGHT/; s/0x403/CTL_UP/
           s/0x404/CTL_DOWN/;  s/0x405/CTL_HOME/;  s/0x406/CTL_END/
           s/0x40D/CTL_DEL/;   s/0x427/ALT_PGUP/;  s/0x428/ALT_PGDN/
           s/0x42C/ALT_INS/;   s/0x42D/ALT_DEL/
           " src/definitions.h
-      _diff
 
       echo -e "\n\nPATCH: ALT+[NUMBER|LETTER] not working."
-      sed -i.bak "s/char)keystring\[2])/&\+\(\(unsigned char)keystring\[2]>\='9' \? ALT_A-\(int)'a' \: ALT_0-\(int)'0')/" src/global.c
-      _diff
+      sed -i "s/char)keystring\[2])/&\+\(\(unsigned char)keystring\[2]>\='9' \? ALT_A-\(int)'a' \: ALT_0-\(int)'0')/" src/global.c
 
       echo -e "\n\nPATCH: Shifted metas SHIFT+ALT+[LETTER] not working."
-      sed -i.bak "/(escapes == 0)/a\
+      sed -i "/(escapes == 0)/a\
           meta_key\=PDC_get_key_modifiers\() \& PDC_KEY_MODIFIER_ALT;" src/winio.c
-      _diff
 
       echo -e "\n\nPATCH: PDC_display_utf8 = TRUE"
-      sed -i.bak 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wincon/*.c
-      sed -i.bak 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/vt/*.c
-      sed -i.bak 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wingui/*.c
-      _diff
+      sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wincon/*.c
+      sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/vt/*.c
+      sed -i 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wingui/*.c
 
       echo -e "\n\nPATCH: Make MAX_UNICODE suck less."
-      sed -i.bak 's|MAX_UNICODE 0x110000|MAX_UNICODE 0x10ffff|g' curses/curspriv.h
-      _diff
+      sed -i 's|MAX_UNICODE 0x110000|MAX_UNICODE 0x10ffff|g' curses/curspriv.h
 
       echo -e "\n\nPATCH: Force 4-byte UTF-8 emoji input in VT keyboard driver."
-      sed -i.bak 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/vt/pdckbd.c
-      sed -i.bak 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/wincon/pdckbd.c
-      sed -i.bak 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/wingui/pdckbd.c
-      _diff
+      sed -i 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/vt/pdckbd.c
+      sed -i 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/wincon/pdckbd.c
+      sed -i 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/wingui/pdckbd.c
 
       echo -e "\n\nPATCH: Porting folder accessibility from executable to read access."
-      sed -i.bak "s/X_OK/R_OK/" src/files.c
-      _diff
+      sed -i "s/X_OK/R_OK/" src/files.c
 
       echo -e "\n\nPATCH: fix GNUlib glob DIR* conflict in browser.c."
-      sed -i.bak 's/rewinddir(dir)/rewinddir((DIR *)dir)/' src/browser.c
-      _diff
+      sed -i 's/rewinddir(dir)/rewinddir((DIR *)dir)/' src/browser.c
 
       # ── Branding ───────────────────────────────────────────────
       cd curses
@@ -461,9 +414,8 @@ checks:
       CURSES_DATE=$(TZ=UTC git show --quiet --date='format-local:%Y.%m.%d' --format="%cd")
       CURSES="PDCursesMod ${CURSES} build $(git rev-list --count HEAD), ${CURSES_DATE}"
       cd ..
-      sed -i.bak 's/ GNU nano from git,//' src/nano.c
-      sed -i.bak 's|Compiled options|Project info at https://github.com/gfunkmonk/nano-for-windows\\n Using '"${CURSES}"'\\n &|' src/nano.c
-      _diff
+      sed -i 's/ GNU nano from git,//' src/nano.c
+      sed -i 's|Compiled options|Project info at https://github.com/gfunkmonk/nano-for-windows\\n Using '"${CURSES}"'\\n &|' src/nano.c
 
     # ── Compile curses lib ──────────────────────────────────────
     - |
