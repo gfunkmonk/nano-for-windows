@@ -38,7 +38,7 @@ checks:
   stage: checks
   image: buildpack-deps:noble
   timeout: 3m
-before_script:
+  before_script:
     - apt-get update -y && apt-get install -y jq curl
   script:
     - |
