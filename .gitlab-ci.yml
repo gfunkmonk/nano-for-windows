@@ -165,7 +165,7 @@ checks:
 # If you always build all three, just remove the rules: block.
 .build_template: &build_template
   stage: build
-  image: alpine:edge
+  image: ubuntu:latest
   needs:
     - job: checks
       artifacts: true
@@ -174,8 +174,8 @@ checks:
       when: never
     - when: on_success
   before_script:
-    - apk update && apk upgrade
-    - apk add bash curl jq tar xz git make texinfo groff gettext-dev bash
+    - apt-get update && apt-get upgrade
+    - apt-get install bash curl jq tar xz git make texinfo groff gettext-dev bash
         automake autoconf pkgconf coreutils upx p7zip python3 sed patch
     - git config --global --add safe.directory '*'
     - ln -snf /bin/bash /bin/sh
