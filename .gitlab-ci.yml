@@ -35,7 +35,6 @@ workflow:
   rules:
     - if: $CI_PIPELINE_SOURCE == "web"          # "Run pipeline" button
     - if: $CI_PIPELINE_SOURCE == "schedule"     # uncomment cron in Schedules UI
-      when: never                               #   ← remove this line to enable
 
 # ──────────────────────────────────────────────────────────────
 # STAGE ORDER
