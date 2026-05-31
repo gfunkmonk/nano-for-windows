@@ -718,7 +718,7 @@ publish:
       if [ "$RELEASE" = "Release" ] || [ "$CI_PIPELINE_SOURCE" != "web" ]; then
         apt-get install -y -qq release-cli || \
           (curl -fsSL \
-            "https://release-cli-downloads.s3.amazonaws.com/latest/release-cli-linux-amd64" \
+            "https://gitlab.com/gitlab-org/release-cli/-/releases/v0.24.0/downloads/bin/release-cli-linux-amd64" \
             -o /usr/local/bin/release-cli && chmod +x /usr/local/bin/release-cli)
 
         DESCRIPTION=$(cat body.txt)
