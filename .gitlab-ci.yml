@@ -36,7 +36,7 @@ variables:
 ## PRECHECK ##############################################################################
 checks:
   stage: checks
-  image: ubuntu:latest
+  image: buildpack-deps:noble
   timeout: 3m
   script:
     - |
