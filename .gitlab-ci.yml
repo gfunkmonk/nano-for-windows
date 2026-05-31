@@ -260,7 +260,7 @@ checks:
 
     # ── Windows portability patches ─────────────────────────────
     - |
-    cd nano
+      cd nano
 
     # (identical to GitHub Actions "Apply Windows Portability Magic" step)
     - |
