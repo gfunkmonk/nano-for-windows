@@ -1,0 +1,99 @@
+diff -ruN curses/wincon/pdcdisp.c cursesb/wincon/pdcdisp.c
+--- a/curses/wincon/pdcdisp.c   2026-05-15 06:33:11.555026972 -0400
++++ b/curses/wincon/pdcdisp.c   2026-05-15 06:36:43.195025583 -0400
+@@ -181,6 +181,69 @@
+
+ #ifdef PDC_WIDE
+         ch &= A_CHARTEXT;
++        if ((ch >= 0x1F3FB && ch <= 0x1F3FF) || ch == 0xFE0F)
++        {
++            if (IS_SUPPLEMENTAL_MULTILINGUAL_PLANE(ch))
++            {
++                buffer[n_out++] = (WCHAR)((ch - 0x10000) >> 10 | 0xD800);
++                buffer[n_out++] = (WCHAR)((ch & 0x3FF) | 0xDC00);
++            }
++            else
++                buffer[n_out++] = (WCHAR)ch;
++            continue;
++        }
++#ifdef USING_COMBINING_CHARACTER_SCHEME
++        /* Skip the placeholder cell that follows a fullwidth character.
++         * Writing the noncharacter U+10FFFF here would (a) display garbage
++         * in some terminals and (b) break ZWJ joining of adjacent emoji,
++         * because the cluster has to reach the terminal as an unbroken
++         * sequence of code points. */
++        if( ch == DUMMY_CHAR_NEXT_TO_FULLWIDTH)
++            continue;
++        /* Expand a combined-character cell (base + variation selector,
++         * base + ZWJ, multi-mark cluster, ...) into its component code
++         * points so the terminal can compose them.  added[] is filled
++         * outermost-first, so we emit root, then added[n_added] (oldest
++         * combiner), ..., added[0] (newest combiner). */
++        if( ch > MAX_UNICODE)
++        {
++            cchar_t added[10];
++            chtype  root = ch;
++            int     n_added = 0;
++            int     k, depth = 0;
++
++            while( depth++ < 31 &&
++                   (root = PDC_expand_combined_characters( root,
++                                   &added[n_added])) > MAX_UNICODE)
++                n_added++;
++
++            if( root <= MAX_UNICODE)
++            {
++                if( IS_SUPPLEMENTAL_MULTILINGUAL_PLANE( root))
++                {
++                    buffer[n_out++] = (WCHAR)((root - 0x10000) >> 10 | 0xD800);
++                    buffer[n_out++] = (WCHAR)((root & 0x3FF) | 0xDC00);
++                }
++                else
++                    buffer[n_out++] = (WCHAR)root;
++            }
++            for( k = n_added - 1; k >= 0; k--)
++            {
++                const chtype c = (chtype)added[k];
++
++                if( c == DUMMY_CHAR_NEXT_TO_FULLWIDTH)
++                    continue;
++                if( IS_SUPPLEMENTAL_MULTILINGUAL_PLANE( c))
++                {
++                    buffer[n_out++] = (WCHAR)((c - 0x10000) >> 10 | 0xD800);
++                    buffer[n_out++] = (WCHAR)((c & 0x3FF) | 0xDC00);
++                }
++                else
++                    buffer[n_out++] = (WCHAR)c;
++            }
++            continue;
++        }
++#endif
+         if( ch <= MAX_UNICODE)
+         {
+             if( IS_SUPPLEMENTAL_MULTILINGUAL_PLANE( ch))
+@@ -312,6 +363,25 @@
+     ansi = pdc_ansi || (fore >= 16 || back >= 16);
+     blink = (SP->termattrs & A_BLINK) && (attr & A_BLINK);
+
++#ifdef PDC_WIDE
++    /* Force ANSI path for runs containing SMP characters (emoji/supplemental
++       plane), because WriteConsoleOutput does not handle surrogate pairs.
++       WriteConsoleW (used by the ANSI path) handles them correctly. */
++    if (!ansi)
++    {
++        int k;
++        for (k = 0; k < len; k++)
++        {
++            chtype c = srcp[k] & A_CHARTEXT;
++            if (IS_SUPPLEMENTAL_MULTILINGUAL_PLANE(srcp[k] & A_CHARTEXT))
++            {
++                ansi = TRUE;
++                break;
++            }
++        }
++    }
++#endif
++
+     if (blink)
+     {
+         attr &= ~A_BLINK;

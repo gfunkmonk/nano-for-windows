@@ -1,0 +1,69 @@
+--- a/curses/wincon/pdcdisp.c	2026-06-03 07:41:37.015798918 -0400
++++ b/curses/wincon/pdcdisp.c	2026-06-03 07:50:46.875795307 -0400
+@@ -14,6 +14,24 @@
+ 
+ #include "../common/acs_defs.h"
+ 
++static bool PDC_has_emoji_or_joiner(const chtype ch)
++{
++    const uint32_t c = (uint32_t)(ch & A_CHARTEXT);
++
++    if ((c >= '0' && c <= '9') || c == '#' || c == '*') return true;
++    return( c == 0x200d                     /* ZWJ */
++         || c == 0x200c                     /* ZWNJ */
++         || c == 0x20e3                     /* combining enclosing keycap */
++         || (c >= 0xfe00 && c <= 0xfe0f)    /* variation selectors */
++         || (c >= 0xe0020 && c <= 0xe007f)  /* Unicode Tags (flags) */
++         || (c >= 0x1f3fb && c <= 0x1f3ff)  /* skin tone modifiers */
++         || (c >= 0x1f1e6 && c <= 0x1f1ff)  /* regional indicators */
++         || (c >= 0x10000 && c <= 0x1faff)  /* emoji blocks */
++         || (c >= 0x2600 && c <= 0x27bf)    /* misc symbols */
++         || c == MAX_UNICODE                /* Wide character continuation */
++         || c > MAX_UNICODE);               /* combined char (base+VS/ZWJ) */
++}
++
+ DWORD pdc_last_blink;
+ static bool blinked_off = FALSE;
+ static bool in_italic = FALSE;
+@@ -380,7 +380,6 @@
+     bool blink, ansi;
+
+     assert( len >= 0);
+-    assert( len < MAX_PACKET_LEN);
+     if (pdc_ansi && (lineno == (SP->lines - 1)) && ((x + len) == SP->cols))
+     {
+         len--;
+@@ -417,6 +434,8 @@
+ 
+ void PDC_transform_line(int lineno, int x, int len, const chtype *srcp)
+ {
++    const chtype *full_line = srcp - x;
++    int start_col = x, end_col = x + len;
+     attr_t old_attr, attr;
+     int i, j;
+ 
+@@ -424,6 +443,24 @@
+ 
+     old_attr = *srcp & (A_ATTRIBUTES | A_ALTCHARSET);
+ 
++    while (start_col > 0 && (full_line[start_col] & A_CHARTEXT) == MAX_UNICODE)
++        start_col--;
++
++    while (start_col > 0 && (PDC_has_emoji_or_joiner(full_line[start_col - 1]) ||
++           (full_line[start_col - 1] & A_CHARTEXT) == MAX_UNICODE))
++        start_col--;
++
++    while (end_col < SP->cols && (PDC_has_emoji_or_joiner(full_line[end_col]) ||
++           (full_line[end_col] & A_CHARTEXT) == MAX_UNICODE))
++        end_col++;
++
++    srcp = full_line + start_col;
++    x = start_col;
++    len = end_col - start_col;
++
++    while (len > 0 && (srcp[len - 1] & A_CHARTEXT) == MAX_UNICODE)
++        len--;
++
+     for (i = 1, j = 1; j < len; i++, j++)
+     {
+         attr = srcp[i] & (A_ATTRIBUTES | A_ALTCHARSET);

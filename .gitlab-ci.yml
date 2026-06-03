@@ -1,0 +1,781 @@
+# ──────────────────────────────────────────────────────────────
+# Pipeline-level variables (override at runtime via
+#   CI/CD > Pipelines > Run pipeline > Variables)
+# ──────────────────────────────────────────────────────────────
+variables:
+  RELEASE:
+    value: "Artifact"
+    options:
+      - "Artifact"
+      - "Release"
+    description: "Choose whether to build as an Artifact or create a full Release."
+
+  PDTERM:
+    value: "all"
+    options:
+      - "all"
+      - "wincon"
+      - "wingui"
+      - "vt"
+    description: "Select the target terminal interface to build."
+
+  FORCE_COLOR: "1"
+  CLICOLOR_FORCE: "1"
+  WT_SESSION: "1"
+  ConEmuANSI: "ON"
+  CFLAGS: "-O2 -fno-math-errno -flto -std=c17 -Wno-error -DCHTYPE_64 -DPDC_WIDE -DPDC_FORCE_UTF8 -D_GNU_SOURCE"
+  CPPFLAGS: "-D__USE_MINGW_ANSI_STDIO -DHAVE_NCURSESW_NCURSES_H -DNCURSES_STATIC"
+
+# Only allow manual pipeline triggers (equivalent to workflow_dispatch).
+# Remove this block if you also want to re-enable the scheduled trigger.
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "web"          # "Run pipeline" button
+    - if: $CI_PIPELINE_SOURCE == "schedule"     # uncomment cron in Schedules UI
+
+# ──────────────────────────────────────────────────────────────
+# STAGE ORDER
+# ──────────────────────────────────────────────────────────────
+stages:
+  - checks
+  - build
+  - publish
+
+# ──────────────────────────────────────────────────────────────
+# PRE-BUILD CHECKS
+# ──────────────────────────────────────────────────────────────
+checks:
+  stage: checks
+  image: ubuntu:latest
+  timeout: 3 minutes
+  script:
+    - apt-get update -qq && apt-get install -y -qq git curl jq bash
+    - ln -snf /bin/bash /bin/sh
+
+    # ── Resolve pdterms and tag_suffix ──────────────────────────
+    - |
+      if [[ "$PDTERM" == "all" ]] || [[ -z "$PDTERM" ]]; then
+        echo 'PDTERMS=wincon wingui vt' >> checks.env
+        echo 'TAG_SUFFIX='             >> checks.env
+      else
+        echo "PDTERMS=$PDTERM"         >> checks.env
+        echo "TAG_SUFFIX=-$PDTERM"     >> checks.env
+      fi
+
+    # ── Clone upstream repos (shallow, no checkout) ─────────────
+    - git clone --depth=1 -n https://github.com/GitMirroring/nano.git
+    - cd nano
+    - LAST_NANO=$(TZ=UTC git show --quiet --date='format-local:%Y-%m-%dT%H:%M:%SZ' --format="%cd")
+    - CHANGES_NANO="$(git log -1 --pretty=%B)"
+    - git clone --depth=1 -n https://github.com/Bill-Gray/PDCursesMod.git curses
+    - cd curses
+    - echo "Nano last commit DATE    $LAST_NANO"
+    - LAST_CURSES=$(TZ=UTC git show --quiet --date='format-local:%Y-%m-%dT%H:%M:%SZ' --format="%cd")
+    - echo "Curses last commit DATE  $LAST_CURSES"
+    - CHANGES_CURSES="$(git log -1 --pretty=%B)"
+    - cd ../..
+    - rm -rf nano
+
+    # ── Compare against last GitLab release ─────────────────────
+    # Replace $CI_PROJECT_ID with your numeric project id if the variable
+    # isn't automatically available in older GitLab versions.
+    - |
+      LAST_RELEASE=$(curl -fsSL \
+        "https://gitlab.com/api/v4/projects/${CI_PROJECT_ID}/releases?per_page=1" \
+        --header "PRIVATE-TOKEN: ${CI_JOB_TOKEN}" \
+        | jq -r '.[0].released_at // "2000-01-01T00:00:00Z"') \
+        || LAST_RELEASE="2000-01-01T00:00:00Z"
+      echo "n4win last release DATE  $LAST_RELEASE"
+
+    - |
+      if [[ "$LAST_NANO" > "$LAST_RELEASE" ]]; then
+        echo "NEW NANO SOURCE!!!!"
+        printf "# NANO CHANGES\n\n%s\n\n\n" "$CHANGES_NANO" > body.txt
+        cat body.txt
+      fi
+      if [[ "$LAST_CURSES" > "$LAST_RELEASE" ]]; then
+        echo "NEW CURSES SOURCE!!!!"
+        [ -f body.txt ] && echo >> body.txt
+        printf "# PDCursesMod CHANGES\n\n%s\n" "$CHANGES_CURSES" >> body.txt
+      fi
+      # Manual trigger always forces a build
+      if [[ "$CI_PIPELINE_SOURCE" == "web" ]]; then
+        echo "NEW WINDOWS PATCHES!!!!"
+        [ -f body.txt ] && echo >> body.txt
+        echo "# WINDOWS PORTABILITY PATCHES" >> body.txt
+        echo >> body.txt
+      fi
+
+    # ── Version calculation ──────────────────────────────────────
+    - |
+      if [ -f body.txt ]; then
+        NANO_VERSION=$(curl -s https://api.github.com/repos/GitMirroring/nano/tags | jq -r '.[0].name')
+        echo "Nano main VERSION: $NANO_VERSION"
+        NANO_SUBVER=$(curl -s "https://api.github.com/repos/GitMirroring/nano/compare/${NANO_VERSION}...master" | jq -r '.ahead_by')
+        echo "Nano SUBVERSION: $NANO_SUBVER"
+        [[ "$NANO_SUBVER" =~ ^[0-9]+$ ]] && [ "$NANO_SUBVER" -gt 0 ] && NANO_VERSION="${NANO_VERSION}-${NANO_SUBVER}"
+        echo "Current nano version: ${NANO_VERSION}"
+
+        LAST_BUILD=$(curl -fsSL \
+          "https://gitlab.com/api/v4/projects/${CI_PROJECT_ID}/releases?per_page=1" \
+          --header "PRIVATE-TOKEN: ${CI_JOB_TOKEN}" \
+          | jq -r '.[0].tag_name // "v0.0"') || LAST_BUILD="v0.0"
+        [ -z "${LAST_BUILD}" ] && LAST_BUILD="v0.0"
+        echo "Last build: ${LAST_BUILD}"
+
+        LAST_VERSION=$(echo "${LAST_BUILD}" | awk -F '-' '{print $1}')
+        LAST_SUBVER=$(echo "${LAST_BUILD}" | awk -F '[.-]' '{print $3}')
+        [[ "$LAST_SUBVER" =~ ^[0-9]+$ ]] && [ "$LAST_SUBVER" -gt 0 ] && LAST_VERSION="${LAST_VERSION}-${LAST_SUBVER}"
+
+        if [ "${NANO_VERSION}" == "${LAST_VERSION}" ]; then
+          SUBBUILD="$(echo $LAST_BUILD | awk -F . '{print $3}')"
+          ((SUBBUILD=SUBBUILD+1))
+          [ -z "$(echo "$LAST_BUILD" | grep '-')" ] \
+            && BUILD="${NANO_VERSION}-0.${SUBBUILD}" \
+            || BUILD="${NANO_VERSION}.${SUBBUILD}"
+        else
+          BUILD="${NANO_VERSION}"
+        fi
+        echo "New Build: ${BUILD}"
+        echo "BUILD=${BUILD}"                         >> checks.env
+        echo "BODY=$(cat body.txt | base64 -w0)"     >> checks.env
+        echo "CANCEL=false"                           >> checks.env
+      else
+        echo "NO NEW SOURCES. CANCELLING PIPELINE..."
+        echo "CANCEL=true"                            >> checks.env
+      fi
+
+  artifacts:
+    reports:
+      dotenv: checks.env
+    paths:
+      - body.txt
+    expire_in: 1 hour
+
+# ──────────────────────────────────────────────────────────────
+# BUILD  (matrix: pdterm × arch)
+# ──────────────────────────────────────────────────────────────
+.build_template: &build_template
+  stage: build
+  image: ubuntu:latest
+  needs:
+    - job: checks
+      artifacts: true
+  rules:
+    - if: $CANCEL == "true"
+      when: never
+    - when: on_success
+  before_script:
+    - apt-get update -qq && apt-get upgrade -y -qq
+    - apt-get install -y -qq bash curl jq tar xz-utils git make texinfo groff gettext bash
+        automake autoconf pkgconf coreutils upx p7zip python3 sed patch autopoint
+    - git config --global --add safe.directory '*'
+    - ln -snf /bin/bash /bin/sh
+
+    # Download toolchain
+    - |
+      echo "Downloading toolchain"
+      curl -fsSL \
+        "https://github.com/mstorsjo/llvm-mingw/releases/download/20260519/llvm-mingw-20260519-ucrt-ubuntu-22.04-x86_64.tar.xz" \
+        -o llvm-mingw.tar.xz
+      mkdir llvm-mingw
+      tar -xJf llvm-mingw.tar.xz --strip-components=1 -C llvm-mingw/
+      export PATH="$(pwd)/llvm-mingw/bin:$PATH"
+      echo "export PATH=$(pwd)/llvm-mingw/bin:\$PATH" > llvm_path.sh
+      echo "Toolchain ready: $(which aarch64-w64-mingw32-gcc || echo 'NOT FOUND')"
+  script:
+    # ── Export PATH from before_script ──────────────────────────
+    - source llvm_path.sh
+
+    # ── Determine PDT_PRETTY ────────────────────────────────────
+    - |
+      case "$PDTERM_MATRIX" in
+        vt)     PDT_PRETTY=VT     ;;
+        wincon) PDT_PRETTY=WinCon ;;
+        wingui) PDT_PRETTY=WinGUI ;;
+      esac
+      export PDT_PRETTY
+
+    # ── Clone sources ───────────────────────────────────────────
+    - git clone https://github.com/GitMirroring/nano.git --depth=1
+    - cd nano
+    - git clone https://github.com/Bill-Gray/PDCursesMod.git curses
+    - git clone https://github.com/coreutils/gnulib.git --depth 1
+    - autopoint --force
+    - |
+      glibmodules="
+          base32 base64 futimens getdelim getline getopt-gnu glob isblank
+          iswblank lstat mbrlen mbchar mkstemps nl_langinfo regex rewinddir
+          sigaction snprintf-posix stdarg-h strcase strcasestr-simple strnlen
+          sys_wait-h uniwidth unitypes unictype/property-emoji vsnprintf-posix
+          wchar-h wctype-h wcwidth
+      "
+      rm -rf lib
+      ./gnulib/gnulib-tool --import ${glibmodules}
+    - aclocal -I m4
+    - autoconf
+    - autoheader
+    - automake --add-missing
+    - cd /builds/gfunkmonk/nano-for-windows/
+
+    # ── Apply patches ───────────────────────────────────────────
+    - |
+      CWD=$(pwd)
+      cd nano
+      while IFS= read -r p; do
+        [ -n "$p" ] || continue
+        echo -e "\033[1;35mApplying $(basename "$p")...\033[0m"
+        patch -p1 < "$p" || exit 1
+      done < <(find "${CWD}/patch/nano" -maxdepth 1 -type f -name '*.patch' | sort -V)
+      cd $CWD
+
+    - |
+      CWD=$(pwd)
+      cd nano
+      while IFS= read -r p; do
+        [ -n "$p" ] || continue
+        echo -e "\033[1;33mApplying $(basename "$p")...\033[0m"
+        patch -p1 < "$p" || exit 1
+      done < <(find "${CWD}/patch/curses/common" -maxdepth 1 -type f -name '*.patch' | sort -V)
+      cd $CWD
+
+    - |
+      CWD=$(pwd)
+      cd nano
+      while IFS= read -r p; do
+        [ -n "$p" ] || continue
+        echo -e "\033[1;33mApplying $(basename "$p")...\033[0m"
+        patch -p1 < "$p" || exit 1
+      done < <(find "${CWD}/patch/curses/${PDTERM_MATRIX}" -maxdepth 1 -type f -name '*.patch' | sort -V)
+      cd $CWD
+
+    # ── Windows portability patches ─────────────────────────────
+    - |
+      cd nano
+
+    # (identical to GitHub Actions "Apply Windows Portability Magic" step)
+    - |
+      function _diff() {
+        mapfile -t < <(find . -type f -name '*.bak')
+        for bak in "${MAPFILE[@]}"; do
+          src=${bak/.bak/}
+          for ((n=1; ; n++)); do
+            patch=${src}-${n}.patch
+            test -f "${patch}" || break
+          done
+          diff -u -w "${bak}" "${src}" >"${patch}" || true
+          rm -f "${bak}" || true
+          if [[ ! -s "${patch}" ]]; then rm -f "${patch}" || true; continue; fi
+          echo "${patch}:"; cat "${patch}"
+        done
+        return 0
+      }
+
+    # (identical to GitHub Actions "Apply Windows Portability Magic" step)
+    - |
+      echo -e "\n\nPATCH: realpath() workaround applied."
+      echo " "              >> ./src/definitions.h
+      echo "#ifdef _WIN32"  >> ./src/definitions.h
+      echo "#include <windows.h>"     >> ./src/definitions.h
+      echo "#include \"uniwidth.h\""  >> ./src/definitions.h
+      echo "#define realpath(N,R) _fullpath((R),(N),0)" >> ./src/definitions.h
+      echo "#endif"         >> ./src/definitions.h
+      _diff
+
+      echo -e "\n\nPATCH: Forcing file management in binary mode like the Linux version."
+      sed -i.bak 's/O_..ONLY/& | _O_BINARY/g' ./src/files.c
+      _diff
+      sed -i.bak 's/O_..ONLY/& | _O_BINARY/g' ./src/text.c
+      _diff
+
+      echo -e "\n\nPATCH: configuring Windows temporal folder."
+      sed -i.bak 's|TMPDIR|TEMP|g' ./src/files.c
+      echo -e "\n\nPATCH: Convert invalid filename characters to ! for backup files."
+      sed -i.bak "s~if (thename\[i\] == '/')~if (strchr(\"<>:\\\\\"/\\\\\\\\|?*\", thename[i]))~g" ./src/files.c
+      sed -i.bak 's|/tmp/|~/AppData/Local/Temp/|g' ./src/files.c
+      _diff
+
+      echo -e "\n\nPATCH: Configuring backslashes for folders."
+      sed -i.bak "/free(tilded)/a\
+          \\\\tfor(tilded = retval; \*tilded; ++tilded) if(\*tilded == '\\\\\\\\') \*tilded = '/';
+
+          s|path\[i\] != '/'|path[i] != '/' \&\& path[i] != '\\\\\\\\'|" src/files.c
+      _diff
+
+      echo -e "\n\nPATCH: Allow true color."
+      sed -i.bak "/COLORS == 256/ {s/==/>=/}" src/rcfile.c
+      _diff
+
+      echo -e "\n\nPATCH: solved deadlock with unicode characters."
+      sed -i.bak "/halfdelay(ISSET(QUICK_BLANK)/,/disable_kb_interrupt/d" src/winio.c
+      _diff
+
+      echo -e "\n\nPATCH: blank out nano's default terminal"
+      sed -i.bak 's|vt220||g' ./src/nano.c
+      _diff
+
+      echo -e "\n\nPATCH: Fix pipe in data in Windows console."
+      sed -i.bak "s|/dev/tty|CON|" src/nano.c
+      sed -i.bak "s/stream, 0/stream, fd/" src/nano.c
+      sed -i.bak "/FILE \*stream/,/stop the reading/ c\
+          \\\\t static FILE \*stream;\\n\
+          static int fd\=0;\\n\
+          if \(fd\=\=0){\\n\
+          if \(GetConsoleWindow\() \!\= NULL)\\n\
+          fprintf\(stderr, _\(\"Reading data from keyboard; type a ^Z line to finish.\\\\n\"));\\n\
+          fd \= dup\(0);\\n\
+          stream \= fdopen\(fd, \"rb\");\\n\
+          freopen\(\"CON\", \"rb\", stdin);\\n\
+          FreeConsole\();\\n\
+          AttachConsole\(ATTACH_PARENT_PROCESS);\\n\
+          return FALSE;}\\n\
+          endwin\();\\n\
+          if \(stream \=\= NULL) {\\n\
+          \\t int errnumber \= errno;\\n\
+          \\t if\(fd \> -1) close\(fd);\\n\
+          return FALSE;}" src/nano.c
+      sed -i.bak "/initscr/i\
+          for\(int optind_\=optind; optind_ \< argc;optind_\+\+)\\n\
+          if \(strcmp\(argv\[optind_], \"\-\") \=\= 0){scoop_stdin\();break;}" src/nano.c
+      _diff
+
+      echo -e "\n\nPATCH: Fixed browser folder change."
+      sed -i.bak 's/--selected/selected=0/' src/browser.c
+      _diff
+
+      echo -e "\n\nPATCH: More info for exit message."
+      sed -i.bak "s|Save modified buffer|& (Y/N/^C)|" src/nano.c
+      _diff
+
+      echo -e "\n\nPATCH: Enable UTF-8 console."
+      sed -i.bak 's|vt220||g
+          /x1B/d
+          /nl_langinfo(CODESET)/ c\\tsetlocale(LC_ALL, "");' src/nano.c
+      _diff
+
+      echo -e "\n\nPATCH: Enable FULL UTF-8"
+      sed -i.bak 's|setlocale(LC_ALL, "");|setlocale(LC_ALL, "");\
+      /* Force UTF-8 console on Windows */\
+      #ifdef _WIN32\
+      SetConsoleOutputCP(65001);\
+      SetConsoleCP(65001);\
+      #endif|' src/nano.c
+      _diff
+
+      echo -e "\n\nPATCH: unicode char width detection using GNUlib internal function."
+      sed -i.bak '/prototypes.h/a#include "uniwidth.h"' src/chars.c
+      _diff
+
+      echo -e "\n\nPATCH: remove duplicated definitions."
+      sed -i.bak "/0x42[1234]/d" src/definitions.h
+      _diff
+
+      echo -e "\n\nPATCH: Improving from 256colors to true color."
+      sed -i.bak "/interface_color_pair/ s/\bint\b/chtype/g" src/prototypes.h src/global.c
+      _diff
+      sed -i.bak "/int attributes/ s/\bint\b/chtype/g" src/definitions.h
+      _diff
+      sed -i.bak "/int attributes/ s/\bint\b/chtype/g" src/rcfile.c
+      _diff
+      sed -i.bak "/bool parse_combination/ s/\bint\b/chtype/g" src/rcfile.c
+      _diff
+
+      echo -e "\n\nPATCH: Full key modifiers detection."
+      sed -i.bak "/get_kbinput(midwin, VISIBLE)/a\
+          \\\\tif (\!((PDC_get_key_modifiers()) & (PDC_KEY_MODIFIER_SHIFT|PDC_KEY_MODIFIER_CONTROL|PDC_KEY_MODIFIER_ALT)) ) {\\n\
+          \\tswitch (input) {\\n\
+          \\t\\tcase 0x08:      input = KEY_BACKSPACE; break;\\n\
+          \\t\\tcase 0x0d:      input = KEY_ENTER;\\n\
+          \\t}\\n\
+          }\\n\
+          if (PDC_get_key_modifiers() & PDC_KEY_MODIFIER_CONTROL){\\n\
+          switch (input) {\\n\
+          \\t\\tcase '/':          input = 31; break;\\n\
+          \\t\\tcase SHIFT_DELETE: input = CONTROL_SHIFT_DELETE; break;\\n\
+          \\t}\\n\
+          }" src/nano.c
+      sed -Ei.bak '
+          s|(M-\{", )0|\1ALT_LBRACKET|
+          s|(M-}", )0|\1ALT_RBRACKET|
+          ' src/global.c
+      sed -i.bak "
+          s/0x401/CTL_LEFT/;  s/0x402/CTL_RIGHT/; s/0x403/CTL_UP/
+          s/0x404/CTL_DOWN/;  s/0x405/CTL_HOME/;  s/0x406/CTL_END/
+          s/0x40D/CTL_DEL/;   s/0x427/ALT_PGUP/;  s/0x428/ALT_PGDN/
+          s/0x42C/ALT_INS/;   s/0x42D/ALT_DEL/
+          " src/definitions.h
+      _diff
+
+      echo -e "\n\nPATCH: ALT+[NUMBER|LETTER] not working."
+      sed -i.bak "s/char)keystring\[2])/&\+\(\(unsigned char)keystring\[2]>\='9' \? ALT_A-\(int)'a' \: ALT_0-\(int)'0')/" src/global.c
+      _diff
+
+      echo -e "\n\nPATCH: Shifted metas SHIFT+ALT+[LETTER] not working."
+      sed -i.bak "/(escapes == 0)/a\
+          meta_key\=PDC_get_key_modifiers\() \& PDC_KEY_MODIFIER_ALT;" src/winio.c
+      _diff
+
+      echo -e "\n\nPATCH: PDC_display_utf8 = TRUE"
+      sed -i.bak 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wincon/*.c
+      sed -i.bak 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/vt/*.c
+      sed -i.bak 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wingui/*.c
+      _diff
+
+      echo -e "\n\nPATCH: Make MAX_UNICODE suck less."
+      sed -i.bak 's|MAX_UNICODE 0x110000|MAX_UNICODE 0x10ffff|g' curses/curspriv.h
+      _diff
+
+      echo -e "\n\nPATCH: Force 4-byte UTF-8 emoji input in VT keyboard driver."
+      sed -i.bak 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/vt/pdckbd.c
+      sed -i.bak 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/wincon/pdckbd.c
+      sed -i.bak 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/wingui/pdckbd.c
+      _diff
+
+      echo -e "\n\nPATCH: Porting folder accessibility from executable to read access."
+      sed -i.bak "s/X_OK/R_OK/" src/files.c
+      _diff
+
+      echo -e "\n\nPATCH: fix GNUlib glob DIR* conflict in browser.c."
+      sed -i.bak 's/rewinddir(dir)/rewinddir((DIR *)dir)/' src/browser.c
+      _diff
+
+      # ── Branding ───────────────────────────────────────────────
+      cd curses
+      CURSES="v$(sed -nE 's/^.*PDC_VER_MAJOR\s*([0-9]+)/\1/p' curses.h)"
+      CURSES="${CURSES}.$(sed -nE 's/^.*PDC_VER_MINOR\s*([0-9]+)/\1/p' curses.h)"
+      CURSES="${CURSES}.$(sed -nE 's/^.*PDC_VER_CHANGE\s*([0-9]+)/\1/p' curses.h)"
+      CURSES_DATE=$(TZ=UTC git show --quiet --date='format-local:%Y.%m.%d' --format="%cd")
+      CURSES="PDCursesMod ${CURSES} build $(git rev-list --count HEAD), ${CURSES_DATE}"
+      cd ..
+      sed -i.bak 's/ GNU nano from git,//' src/nano.c
+      sed -i.bak 's|Compiled options|Project info at https://github.com/gfunkmonk/nano-for-windows\\n Using '"${CURSES}"'\\n &|' src/nano.c
+      _diff
+
+    # ── Compile curses lib ──────────────────────────────────────
+    - |
+      cd /builds/gfunkmonk/nano-for-windows/
+      export CFLAGS="${CFLAGS}"
+      export CXXFLAGS="${CFLAGS}"
+      unset NCURSESW_CFLAGS
+      cd "nano/curses/${PDTERM_MATRIX}"
+      make -j$(($(nproc)*2)) WIDE=Y UTF8=Y CHTYPE_64=Y DLL=N _${ARCH_SHORT}=Y
+      cd /builds/gfunkmonk/nano-for-windows/
+
+    # ── Configure nano ──────────────────────────────────────────
+    - |
+      CWD=$(pwd)
+      export TARGET="${ARCH}-w64-mingw32"
+      export OUTDIR="${CWD}/nano/pkg"
+      export CURSES_DIR="${CWD}/nano/curses"
+      export CFLAGS="${CFLAGS} -DPDC_NCMOUSE"
+      export CXXFLAGS="${CFLAGS}"
+      export LDFLAGS="-L${CURSES_DIR}/${PDTERM_MATRIX} -static -static-libgcc ${CURSES_DIR}/${PDTERM_MATRIX}/pdcurses.a"
+      export NCURSESW_CFLAGS="-I${CURSES_DIR} -DNCURSES_STATIC -DENABLE_MOUSE"
+      export NCURSESW_LIBS="-l:pdcurses.a -lwinmm -lbcrypt -lshlwapi"
+      export LIBS="-lbcrypt -lshlwapi"
+      if [ "${PDTERM_MATRIX}" = "wingui" ]; then
+        export LIBS="${LIBS} -lole32 -lgdi32 -lcomdlg32"
+      fi
+      mkdir -p nano/build
+      cd nano/build
+      ../configure --host="${TARGET}" --prefix="${OUTDIR}" \
+          --enable-{utf8,threads=windows,extra,color,nanorc} --disable-{nls,dependency-tracking} \
+          --sysconfdir="C:\\ProgramData" || cat config.log
+      echo "
+        #define HAVE_FREXP_IN_LIBC 1
+        #define HAVE_FREXPL_IN_LIBC 1
+        #define HAVE_SNPRINTF_RETVAL_C99 1
+        #define HAVE_SNPRINTF_TRUNCATION_C99 1
+        #define MBRTOWC_EMPTY_INPUT_BUG 1
+      " >> config.h
+      sed -i "/#define NEED_PRINTF_DIRECTIVE_A 1/d"       config.h
+      sed -i "/#define NEED_PRINTF_DIRECTIVE_F 1/d"       config.h
+      sed -i "/#define NEED_PRINTF_FLAG_GROUPING 1/d"     config.h
+      sed -i "/#define NEED_PRINTF_FLAG_ZERO 1/d"         config.h
+      sed -i "/#define NEED_PRINTF_INFINITE_DOUBLE 1/d"   config.h
+      sed -i "/#define NEED_PRINTF_UNBOUNDED_PRECISION 1/d" config.h
+      NANOVER=$(echo "${BUILD}" | grep -Eo "v[0-9]+\.[0-9]+")
+      BRANDING="GNU nano $NANOVER for ${ARCH_NAME}"
+      echo "#define REVISION \"${BRANDING}\"" > src/revision.h
+
+    # ── Build nano ──────────────────────────────────────────────
+    - |
+      make -j$(($(nproc)*2)) && make install || exit 1
+
+    # ── Package ─────────────────────────────────────────────────
+    - |
+      cd /builds/gfunkmonk/nano-for-windows/
+      CWD=$(pwd)
+      cd nano/pkg
+      export UPX="--lzma --best"
+      cp ${CWD}/LICENSE .
+      cp ${CWD}/README.md .
+      mv bin/nano.exe share/doc/nano/* "${CWD}/nano/doc/sample.nanorc.in" .
+      git clone https://github.com/gfunkmonk/nanorc syntax
+      cd syntax && rm -fr .git/ && cd ..
+      cp ${CWD}/.nanorc .
+      rm -rf bin share rnano*
+      llvm-strip -s nano.exe
+      upx nano.exe || true
+      ls -als
+      ZIPNAME="nano-for-windows_${ARCH_NAME}_${BUILD}-${PDT_PRETTY}.zip"
+      7z a -mx9 -mm=Deflate64 -mmt$(nproc) "${CWD}/${ZIPNAME}" * .nanorc
+      echo "ZIPNAME=${ZIPNAME}" > ${CWD}/zip.env
+
+  artifacts:
+    paths:
+      - "*.zip"
+    expire_in: 1 week
+
+# ── Concrete build jobs (pdterm × arch) ─────────────────────────
+# Each job sets PDTERM_MATRIX, ARCH, ARCH_NAME, ARCH_SHORT.
+# Add or remove combinations to taste.
+# If you want a true dynamic matrix driven by PDTERMS from checks,
+# look into GitLab's dynamic child pipelines feature.
+
+build:wincon:i686:
+  <<: *build_template
+  variables:
+    PDTERM_MATRIX: wincon
+    ARCH: i686
+    ARCH_NAME: Win32
+    ARCH_SHORT: w32
+  rules:
+    - if: $CANCEL == "true"
+      when: never
+    - if: $PDTERM == "all" || $PDTERM == "wincon"
+
+build:wincon:x86_64:
+  <<: *build_template
+  variables:
+    PDTERM_MATRIX: wincon
+    ARCH: x86_64
+    ARCH_NAME: Win64
+    ARCH_SHORT: w64
+  rules:
+    - if: $CANCEL == "true"
+      when: never
+    - if: $PDTERM == "all" || $PDTERM == "wincon"
+
+build:wincon:aarch64:
+  <<: *build_template
+  variables:
+    PDTERM_MATRIX: wincon
+    ARCH: aarch64
+    ARCH_NAME: ARM64
+    ARCH_SHORT: a64
+  rules:
+    - if: $CANCEL == "true"
+      when: never
+    - if: $PDTERM == "all" || $PDTERM == "wincon"
+
+build:wincon:armv7:
+  <<: *build_template
+  variables:
+    PDTERM_MATRIX: wincon
+    ARCH: armv7
+    ARCH_NAME: ARM32
+    ARCH_SHORT: a32
+  rules:
+    - if: $CANCEL == "true"
+      when: never
+    - if: $PDTERM == "all" || $PDTERM == "wincon"
+
+build:wingui:i686:
+  <<: *build_template
+  variables:
+    PDTERM_MATRIX: wingui
+    ARCH: i686
+    ARCH_NAME: Win32
+    ARCH_SHORT: w32
+  rules:
+    - if: $CANCEL == "true"
+      when: never
+    - if: $PDTERM == "all" || $PDTERM == "wingui"
+
+build:wingui:x86_64:
+  <<: *build_template
+  variables:
+    PDTERM_MATRIX: wingui
+    ARCH: x86_64
+    ARCH_NAME: Win64
+    ARCH_SHORT: w64
+  rules:
+    - if: $CANCEL == "true"
+      when: never
+    - if: $PDTERM == "all" || $PDTERM == "wingui"
+
+build:wingui:aarch64:
+  <<: *build_template
+  variables:
+    PDTERM_MATRIX: wingui
+    ARCH: aarch64
+    ARCH_NAME: ARM64
+    ARCH_SHORT: a64
+  rules:
+    - if: $CANCEL == "true"
+      when: never
+    - if: $PDTERM == "all" || $PDTERM == "wingui"
+
+build:wingui:armv7:
+  <<: *build_template
+  variables:
+    PDTERM_MATRIX: wingui
+    ARCH: armv7
+    ARCH_NAME: ARM32
+    ARCH_SHORT: a32
+  rules:
+    - if: $CANCEL == "true"
+      when: never
+    - if: $PDTERM == "all" || $PDTERM == "wingui"
+
+build:vt:i686:
+  <<: *build_template
+  variables:
+    PDTERM_MATRIX: vt
+    ARCH: i686
+    ARCH_NAME: Win32
+    ARCH_SHORT: w32
+  rules:
+    - if: $CANCEL == "true"
+      when: never
+    - if: $PDTERM == "all" || $PDTERM == "vt"
+
+build:vt:x86_64:
+  <<: *build_template
+  variables:
+    PDTERM_MATRIX: vt
+    ARCH: x86_64
+    ARCH_NAME: Win64
+    ARCH_SHORT: w64
+  rules:
+    - if: $CANCEL == "true"
+      when: never
+    - if: $PDTERM == "all" || $PDTERM == "vt"
+
+build:vt:aarch64:
+  <<: *build_template
+  variables:
+    PDTERM_MATRIX: vt
+    ARCH: aarch64
+    ARCH_NAME: ARM64
+    ARCH_SHORT: a64
+  rules:
+    - if: $CANCEL == "true"
+      when: never
+    - if: $PDTERM == "all" || $PDTERM == "vt"
+
+build:vt:armv7:
+  <<: *build_template
+  variables:
+    PDTERM_MATRIX: vt
+    ARCH: armv7
+    ARCH_NAME: ARM32
+    ARCH_SHORT: a32
+  rules:
+    - if: $CANCEL == "true"
+      when: never
+    - if: $PDTERM == "all" || $PDTERM == "vt"
+
+# ──────────────────────────────────────────────────────────────
+# PUBLISH
+# ──────────────────────────────────────────────────────────────
+publish:
+  stage: publish
+  image: ubuntu:latest
+  needs:
+    - job: checks
+      artifacts: true
+    - job: build:wincon:i686
+      artifacts: true
+      optional: true
+    - job: build:wincon:x86_64
+      artifacts: true
+      optional: true
+    - job: build:wincon:aarch64
+      artifacts: true
+      optional: true
+    - job: build:wincon:armv7
+      artifacts: true
+      optional: true
+    - job: build:wingui:i686
+      artifacts: true
+      optional: true
+    - job: build:wingui:x86_64
+      artifacts: true
+      optional: true
+    - job: build:wingui:aarch64
+      artifacts: true
+      optional: true
+    - job: build:wingui:armv7
+      artifacts: true
+      optional: true
+    - job: build:vt:i686
+      artifacts: true
+      optional: true
+    - job: build:vt:x86_64
+      artifacts: true
+      optional: true
+    - job: build:vt:aarch64
+      artifacts: true
+      optional: true
+    - job: build:vt:armv7
+      artifacts: true
+      optional: true
+  rules:
+    - if: $CANCEL == "true"
+      when: never
+    - when: on_success
+  script:
+    - apt-get update -qq && apt-get install -y -qq curl jq
+
+    # ── Assemble final package ──────────────────────────────────
+    - sha256sum *.zip > hashes.txt
+    - echo "$BODY" | base64 -d > body.txt
+
+    # ── Upload as GitLab generic package (Artifact mode) ────────
+    - |
+      if [ "$RELEASE" = "Artifact" ]; then
+        PACKAGE_NAME="nano-for-windows_${BUILD}${TAG_SUFFIX}"
+        for f in *.zip hashes.txt; do
+          curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
+               --upload-file "$f" \
+               "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/${PACKAGE_NAME}/${BUILD}/$f"
+        done
+        echo "Uploaded to GitLab Package Registry as: ${PACKAGE_NAME}"
+      fi
+
+    # ── Create GitLab Release (Release mode) ────────────────────
+    # Requires release-cli; install with: apk add release-cli  (alpine)
+    # or grab from: https://gitlab.com/gitlab-org/release-cli
+    - |
+      if [ "$RELEASE" = "Release" ] || [ "$CI_PIPELINE_SOURCE" != "web" ]; then
+        apt-get install -y -qq release-cli || \
+          (curl -fsSL \
+            "https://gitlab.com/gitlab-org/release-cli/-/releases/v0.24.0/downloads/bin/release-cli-linux-amd64" \
+            -o /usr/local/bin/release-cli && chmod +x /usr/local/bin/release-cli)
+
+        DESCRIPTION=$(cat body.txt)
+        ASSETS=""
+        for f in *.zip hashes.txt; do
+          # Upload each asset to generic packages first so it has a URL
+          curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
+               --upload-file "$f" \
+               "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/releases/${BUILD}/$f"
+          URL="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/releases/${BUILD}/$f"
+          ASSETS="${ASSETS} --assets-link {\"name\":\"$f\",\"url\":\"$URL\"}"
+        done
+
+        release-cli create \
+          --name "nano for Windows ${BUILD}${TAG_SUFFIX}" \
+          --tag-name "${BUILD}${TAG_SUFFIX}" \
+          --description "$DESCRIPTION" \
+          $ASSETS
+      fi
+
+  artifacts:
+    paths:
+      - "*.zip"
+      - hashes.txt
+      - body.txt
+    expire_in: 1 week

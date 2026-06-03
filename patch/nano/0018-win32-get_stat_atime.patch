@@ -1,0 +1,21 @@
+--- a/src/files.c	2026-05-22 07:58:45.490444810 -0400
++++ b/src/files.c	2026-05-22 08:00:35.320444089 -0400
+@@ -30,6 +30,7 @@
+ #include <string.h>
+ #include <unistd.h>
+ #include <sys/wait.h>
++#include "stat-time.h"
+ 
+ #define RW_FOR_ALL  (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH)
+ 
+@@ -1646,8 +1647,8 @@
+ 
+ 	/* Set the backup's timestamps to those of the original file.
+ 	 * Failure is unimportant: saving the file apparently worked. */
+-	filetimes[0] = fileinfo.st_atim;
+-	filetimes[1] = fileinfo.st_mtim;
++	filetimes[0] = get_stat_atime(&fileinfo);
++	filetimes[1] = get_stat_mtime(&fileinfo);
+ 	IGNORE_CALL_RESULT(futimens(descriptor, filetimes));
+ 
+ 	if (fclose(backup_file) == 0) {

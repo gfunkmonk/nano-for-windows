@@ -1,0 +1,75 @@
+--- a/curses/vt/pdcdisp.c	2026-06-03 08:02:13.765790796 -0400
++++ b/curses/vt/pdcdisp.c	2026-06-03 08:10:25.105787569 -0400
+@@ -24,6 +24,24 @@
+ #include "../common/acs_defs.h"
+ #include "../common/pdccolor.h"
+ 
++static bool PDC_has_emoji_or_joiner(const chtype ch)
++{
++    const uint32_t c = (uint32_t)(ch & A_CHARTEXT);
++
++    if ((c >= '0' && c <= '9') || c == '#' || c == '*') return true;
++    return( c == 0x200d                     /* ZWJ */
++         || c == 0x200c                     /* ZWNJ */
++         || c == 0x20e3                     /* combining enclosing keycap */
++         || (c >= 0xfe00 && c <= 0xfe0f)    /* variation selectors */
++         || (c >= 0xe0020 && c <= 0xe007f)  /* Unicode Tags (flags) */
++         || (c >= 0x1f3fb && c <= 0x1f3ff)  /* skin tone modifiers */
++         || (c >= 0x1f1e6 && c <= 0x1f1ff)  /* regional indicators */
++         || (c >= 0x10000 && c <= 0x1faff)  /* emoji blocks */
++         || (c >= 0x2600 && c <= 0x27bf)    /* misc symbols */
++         || c == MAX_UNICODE                /* Wide character continuation */
++         || c > MAX_UNICODE);               /* combined char (base+VS/ZWJ) */
++}
++
+ int PDC_get_terminal_fd( void)
+ {
+     static int stdout_fd = -1;
+@@ -285,10 +302,30 @@
+ 
+ void PDC_transform_line(int lineno, int x, int len, const chtype *srcp)
+ {
++    const chtype *full_line = srcp - x;
++    int start_col = x, end_col = x + len;
+     static chtype prev_ch = 0;
+     static bool force_reset_all_attribs = TRUE;
+     char obuff[OBUFF_SIZE];
+ 
++    while (start_col > 0 && (full_line[start_col] & A_CHARTEXT) == MAX_UNICODE)
++        start_col--;
++
++    while (start_col > 0 && (PDC_has_emoji_or_joiner(full_line[start_col - 1]) ||
++           (full_line[start_col - 1] & A_CHARTEXT) == MAX_UNICODE))
++        start_col--;
++
++    while (end_col < SP->cols && (PDC_has_emoji_or_joiner(full_line[end_col]) ||
++           (full_line[end_col] & A_CHARTEXT) == MAX_UNICODE))
++        end_col++;
++
++    srcp = full_line + start_col;
++    x = start_col;
++    len = end_col - start_col;
++
++    while (len > 0 && (srcp[len - 1] & A_CHARTEXT) == MAX_UNICODE)
++        len--;
++
+     if( !srcp)
+     {
+         prev_ch = 0;
+@@ -301,7 +342,6 @@
+     assert( lineno >= 0);
+     assert( lineno < SP->lines);
+     assert( len > 0);
+-    assert( len < MAX_PACKET_LEN);
+ #ifdef DOS           /* can't write to last cell at lower right */
+     if( lineno == SP->lines - 1 && len == SP->cols - x)
+         len--;
+@@ -352,7 +389,6 @@
+            continue;
+        }
+        assert( ch != MAX_UNICODE);
+-       assert( len == 1 || ch < MAX_UNICODE);
+ #endif
+        if( _is_altcharset( *srcp))
+           ch = (int)acs_map[ch & 0x7f];
+
