@@ -204,11 +204,10 @@ checks:
     - autopoint --force
     - |
       glibmodules="
-          base32 base64 futimens getdelim getline getopt-gnu glob isblank
-          iswblank lstat mbrlen mbchar mkstemps nl_langinfo regex rewinddir
-          sigaction snprintf-posix stdarg-h strcase strcasestr-simple strnlen
-          sys_wait-h uniwidth unitypes unictype/property-emoji vsnprintf-posix
-          wchar-h wctype-h wcwidth
+          canonicalize-lgpl futimens getdelim getline getopt-gnu globisblank
+          iswblank isblank lstat mbchar mbrlen mkstemps nl_langinfo regex
+          rewinddir sigaction snprintf-posix stdarg-h strcase strcasestr-simple
+          strnlen sys_wait-h uniwidth vsnprintf-posix wchar-h wctype-h wcwidth
       "
       rm -rf lib
       ./gnulib/gnulib-tool --import ${glibmodules}

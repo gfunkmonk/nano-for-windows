@@ -1,0 +1,27 @@
+--- a/src/utils.c	2026-06-04 01:32:32.075376954 -0400
++++ b/src/utils.c	2026-06-04 01:34:27.405376197 -0400
+@@ -39,7 +39,23 @@
+ 			homenv = getenv("USERPROFILE");
+ 
+ 		if (homenv == NULL || *homenv == '\0')
+-			homenv = getenv("ALLUSERSPROFILE");
++		        homenv = getenv("APPDATA");
++
++#ifdef _WIN32
++     /* Last resort: use the directory containing nano.exe.
++      * This makes portable (zip-extracted) installs self-contained
++      * even when no user profile environment variables are set. */
++     static char exedir[MAX_PATH];
++     if ((homenv == NULL || *homenv == '\0') && exedir[0] == '\0') {
++        DWORD len = GetModuleFileNameA(NULL, exedir, MAX_PATH);
++        if (len > 0 && len < MAX_PATH) {
++           char *slash = strrchr(exedir, '\\');
++           if (slash) *slash = '\0';
++        }
++     }
++     if (homenv == NULL || *homenv == '\0')
++        homenv = exedir[0] ? exedir : NULL;
++#endif
+ 
+ 		/* Only set `homedir` if a home directory could be determined. */
+ 		if (homenv && *homenv)

@@ -34,7 +34,7 @@
  	LDFLAGS = -g
  else
 -	CFLAGS  += -O3
-+	CFLAGS  += -O2
++	CFLAGS  += -O3 -DPDC_GUI
  	LDFLAGS =
  endif
  

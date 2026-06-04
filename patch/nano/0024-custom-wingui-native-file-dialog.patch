@@ -1,0 +1,124 @@
+--- a/src/files.c	2026-06-04 01:52:40.195369021 -0400
++++ b/src/files.c	2026-06-04 02:01:24.305365579 -0400
+@@ -21,6 +21,73 @@
+ 
+ #include "prototypes.h"
+ 
++#if defined(_WIN32) && defined(PDC_GUI)
++/* -----------------------------------------------------------------------
++ * Native Windows file-picker dialogs for the wingui (PDC_GUI) build.
++ *
++ * GetOpenFileName / GetSaveFileName are provided by comdlg32, which is
++ * already linked for the wingui target.  PDC_hWnd is the top-level window
++ * created by PDCurses/wingui and is used as the dialog owner so it
++ * behaves as a proper modal child of the editor window.
++ *
++ * Both helpers write their result into the global `answer` buffer and
++ * return TRUE.  On cancel they return FALSE and the caller falls through
++ * to the normal TUI prompt.
++ * ----------------------------------------------------------------------- */
++#include <commdlg.h>
++
++extern HWND PDC_hWnd;
++
++/* Pop a Save-As dialog.  `initial` is the filename to pre-populate.
++ * On success writes the chosen path into `answer` and returns TRUE. */
++static bool win32_save_dialog(const char *initial)
++{
++   char buf[MAX_PATH];
++   OPENFILENAMEA ofn;
++
++   strncpy(buf, initial ? initial : "", MAX_PATH - 1);
++   buf[MAX_PATH - 1] = '\0';
++
++   memset(&ofn, 0, sizeof(ofn));
++   ofn.lStructSize = sizeof(ofn);
++   ofn.hwndOwner   = PDC_hWnd;
++   ofn.lpstrFile   = buf;
++   ofn.nMaxFile    = MAX_PATH;
++   ofn.lpstrTitle  = "Save File As";
++   ofn.Flags       = OFN_OVERWRITEPROMPT | OFN_NOCHANGEDIR | OFN_PATHMUSTEXIST;
++
++   if (!GetSaveFileNameA(&ofn))
++       return FALSE;
++
++   normalize_slashes(buf);
++   answer = mallocstrcpy(answer, buf);
++   return TRUE;
++}
++
++/* Pop an Open dialog.  On success writes the chosen path into `answer`
++ * and returns TRUE. */
++static bool win32_open_dialog(void)
++{
++   char buf[MAX_PATH] = "";
++   OPENFILENAMEA ofn;
++
++   memset(&ofn, 0, sizeof(ofn));
++   ofn.lStructSize = sizeof(ofn);
++   ofn.hwndOwner   = PDC_hWnd;
++   ofn.lpstrFile   = buf;
++   ofn.nMaxFile    = MAX_PATH;
++   ofn.lpstrTitle  = "Insert File";
++   ofn.Flags       = OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR | OFN_PATHMUSTEXIST;
++
++   if (!GetOpenFileNameA(&ofn))
++       return FALSE;
++
++   normalize_slashes(buf);
++   answer = mallocstrcpy(answer, buf);
++   return TRUE;
++}
++#endif /* _WIN32 && PDC_GUI */
++
+ #include <errno.h>
+ #include <fcntl.h>
+ #include <libgen.h>
+@@ -1196,6 +1263,18 @@
+ 
+ 		present_path = mallocstrcpy(present_path, "./");
+ 
++#if defined(_WIN32) && defined(PDC_GUI)
++		/* For insert-file (not execute), offer the native open dialog.
++		 * If the user picks a file, skip the TUI prompt entirely and
++		 * jump straight to processing.  On cancel, fall through to the
++		 * normal TUI prompt so nano's browser is still accessible. */
++		if (!execute && win32_open_dialog()) {
++			given = mallocstrcpy(given, answer);
++			response = 0;
++			goto wingui_insert_done;
++		}
++#endif
++
+ 		response = do_prompt(execute ? MEXECUTE : MINSERTFILE, given,
+ 							execute ? &execute_history : NULL,
+ 							edit_refresh, msg,
+@@ -1206,6 +1285,9 @@
+ 
+ 		/* If we're in multibuffer mode and the filename or command is
+ 		 * blank, open a new buffer instead of canceling. */
++#if defined(_WIN32) && defined(PDC_GUI)
++		wingui_insert_done:
++#endif
+ 		if (response == -1 || (response == -2 && !ISSET(MULTIBUFFER))) {
+ 			statusbar(_("Cancelled"));
+ 			break;
+@@ -2090,6 +2172,18 @@
+ 		if ((!withprompt || (ISSET(SAVE_ON_EXIT) && exiting)) && openfile->filename[0])
+ 			answer = mallocstrcpy(answer, openfile->filename);
+ 		else
++#if defined(_WIN32) && defined(PDC_GUI)
++		/* For a normal overwrite save (not append/prepend/selection),
++		 * offer the native save dialog.  On cancel fall through to the
++		 * TUI prompt so nano's browser is still accessible. */
++		if (withprompt && method == OVERWRITE
++#ifndef NANO_TINY
++				&& !openfile->mark
++#endif
++				&& win32_save_dialog(given)) {
++			/* answer already set by win32_save_dialog; response stays 0 */
++		} else
++#endif /* _WIN32 && PDC_GUI */
+ 			response = do_prompt(MWRITEFILE, given, NULL,
+ 						edit_refresh, "%s%s%s", msg,
+ #ifndef NANO_TINY

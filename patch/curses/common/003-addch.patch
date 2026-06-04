@@ -1,6 +1,6 @@
 --- a/curses/pdcurses/addch.c   2026-05-26 01:45:38.868322267 -0400
 +++ b/curses/pdcurses/addch.c   2026-05-26 01:48:21.478321199 -0400
-@@ -535,10 +535,35 @@
+@@ -535,10 +535,47 @@
 
      if( x || y)
      {
@@ -28,12 +28,24 @@
 +            }
 +            return OK;
 +        }
++        if (is_zwj && x > 0) {
++            chtype prev_full = win->_y[y][x - 1];
++            chtype prev = prev_full & A_CHARTEXT;
++            if (prev > MAX_UNICODE) {
++                cchar_t added;
++                chtype root = PDC_expand_combined_characters(prev, &added);
++                if (added == 0x200D) {
++                    win->_y[y][x - 1] = COMBINED_CHAR_START + PDC_find_combined_char_idx(text, added);
++                    return OK;
++                }
++            }
++        }
 +
          const bool is_combining = (text && !text_width);
          const bool is_low_surrogate = PDC_IS_LOW_SURROGATE( text);
 
 -        if( is_combining || is_low_surrogate)
-+        if( (is_combining && !is_zwj && !is_variation_selector && !is_keycap_joiner) || is_low_surrogate)
++        if( (is_combining && !is_zwj && !is_variation_selector && !is_keycap_joiner && is_regional_indicator) || is_low_surrogate)
          {
              chtype prev_char;
 
@@ -41,7 +53,7 @@
                  x--;
              else
              {
-+                if(is_zwj || is_variation_selector || is_keycap_joiner)
++                if(is_zwj || is_variation_selector)
 +                {
 +                    win->_y[y][x] = COMBINED_CHAR_START + PDC_find_combined_char_idx( 0, text);
 +                    return OK;
@@ -53,7 +65,7 @@
              if( is_combining)
                  text = COMBINED_CHAR_START
                           + PDC_find_combined_char_idx( prev_char, text);
-+            else if(is_zwj || is_variation_selector || is_keycap_joiner)
++            else if(is_zwj || is_variation_selector)
 +                text = COMBINED_CHAR_START
 +                         + PDC_find_combined_char_idx( prev_char, text);
              else if( PDC_IS_HIGH_SURROGATE( prev_char))

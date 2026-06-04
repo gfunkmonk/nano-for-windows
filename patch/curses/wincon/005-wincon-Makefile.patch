@@ -37,7 +37,7 @@
  	LDFLAGS = -g
  else
 -	CFLAGS  += -O3
-+	CFLAGS  += -O2 -DPDC_WINCON
++	CFLAGS  += -O3 -DPDC_WINCON
  	LDFLAGS =
  endif
  

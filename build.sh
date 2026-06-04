@@ -1,4 +1,10 @@
 #!/bin/bash
+
+if [ -z "$BASH_VERSION" ]; then
+    echo "Error: This script must be run with bash, not sh." >&2
+    exit 1
+fi
+
 set -euo pipefail
 
 if [ $# -lt 2 ]; then
@@ -7,79 +13,62 @@ if [ $# -lt 2 ]; then
     exit 1
 fi
 
-PURPLE="\x1b[1;35m"
-YELLOW="\x1b[1;33m"
-BROWN="\x1b[0;33m"
-TEAL="\x1b[2;36m"
-BWHITE="\x1b[1;37m"
-GREEN="\x1b[1;32m"
-CYAN="\x1b[1;36m"
-RED="\x1b[1;31m"
-BLUE="\x1b[1;34m"
-ORANGE="$(tput setaf 214)"
-NEONBLUE="\033[38;2;4;218;255m"
-NEONGREEN="\033[38;2;57;255;20m"
-NEONPINK="\033[38;2;255;19;240m"
-NEONPURPLE="\033[38;2;225;8;255m"
-NEONRED="\033[38;2;255;49;49m"
-JUNEBUD="\033[38;2;189;218;87m"
-HIGHLIGHTER="\033[38;2;248;255;15m"
-NC="\x1b[0m"
+# Load shared colors, check_deps, sync_repo
+source "$(dirname "$0")/common.sh"
 
-# --- Check Dependencies ---
-for cmd in git curl tar patch sed perl make autoconf automake 7z; do
-    command -v "$cmd" >/dev/null 2>&1 || echo -e  "${NEONRED}$cmd is required but not installed.${NC}"
-done
+# --- Check Dependencies (exits on first missing tool) ---
+check_deps git curl tar patch sed perl make autoconf automake 7z jq
 
 # Map the input to the full triplet
 case "$1" in
-    x86_64|amd64|x64)     TARGETS=("x86_64-w64-mingw32") ;;
-    i686|i386|x86|x32)	  TARGETS=("i686-w64-mingw32") ;;
-    aarch64|arm64|armv8)  TARGETS=("aarch64-w64-mingw32") ;;
-    armv7|arm|arm32)	  TARGETS=("armv7-w64-mingw32") ;;
+    x86_64|amd64|x64)    TARGETS=("x86_64-w64-mingw32") ;;
+    i686|i386|x86|x32)   TARGETS=("i686-w64-mingw32") ;;
+    aarch64|arm64|armv8) TARGETS=("aarch64-w64-mingw32") ;;
+    armv7|arm|arm32)     TARGETS=("armv7-w64-mingw32") ;;
     *) echo "Invalid architecture: $1"; exit 1 ;;
 esac
 
+# Padding for banner alignment
 case "$1" in
-    x86_64)       PAD=("###") ;;
-    amd64)     	  PAD=("##") ;;
-    x64)	  PAD=("") ;;
-    i686)	  PAD=("#") ;;
-    i386)	  PAD=("#") ;;
-    x86)	  PAD=("") ;;
-    x32)	  PAD=("") ;;
-    aarch64)  	  PAD=("####") ;;
-    arm64)  	  PAD=("##") ;;
-    armv8)	  PAD=("##") ;;
-    arm)	  PAD=("") ;;
-    armv7)	  PAD=("##") ;;
-    arm32)	  PAD=("##") ;;
+    x86_64)  PAD="###" ;;
+    amd64)   PAD="##" ;;
+    x64)     PAD="" ;;
+    i686)    PAD="#" ;;
+    i386)    PAD="#" ;;
+    x86)     PAD="" ;;
+    x32)     PAD="" ;;
+    aarch64) PAD="####" ;;
+    arm64)   PAD="##" ;;
+    armv8)   PAD="##" ;;
+    arm)     PAD="" ;;
+    armv7)   PAD="##" ;;
+    arm32)   PAD="##" ;;
 esac
 
 # Map PDTERM
 PDTERM="$2"
 case "$PDTERM" in
-     vt)
-	export PDT_PRETTY="VT"
+    vt)
+        export PDT_PRETTY="VT"
         export BANNER_NAME="VirtTerm"
-	export PAD2="##"
-	;;
-     wincon)
-	export PDT_PRETTY="WinCon"
-	export BANNER_NAME="WinCon"
-	export PAD2=""
-	;;
-     wingui)
-	export PDT_PRETTY="WinGUI"
-	export BANNER_NAME="WinGUI"
-	export PAD2=""
-	;;
+        export PAD2="##"
+        ;;
+    wincon)
+        export PDT_PRETTY="WinCon"
+        export BANNER_NAME="WinCon"
+        export PAD2=""
+        ;;
+    wingui)
+        export PDT_PRETTY="WinGUI"
+        export BANNER_NAME="WinGUI"
+        export PAD2=""
+        ;;
     *) echo "Invalid PDTERM: $PDTERM (expected wincon, wingui, or vt)"; exit 1 ;;
 esac
 
-echo -e "${BLUE}###########################################${PAD}${PAD2}"
-echo -e "${BLUE}@@  ${BWHITE}Building for ${NEONPINK}$1 ${GREEN}with ${YELLOW}PDTERM ${RED}$BANNER_NAME  ${BLUE}@@${NC}"
-echo -e "${BLUE}###########################################${PAD}${PAD2}"
+echo -e "${BLUE}################################################${PAD}${PAD2}"
+echo -e "${BLUE}@@  ${BWHITE}Building ${JUNEBUD}nano ${BWHITE}for ${NEONPINK}$1 ${GREEN}with ${YELLOW}PDTERM ${RED}$BANNER_NAME  ${BLUE}@@${NC}"
+echo -e "${BLUE}################################################${PAD}${PAD2}"
 sleep 3
 
 # --- Configuration & Environment ---
@@ -88,7 +77,7 @@ BUILDDIR="${BASE_DIR}/build"
 
 mkdir -p "$BUILDDIR"
 
-# Global variables from your workflow
+# Global variables
 export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DCHTYPE_64 -DPDC_WIDE -DPDC_FORCE_UTF8 -D_GNU_SOURCE"
 export LDFLAGS="-L${BUILDDIR}/nano/curses/$PDTERM -static -static-libgcc $BUILDDIR/nano/curses/$PDTERM/pdcurses.a"
 export LIBS="-l:pdcurses.a -lwinmm -lbcrypt -lshlwapi"
@@ -102,12 +91,27 @@ if [[ "$PDTERM" == "vt" ]]; then
     export PDC_VT="RGB UNDERLINE BLINK DIM STANDOUT"
 elif [[ "$PDTERM" == "wingui" ]]; then
     export LIBS="${LIBS} -lole32 -lgdi32 -lcomdlg32"
+    export CFLAGS="${CFLAGS} -DPDC_GUI"
 fi
 
 # --- Toolchain Setup ---
 setup_toolchain() {
     echo -e "${CYAN}Setting up toolchain...${NC}"
-    local RELEASE="20260519"
+    # Fetch the latest llvm-mingw release tag dynamically so this doesn't go stale
+    local API_RESPONSE
+    API_RESPONSE=$(curl -fsSL https://api.github.com/repos/mstorsjo/llvm-mingw/releases/latest 2>&1)
+    local CURL_EXIT=$?
+    if [ $CURL_EXIT -ne 0 ]; then
+        echo -e "${NEONRED}Failed to fetch llvm-mingw release (curl exit code: $CURL_EXIT).${NC}" >&2
+        echo -e "${NEONRED}API response: $API_RESPONSE${NC}" >&2
+        exit 1
+    fi
+    RELEASE=$(echo "$API_RESPONSE" | jq -r '.tag_name')
+    if [[ -z "$RELEASE" ]]; then
+        echo -e "${NEONRED}Failed to parse llvm-mingw release tag from API response.${NC}" >&2
+        echo -e "${NEONRED}API response: $API_RESPONSE${NC}" >&2
+        exit 1
+    fi
     local URL="https://github.com/mstorsjo/llvm-mingw/releases/download/${RELEASE}/llvm-mingw-${RELEASE}-ucrt-ubuntu-22.04-x86_64.tar.xz"
     local ARCHIVE="$BASE_DIR/llvm.tar.xz"
     if [[ ! -d "$BASE_DIR/toolchain/bin" ]]; then
@@ -118,41 +122,35 @@ setup_toolchain() {
             else
                 curl -L -o "$ARCHIVE" "$URL"
             fi
+            if [ $? -ne 0 ]; then
+                echo -e "${NEONRED}Failed to download toolchain archive.${NC}" >&2
+                exit 1
+            fi
         fi
         mkdir -p "$BASE_DIR/toolchain"
+        echo -e "${PEACH}Extracting toolchain...${NC}"
         tar -xJf "$ARCHIVE" --strip-components=1 -C "$BASE_DIR/toolchain/"
+        if [ $? -ne 0 ]; then
+            echo -e "${NEONRED}Failed to extract toolchain archive.${NC}" >&2
+            exit 1
+        fi
         rm -f "$ARCHIVE"
     else
-    	echo -e "${GREEN}Toolchain cache hit: llvm found.${NC}"
+        echo -e "${GREEN}Toolchain cache hit: llvm found.${NC}"
     fi
-
     export PATH="$BASE_DIR/toolchain/bin:$PATH"
-}
-
-sync_repo() {
-    local url=$1
-    local dir=$2
-    if [[ ! -d "$dir" ]]; then
-        git clone "$url" --depth=1 "$dir"
-    else
-        echo -e "${CYAN}Syncing $dir...${NC}"
-        cd "$dir"
-        git fetch --depth=1
-        git reset --hard origin/$(git symbolic-ref --short HEAD)
-        git clean -fd
-        cd ..
-    fi
 }
 
 setup_toolchain
 
 cd "${BUILDDIR}"
-sync_repo "https://github.com/GitMirroring/nano.git" "nano"
+sync_repo "https://github.com/GitMirroring/nano.git" "nano" "$NEONPURPLE"
 cd nano
-sync_repo "https://github.com/Bill-Gray/PDCursesMod.git" "curses"
-sync_repo "https://github.com/coreutils/gnulib.git" "gnulib"
+sync_repo "https://github.com/Bill-Gray/PDCursesMod.git" "curses" "$NEONBLUE"
+sync_repo "https://github.com/coreutils/gnulib.git" "gnulib" "$ORANGE"
 
-modules="canonicalize-lgpl futimens getdelim getline getopt-gnu glob isblank iswblank lstat mbrlen mbchar mkstemps nl_langinfo regex rewinddir sigaction snprintf-posix stdarg-h strcase strcasestr-simple strnlen sys_wait-h uniwidth vsnprintf-posix wchar-h wctype-h wcwidth"
+modules="canonicalize-lgpl futimens getdelim getline getopt-gnu glob isblank iswblank lstat mbchar mbrlen mkstemps nl_langinfo regex rewinddir sigaction snprintf-posix stdarg-h strcase strcasestr-simple strnlen sys_wait-h uniwidth vsnprintf-posix wchar-h wctype-h wcwidth"
+
 ./gnulib/gnulib-tool --import $modules
 autopoint --force && aclocal -I m4 && autoconf && autoheader && automake --add-missing
 
@@ -165,7 +163,7 @@ if [ -d "$BASE_DIR/patch/nano" ]; then
     done < <(find "$BASE_DIR/patch/nano" -maxdepth 1 -type f -name '*.patch' | sort -V)
 fi
 
-# Patch Curses
+# Patch Curses (common)
 if [ -d "$BASE_DIR/patch/curses/common" ]; then
     while IFS= read -r p; do
         [ -n "$p" ] || continue
@@ -173,6 +171,7 @@ if [ -d "$BASE_DIR/patch/curses/common" ]; then
         patch -p1 < "$p" || exit 1
     done < <(find "$BASE_DIR/patch/curses/common" -maxdepth 1 -type f -name '*.patch' | sort -V)
 fi
+# Patch Curses (PDTERM-specific)
 if [ -d "$BASE_DIR/patch/curses/$PDTERM" ]; then
     while IFS= read -r p; do
         [ -n "$p" ] || continue
@@ -183,13 +182,11 @@ fi
 
 # realpath() workaround
 echo -e "${NEONRED}[${GREEN}definitions.h${NEONRED}] ${BWHITE}realpath() workaround applied.${NC}"
-cp -p ./src/definitions.h{,.bak}
-echo " " >> ./src/definitions.h
-echo "#ifdef _WIN32" >> ./src/definitions.h
-echo "#include <windows.h>"  >> ./src/definitions.h
-echo "#include \"uniwidth.h\""  >> ./src/definitions.h
-echo "#define realpath(N,R) _fullpath((R),(N),0)" >> ./src/definitions.h
-echo "#endif" >> ./src/definitions.h
+if ! grep -q 'realpath(N,R)' ./src/definitions.h; then
+    cp -p ./src/definitions.h{,.bak}
+    printf '\n#ifdef _WIN32\n#include <windows.h>\n#include "uniwidth.h"\n#define realpath(N,R) _fullpath((R),(N),0)\n#endif\n' \
+        >> ./src/definitions.h
+fi
 
 # Default open() files in binary mode
 echo -e "${NEONRED}[${GREEN}files.c${NEONRED}] ${BWHITE}default open in binary mode${NC}"
@@ -307,13 +304,11 @@ sed -i 's|MAX_UNICODE 0x110000|MAX_UNICODE 0x10ffff|g' curses/curspriv.h
 
 # --- Build Binaries ---
 for TRIPLET in "${TARGETS[@]}"; do
-    # Now ARCH is actually the arch (e.g., x86_64)
     ARCH=$(echo "$TRIPLET" | cut -d'-' -f1)
     PREFIX="$BASE_DIR/dist/$ARCH"
 
-    # Mapping for your 'Win64/WinARM' labels
     NAME=$(echo "$ARCH" | sed 's/aarch64/ARM64/;s/armv7/ARM32/;s/x86_64/Win64/;s/i686/Win32/')
-    SHORT=$(echo "$ARCH" | cut -d'-' -f1 | sed 's/aarch64/a64/;s/armv7/a32/;s/x86_64/w64/;s/i686/w32/')
+    SHORT=$(echo "$ARCH" | sed 's/aarch64/a64/;s/armv7/a32/;s/x86_64/w64/;s/i686/w32/')
 
     echo -e "${NEONPURPLE}Building for ${ARCH} (Target: ${TRIPLET})${NC}"
 
@@ -328,17 +323,18 @@ for TRIPLET in "${TARGETS[@]}"; do
 
     # Nano Build
     cd "$BUILDDIR/nano"
-
     [ -d "build" ] && rm -rf build
     mkdir build && cd build
     ../configure --host="$TRIPLET" --prefix="$PREFIX" \
-        --enable-utf8 --enable-threads=windows --disable-nls --sysconfdir="C:\\\\ProgramData" --enable-extras --enable-color --enable-nanorc --disable-dependency-tracking \
+        --enable-utf8 --enable-threads=windows --disable-nls \
+        --sysconfdir="C:\\ProgramData" --enable-extras --enable-color \
+	--enable-nanorc --disable-dependency-tracking \
         CFLAGS="${CFLAGS} -DPDC_NCMOUSE" \
         CXXFLAGS="${CFLAGS}" \
         LDFLAGS="${LDFLAGS}" \
         LIBS="${LIBS}" \
-	NCURSESW_CFLAGS="${NCURSES_CFLAGS}" \
-	NCURSESW_LIBS="${NCURSES_LIBS}"
+        NCURSESW_CFLAGS="${NCURSES_CFLAGS}" \
+        NCURSESW_LIBS="${NCURSES_LIBS}"
 
 cat << EOF >> config.h
 #define HAVE_FREXP_IN_LIBC 1
@@ -360,18 +356,22 @@ EOF
 
     make -j$(nproc) && make install
     "$TRIPLET-strip" -s "$PREFIX/bin/nano.exe"
-    cd ${PREFIX}
-    cp ${BASE_DIR}/LICENSE .
-    cp ${BASE_DIR}/README.md .
+    cd "${PREFIX}"
+    cp "${BASE_DIR}/LICENSE" .
+    cp "${BASE_DIR}/README.md" .
     mv bin/nano.exe share/doc/nano/* "${BUILDDIR}/nano/doc/sample.nanorc.in" .
-    if [ -d "syntax" ]; then
-        rm -fr syntax/
+    # Sync nanorc instead of re-cloning on every run
+    if [ -d "syntax/.git" ]; then
+        pushd syntax > /dev/null
+        git fetch --depth=1
+        git reset --hard origin/$(git symbolic-ref --short HEAD)
+        popd > /dev/null
+    else
+        [ -d "syntax" ] && rm -rf syntax
+        git clone https://github.com/gfunkmonk/nanorc syntax
     fi
-    git clone https://github.com/gfunkmonk/nanorc syntax
-    cd syntax
-    rm -fr .git/
-    cd ..
-    cp ${BASE_DIR}/.nanorc .
+    rm -rf syntax/.git
+    cp "${BASE_DIR}/.nanorc" .
     rm -rf bin share rnano*
     file nano.exe
     upx --lzma --best nano.exe || true

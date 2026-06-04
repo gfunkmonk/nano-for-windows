@@ -40,7 +40,7 @@ env:
 jobs:
   ## PRECHECK ##############################################################################
   checks:
-    name: "✔️ Pre-build checks"
+    name: "✅ Pre-build checks"
     runs-on: ubuntu-latest
     timeout-minutes: 3
     # Use the Bash shell regardless whether the GitHub Actions runner is ubuntu-latest, macos-latest, or windows-latest
@@ -51,7 +51,7 @@ jobs:
       pdterms: ${{ steps.checks.outputs.pdterms }}
       tag_suffix: ${{ steps.checks.outputs.tag_suffix }}
     steps:
-    - name: "✔️ Pre-build checks"
+    - name: "✅ Pre-build checks"
       id: checks
       shell: bash
       run: |
@@ -147,7 +147,7 @@ jobs:
   build:
     needs: [ checks ]
     if: needs.checks.outputs.cancel != 'true'
-    name: "⚙️ nano4Win ${{ matrix.pretty }} (${{ matrix.pdterm == 'wincon' && 'Windows Console' || matrix.pdterm == 'wingui' && 'Windows GUI' || 'Virtual Terminal' }}) build"
+    name: "🏗️ nano4Win ${{ matrix.pretty }} (${{ matrix.pdterm == 'wincon' && 'Windows Console' || matrix.pdterm == 'wingui' && 'Windows GUI' || 'Virtual Terminal' }}) build"
     runs-on: ubuntu-latest
     container: alpine:edge
     strategy:
@@ -215,8 +215,7 @@ jobs:
         git clone https://github.com/coreutils/gnulib.git --depth 1
         autopoint --force
         glibmodules="
-            base32
-            base64
+            canonicalize-lgpl
             futimens
             getdelim
             getline
@@ -225,8 +224,8 @@ jobs:
             isblank
             iswblank
             lstat
-            mbrlen
             mbchar
+            mbrlen
             mkstemps
             nl_langinfo
             regex
@@ -239,8 +238,6 @@ jobs:
             strnlen
             sys_wait-h
             uniwidth
-            unitypes
-            unictype/property-emoji
             vsnprintf-posix
             wchar-h
             wctype-h
@@ -263,7 +260,7 @@ jobs:
           patch -p1 < "$p" || exit 1
         done < <(find "${CWD}/patch/nano" -maxdepth 1 -type f -name '*.patch' | sort -V)
 
-    - name: ❤️‍🩹 PDCurses Patcheses (common)
+    - name: 🏴‍☠️ PDCurses Patcheses (common)
       run: |
         CWD=$(pwd)
         cd nano
@@ -313,7 +310,7 @@ jobs:
         ##     APPLY PATCHES    ##
         ##                      ##
         ##########################
-        # 1. >realpath< function doesn't exist on Windows, which isn't fully POSIX compliant.
+        # >realpath< function doesn't exist on Windows, which isn't fully POSIX compliant.
         echo -e "\n\nPATCH: realpath() workaround applied."
         cp -p ./src/definitions.h{,.bak}
         echo " " >> ./src/definitions.h
@@ -495,7 +492,9 @@ jobs:
 
         echo -e "\n\nPATCH: PDC_display_utf8 = TRUE"
         sed -i.bak 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wincon/*.c
+        _diff
         sed -i.bak 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/vt/*.c
+        _diff
         sed -i.bak 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wingui/*.c
         _diff
 
@@ -507,7 +506,9 @@ jobs:
         # even if the system defines a small WCHAR_MAX
         echo -e "\n\nPATCH: Force 4-byte UTF-8 emoji input in VT keyboard driver."
         sed -i.bak 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/vt/pdckbd.c
+        _diff
         sed -i.bak 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/wincon/pdckbd.c
+        _diff
         sed -i.bak 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/wingui/pdckbd.c
         _diff
 
@@ -550,7 +551,7 @@ jobs:
           wingui) echo "PDT_PRETTY=WinGUI" >> $GITHUB_ENV ;;
         esac
 
-    - name: "⚙️ Compile curses lib for ${{ matrix.name}}"
+    - name: "👷 Compile curses lib for ${{ matrix.name}}"
       run: |
         ##########################
         ##                      ##
@@ -566,13 +567,13 @@ jobs:
         cd "nano/curses/${PDTERM}"
           make -j$(($(nproc)*2)) WIDE=Y UTF8=Y CHTYPE_64=Y DLL=N _${{matrix.short}}=Y
 
-    - name: "🐞 SSH session"
+    - name: "💻 SSH session"
       uses: mxschmitt/action-tmate@v3
       if: github.event.inputs.debugssh == 'true'
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: "🔧 Configure Nano Build"
+    - name: "🛠️ Configure Nano Build"
       run: |
         ##########################
         ##                      ##
@@ -595,6 +596,7 @@ jobs:
         export LIBS="-lbcrypt -lshlwapi"
         if [ "${PDTERM}" = "wingui" ]; then
           export LIBS="${LIBS} -lole32 -lgdi32 -lcomdlg32"
+          export CFLAGS="${CFLAGS} -DPDC_GUI"
         fi
         # Configure nano
         mkdir -p nano/build
@@ -621,7 +623,7 @@ jobs:
           BRANDING="GNU nano $NANOVER for ${{ matrix.name }}"
           echo "#define REVISION \"${BRANDING}\"" > src/revision.h
 
-    - name: "⚙️ Build for Windows ${{ matrix.pretty }}"
+    - name: "👷‍♂️ Build for Windows ${{ matrix.pretty }}"
       run: |
         ##########################
         ##                      ##
@@ -674,7 +676,7 @@ jobs:
       run:
         shell: bash
     steps:
-    - name: "📬 Receive Packages"
+    - name: "📥 Receive Packages"
       uses: actions/download-artifact@v8
       with:
         path: ./
@@ -690,7 +692,7 @@ jobs:
         sha256sum *.zip > hashes.txt
         echo "${{ needs.checks.outputs.body }}" | base64 -d > body.txt
 
-    - name: "👍 Upload nano-for-windows_${{ needs.checks.outputs.build }} as Artifact"
+    - name: "📤 Upload nano-for-windows_${{ needs.checks.outputs.build }} as Artifact"
       uses: actions/upload-artifact@v7
       if: github.event.inputs.release == 'Artifact'
       with:
@@ -699,7 +701,7 @@ jobs:
           *.zip
           *.txt
 
-    - name: "🎉 Publish Release ${{ needs.checks.outputs.build }}"
+    - name: "🥂 Publish Release ${{ needs.checks.outputs.build }}"
       uses: softprops/action-gh-release@v3
       # WARNING: before using this action go to https://github.com/OWNER/REPO/settings/actions
       # and in **Workflow Permissions** section give actions **Read and Write permissions**.
@@ -715,4 +717,3 @@ jobs:
         files: |
           ./*.zip
           ./hashes.txt
-
