@@ -1,8 +1,8 @@
---- a/curses/vt/pdcdisp.c	2026-06-03 08:02:13.765790796 -0400
-+++ b/curses/vt/pdcdisp.c	2026-06-03 08:10:25.105787569 -0400
-@@ -24,6 +24,24 @@
+--- a/curses/wincon/pdcdisp.c	2026-06-03 07:41:37.015798918 -0400
++++ b/curses/wincon/pdcdisp.c	2026-06-03 07:50:46.875795307 -0400
+@@ -14,6 +14,25 @@
+ 
  #include "../common/acs_defs.h"
- #include "../common/pdccolor.h"
  
 +static bool PDC_has_emoji_or_joiner(const chtype ch)
 +{
@@ -13,6 +13,7 @@
 +         || c == 0x200c                     /* ZWNJ */
 +         || c == 0x20e3                     /* combining enclosing keycap */
 +         || (c >= 0xfe00 && c <= 0xfe0f)    /* variation selectors */
++         || (c >= 0xff00 && c <= 0xffef)    /* wide/fullwidth characters */
 +         || (c >= 0xe0020 && c <= 0xe007f)  /* Unicode Tags (flags) */
 +         || (c >= 0x1f3fb && c <= 0x1f3ff)  /* skin tone modifiers */
 +         || (c >= 0x1f1e6 && c <= 0x1f1ff)  /* regional indicators */
@@ -22,18 +23,29 @@
 +         || c > MAX_UNICODE);               /* combined char (base+VS/ZWJ) */
 +}
 +
- int PDC_get_terminal_fd( void)
- {
-     static int stdout_fd = -1;
-@@ -285,10 +302,30 @@
+ DWORD pdc_last_blink;
+ static bool blinked_off = FALSE;
+ static bool in_italic = FALSE;
+@@ -359,7 +377,6 @@
+     bool blink, ansi;
+
+     assert( len >= 0);
+-    assert( len < MAX_PACKET_LEN);
+     if (pdc_ansi && (lineno == (SP->lines - 1)) && ((x + len) == SP->cols))
+     {
+         len--;
+@@ -417,6 +434,8 @@
  
  void PDC_transform_line(int lineno, int x, int len, const chtype *srcp)
  {
 +    const chtype *full_line = srcp - x;
 +    int start_col = x, end_col = x + len;
-     static chtype prev_ch = 0;
-     static bool force_reset_all_attribs = TRUE;
-     char obuff[OBUFF_SIZE];
+     attr_t old_attr, attr;
+     int i, j;
+ 
+@@ -424,6 +443,24 @@
+ 
+     old_attr = *srcp & (A_ATTRIBUTES | A_ALTCHARSET);
  
 +    while (start_col > 0 && (full_line[start_col] & A_CHARTEXT) == MAX_UNICODE)
 +        start_col--;
@@ -53,23 +65,6 @@
 +    while (len > 0 && (srcp[len - 1] & A_CHARTEXT) == MAX_UNICODE)
 +        len--;
 +
-     if( !srcp)
+     for (i = 1, j = 1; j < len; i++, j++)
      {
-         prev_ch = 0;
-@@ -301,7 +342,6 @@
-     assert( lineno >= 0);
-     assert( lineno < SP->lines);
-     assert( len > 0);
--    assert( len < MAX_PACKET_LEN);
- #ifdef DOS           /* can't write to last cell at lower right */
-     if( lineno == SP->lines - 1 && len == SP->cols - x)
-         len--;
-@@ -352,7 +389,6 @@
-            continue;
-        }
-        assert( ch != MAX_UNICODE);
--       assert( len == 1 || ch < MAX_UNICODE);
- #endif
-        if( _is_altcharset( *srcp))
-           ch = (int)acs_map[ch & 0x7f];
-
+         attr = srcp[i] & (A_ATTRIBUTES | A_ALTCHARSET);

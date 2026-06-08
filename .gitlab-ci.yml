@@ -23,7 +23,7 @@ variables:
   CLICOLOR_FORCE: "1"
   WT_SESSION: "1"
   ConEmuANSI: "ON"
-  CFLAGS: "-O2 -fno-math-errno -flto -std=c17 -Wno-error -DCHTYPE_64 -DPDC_WIDE -DPDC_FORCE_UTF8 -D_GNU_SOURCE"
+  CFLAGS: "-O2 -fno-math-errno -flto -std=c17 -Wno-error -DPDC_WIDE -DPDC_FORCE_UTF8 -D_GNU_SOURCE"
   CPPFLAGS: "-D__USE_MINGW_ANSI_STDIO -DHAVE_NCURSESW_NCURSES_H -DNCURSES_STATIC"
 
 # Only allow manual pipeline triggers (equivalent to workflow_dispatch).
@@ -204,11 +204,10 @@ checks:
     - autopoint --force
     - |
       glibmodules="
-          base32 base64 futimens getdelim getline getopt-gnu glob isblank
-          iswblank lstat mbrlen mbchar mkstemps nl_langinfo regex rewinddir
-          sigaction snprintf-posix stdarg-h strcase strcasestr-simple strnlen
-          sys_wait-h uniwidth unitypes unictype/property-emoji vsnprintf-posix
-          wchar-h wctype-h wcwidth
+          canonicalize-lgpl futimens getdelim getline getopt-gnu globisblank
+          iswblank isblank lstat mbchar mbrlen mkstemps nl_langinfo regex
+          rewinddir sigaction snprintf-posix stdarg-h strcase strcasestr-simple
+          strnlen sys_wait-h uniwidth vsnprintf-posix wchar-h wctype-h wcwidth
       "
       rm -rf lib
       ./gnulib/gnulib-tool --import ${glibmodules}
@@ -415,20 +414,8 @@ checks:
           meta_key\=PDC_get_key_modifiers\() \& PDC_KEY_MODIFIER_ALT;" src/winio.c
       _diff
 
-      echo -e "\n\nPATCH: PDC_display_utf8 = TRUE"
-      sed -i.bak 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wincon/*.c
-      sed -i.bak 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/vt/*.c
-      sed -i.bak 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wingui/*.c
-      _diff
-
       echo -e "\n\nPATCH: Make MAX_UNICODE suck less."
       sed -i.bak 's|MAX_UNICODE 0x110000|MAX_UNICODE 0x10ffff|g' curses/curspriv.h
-      _diff
-
-      echo -e "\n\nPATCH: Force 4-byte UTF-8 emoji input in VT keyboard driver."
-      sed -i.bak 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/vt/pdckbd.c
-      sed -i.bak 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/wincon/pdckbd.c
-      sed -i.bak 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/wingui/pdckbd.c
       _diff
 
       echo -e "\n\nPATCH: Porting folder accessibility from executable to read access."
@@ -458,7 +445,7 @@ checks:
       export CXXFLAGS="${CFLAGS}"
       unset NCURSESW_CFLAGS
       cd "nano/curses/${PDTERM_MATRIX}"
-      make -j$(($(nproc)*2)) WIDE=Y UTF8=Y CHTYPE_64=Y DLL=N _${ARCH_SHORT}=Y
+      make -j$(($(nproc)*2)) WIDE=Y UTF8=Y DLL=N _${ARCH_SHORT}=Y
       cd /builds/gfunkmonk/nano-for-windows/
 
     # ── Configure nano ──────────────────────────────────────────
@@ -475,6 +462,7 @@ checks:
       export LIBS="-lbcrypt -lshlwapi"
       if [ "${PDTERM_MATRIX}" = "wingui" ]; then
         export LIBS="${LIBS} -lole32 -lgdi32 -lcomdlg32"
+        export CFLAGS="${CFLAGS} -DSAVE_GUI"
       fi
       mkdir -p nano/build
       cd nano/build

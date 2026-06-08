@@ -1,18 +1,55 @@
-From 09f21949fd76b61f41015d03586bb4824c0d7ce7 Mon Sep 17 00:00:00 2001
-From: Chawye Hsu <su+git@chawyehsu.com>
-Date: Thu, 16 Apr 2026 00:41:51 +0800
-Subject: [PATCH 07/17] win32: file io to binary mode
-
-Signed-off-by: Chawye Hsu <su+git@chawyehsu.com>
----
- src/nano.c | 5 +++++
- 1 file changed, 5 insertions(+)
-
-diff --git a/src/nano.c b/src/nano.c
-index 3a7e47c..6fc3e20 100644
---- a/src/nano.c
-+++ b/src/nano.c
-@@ -1830,6 +1830,11 @@ int main(int argc, char **argv)
+diff -ruN a/src/files.c b/src/files.c
+--- a/src/files.c	2026-06-07 01:06:48.253684926 -0400
++++ b/src/files.c	2026-06-07 01:07:15.353684748 -0400
+@@ -174,7 +174,7 @@
+ 		return FALSE;
+ 
+ 	/* Create the lock file -- do not accept an existing one. */
+-	fd = open(lockfilename, O_WRONLY|O_CREAT|O_EXCL, RW_FOR_ALL);
++	fd = open(lockfilename, O_WRONLY | _O_BINARY | _O_BINARY|O_CREAT|O_EXCL, RW_FOR_ALL);
+ 
+ 	if (fd > 0)
+ 		filestream = fdopen(fd, "wb");
+@@ -256,7 +256,7 @@
+ 		int lockfd, lockpid, choice;
+ 		ssize_t readamt;
+ 
+-		if ((lockfd = open(lockfilename, O_RDONLY)) < 0) {
++		if ((lockfd = open(lockfilename, O_RDONLY | _O_BINARY | _O_BINARY)) < 0) {
+ 			statusline(ALERT, _("Error opening lock file %s: %s"), lockfilename, strerror(errno));
+ 			free(lockfilename);
+ 			return NULL;
+@@ -859,7 +859,7 @@
+ #endif
+ 
+ 	/* Try opening the file. */
+-	fd = open(full_filename, O_RDONLY);
++	fd = open(full_filename, O_RDONLY | _O_BINARY | _O_BINARY);
+ 
+ #ifndef NANO_TINY
+ 	restore_handler_for_Ctrl_C();
+@@ -1591,7 +1591,7 @@
+ 	if (unlink(backupname) < 0 && errno != ENOENT && !ISSET(INSECURE_BACKUP))
+ 		goto problem;
+ 
+-	creation_flags = O_WRONLY|O_CREAT|(ISSET(INSECURE_BACKUP) ? O_TRUNC : O_EXCL);
++	creation_flags = O_WRONLY | _O_BINARY | _O_BINARY|O_CREAT|(ISSET(INSECURE_BACKUP) ? O_TRUNC : O_EXCL);
+ 
+ 	/* Create the backup file (or truncate the existing one). */
+ 	descriptor = open(backupname, creation_flags, S_IRUSR|S_IWUSR);
+@@ -1795,7 +1795,7 @@
+ #endif
+ 
+ 		/* Now open the file.  Use O_EXCL for an emergency file. */
+-		descriptor = open(realname, O_WRONLY | O_CREAT | ((method == APPEND) ?
++		descriptor = open(realname, O_WRONLY | _O_BINARY | _O_BINARY | O_CREAT | ((method == APPEND) ?
+ 					O_APPEND : (normal ? O_TRUNC : O_EXCL)), permissions);
+ 
+ #ifndef NANO_TINY
+diff -ruN a/src/nano.c b/src/nano.c
+--- a/src/nano.c	2026-06-07 01:06:48.253684926 -0400
++++ b/src/nano.c	2026-06-07 01:07:02.863684830 -0400
+@@ -1830,6 +1830,11 @@
  		{NULL, 0, NULL, 0}
  	};
  
@@ -24,6 +61,15 @@ index 3a7e47c..6fc3e20 100644
  #ifdef __linux__
  	struct vt_stat dummy;
  
--- 
-2.54.0.windows.1
-
+diff -ruN a/src/text.c b/src/text.c
+--- a/src/text.c	2026-06-07 01:06:48.253684926 -0400
++++ b/src/text.c	2026-06-07 01:07:16.653684739 -0400
+@@ -2361,7 +2361,7 @@
+ 	/* Fork a process to run spell in. */
+ 	if ((pid_spell = fork()) == 0) {
+ 		/* Child: open the temporary file that holds the text to be checked. */
+-		if ((tempfile_fd = open(tempfile_name, O_RDONLY)) < 0)
++		if ((tempfile_fd = open(tempfile_name, O_RDONLY | _O_BINARY | _O_BINARY)) < 0)
+ 			exit(6);
+ 
+ 		/* Connect standard input to the temporary file. */

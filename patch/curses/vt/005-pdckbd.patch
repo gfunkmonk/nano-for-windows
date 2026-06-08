@@ -1,0 +1,11 @@
+--- a/curses/vt/pdckbd.c	2026-06-07 02:05:04.103661969 -0400
++++ b/curses/vt/pdckbd.c	2026-06-07 02:05:32.803661780 -0400
+@@ -491,7 +491,7 @@
+                   return( -1);
+                   }
+                assert( (c[2] & 0xc0) == 0x80);
+-#if WCHAR_MAX > 65535
++#if 1 // Forced for 64-bit chtype
+                c[2] &= 0x3f;
+                rval = (c[2] | (c[1] << 6) | (c[0] << 12) | ((rval & 0xf) << 18));
+ #endif

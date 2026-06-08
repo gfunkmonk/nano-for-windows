@@ -12,7 +12,7 @@ diff --git a/src/definitions.h b/src/definitions.h
 index 265bad6..7fa372b 100644
 --- a/src/definitions.h
 +++ b/src/definitions.h
-@@ -673,3 +673,8 @@ typedef struct completionstruct {
+@@ -668,3 +668,8 @@ typedef struct completionstruct {
  	struct completionstruct *next;
  } completionstruct;
  #endif

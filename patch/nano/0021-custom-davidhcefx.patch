@@ -40,7 +40,7 @@ diff -ruN a/doc/nanorc.5 nano/doc/nanorc.5
 diff -ruN a/src/definitions.h b/src/definitions.h
 --- a/src/definitions.h	2026-05-15 05:36:18.685049385 -0400
 +++ b/src/definitions.h	2026-05-15 05:39:44.455048033 -0400
-@@ -321,6 +321,7 @@
+@@ -316,6 +316,7 @@
  	PROMPT_BAR,
  	STATUS_BAR,
  	ERROR_MESSAGE,
@@ -112,7 +112,7 @@ diff -ruN a/src/nano.c b/src/nano.c
 diff -ruN a/src/prototypes.h b/src/prototypes.h
 --- a/src/prototypes.h	2026-05-15 05:36:18.685049385 -0400
 +++ b/src/prototypes.h	2026-05-15 05:46:09.685045504 -0400
-@@ -549,6 +549,8 @@
+@@ -547,6 +547,8 @@
  #endif
  #ifndef NANO_TINY
  void count_lines_words_and_characters(void);
@@ -153,19 +153,25 @@ diff -ruN a/src/rcfile.c b/src/rcfile.c
 diff -ruN a/src/search.c b/src/search.c
 --- a/src/search.c	2026-05-15 05:36:18.685049385 -0400
 +++ b/src/search.c	2026-05-15 05:49:04.205044358 -0400
-@@ -243,7 +243,7 @@
+@@ -250,7 +250,13 @@
  		/* If we've reached the start or end of the buffer, wrap around;
  		 * but stop when spell-checking or replacing in a region. */
  		if (line == NULL) {
 -			if (whole_word_only || modus == INREGION) {
-+			if (whole_word_only || modus == INREGION || ISSET(NO_SEARCH_WRAP)) {
++			if (ISSET(NO_SEARCH_WRAP)) {
++				nodelay(midwin, FALSE);
++				statusline(AHEM, (ISSET(BACKWARDS_SEARCH) ? _("Search hit top, not wrapping") :
++				                                            _("Search hit bottom, not wrapping")));
++				return -1;
++			}
++			if (whole_word_only || modus == INREGION) {
  				nodelay(midwin, FALSE);
  				return 0;
  			}
 diff -ruN a/src/text.c b/src/text.c
 --- a/src/text.c	2026-05-15 05:36:18.685049385 -0400
 +++ b/src/text.c	2026-05-15 05:51:34.575043370 -0400
-@@ -3211,6 +3211,66 @@
+@@ -3213,6 +3213,66 @@
  						words, P_("word", "words", words),
  						chars, P_("character", "characters", chars));
  }
