@@ -14,18 +14,7 @@
  endif
  
  ifeq ($(DOS),Y)
-@@ -40,6 +40,10 @@
- 	endif
- endif
- 
-+ifdef CHTYPE_64
-+       CFLAGS += -DCHTYPE_64
-+endif
-+
- ifdef CHTYPE_32
- 	CFLAGS += -DCHTYPE_32
- endif
-@@ -49,20 +53,25 @@
+@@ -49,20 +49,25 @@
  endif
  
  ifdef _w64
@@ -54,7 +43,7 @@
  ifeq ($(OS),Windows_NT)
  	IS_WIN = Y
  	RM = cmd /c del
-@@ -72,7 +81,7 @@
+@@ -72,7 +77,7 @@
  	E = .exe
  endif
  

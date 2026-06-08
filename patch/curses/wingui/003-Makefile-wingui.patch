@@ -29,21 +29,17 @@
  endif
  
  PDCURSES_WIN_H	= $(osdir)/pdcwin.h
-@@ -77,16 +82,24 @@
+@@ -77,16 +82,20 @@
  	CFLAGS  += -g -DPDCDEBUG
  	LDFLAGS = -g
  else
 -	CFLAGS  += -O3
-+	CFLAGS  += -O2
++	CFLAGS  += -O2 -fomit-frame-pointer
  	LDFLAGS =
  endif
  
  CFLAGS += -I$(PDCURSES_SRCDIR)
  
-+ifdef CHTYPE_64
-+	CFLAGS += -DCHTYPE_64
-+endif
-+
  ifdef CHTYPE_32
  	CFLAGS += -DCHTYPE_32
  endif

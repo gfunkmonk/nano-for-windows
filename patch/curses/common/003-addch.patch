@@ -1,6 +1,6 @@
 --- a/curses/pdcurses/addch.c   2026-05-26 01:45:38.868322267 -0400
 +++ b/curses/pdcurses/addch.c   2026-05-26 01:48:21.478321199 -0400
-@@ -535,10 +535,35 @@
+@@ -535,10 +535,51 @@
 
      if( x || y)
      {
@@ -20,11 +20,27 @@
 +        }
 +        if (is_variation_selector) {
 +            if (x > 0) {
-+                chtype prev = win->_y[y][x - 1] & A_CHARTEXT;
-+                if (prev != DUMMY_CHAR_NEXT_TO_FULLWIDTH && prev <= 0x2BFF) {
-+                    win->_y[y][x - 1] = COMBINED_CHAR_START
-+                        + PDC_find_combined_char_idx(win->_y[y][x - 1], text);
++                int vs_base = x - 1;
++                if ((win->_y[y][vs_base] & A_CHARTEXT) == DUMMY_CHAR_NEXT_TO_FULLWIDTH)
++                    vs_base--;
++                if (vs_base >= 0) {
++                    chtype prev = win->_y[y][vs_base] & A_CHARTEXT;
++                    if (text == 0xFE0F || prev <= 0x2BFF) {
++                        win->_y[y][vs_base] = COMBINED_CHAR_START
++                            + PDC_find_combined_char_idx(win->_y[y][vs_base], text);
++                    }
 +                }
++            }
++            return OK;
++        }
++        if (is_zwj) {
++            int base_x = x - 1;
++            if (base_x >= 0 &&
++                (win->_y[y][base_x] & A_CHARTEXT) == DUMMY_CHAR_NEXT_TO_FULLWIDTH)
++                base_x--;
++            if (base_x >= 0) {
++                win->_y[y][base_x] = COMBINED_CHAR_START
++                    + PDC_find_combined_char_idx(win->_y[y][base_x], text);
 +            }
 +            return OK;
 +        }
@@ -33,7 +49,7 @@
          const bool is_low_surrogate = PDC_IS_LOW_SURROGATE( text);
 
 -        if( is_combining || is_low_surrogate)
-+        if( (is_combining && !is_zwj && !is_variation_selector && !is_keycap_joiner) || is_low_surrogate)
++        if( (is_combining && !is_zwj && !is_variation_selector && !is_keycap_joiner && is_regional_indicator) || is_low_surrogate)
          {
              chtype prev_char;
 
@@ -41,7 +57,7 @@
                  x--;
              else
              {
-+                if(is_zwj || is_variation_selector || is_keycap_joiner)
++                if(is_zwj || is_variation_selector)
 +                {
 +                    win->_y[y][x] = COMBINED_CHAR_START + PDC_find_combined_char_idx( 0, text);
 +                    return OK;
@@ -53,7 +69,7 @@
              if( is_combining)
                  text = COMBINED_CHAR_START
                           + PDC_find_combined_char_idx( prev_char, text);
-+            else if(is_zwj || is_variation_selector || is_keycap_joiner)
++            else if(is_zwj || is_variation_selector)
 +                text = COMBINED_CHAR_START
 +                         + PDC_find_combined_char_idx( prev_char, text);
              else if( PDC_IS_HIGH_SURROGATE( prev_char))
