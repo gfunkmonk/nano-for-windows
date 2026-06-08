@@ -33,7 +33,7 @@
 +            }
 +            return OK;
 +        }
-+        if (is_skin_tone_modifier || is_zwj) {
++        if (is_zwj) {
 +            int base_x = x - 1;
 +            if (base_x >= 0 &&
 +                (win->_y[y][base_x] & A_CHARTEXT) == DUMMY_CHAR_NEXT_TO_FULLWIDTH)

@@ -1,7 +1,7 @@
 diff -ruN curses/wincon/pdcdisp.c cursesb/wincon/pdcdisp.c
 --- a/curses/wincon/pdcdisp.c   2026-05-15 06:33:11.555026972 -0400
 +++ b/curses/wincon/pdcdisp.c   2026-05-15 06:36:43.195025583 -0400
-@@ -181,6 +181,69 @@
+@@ -181,6 +181,67 @@
 
  #ifdef PDC_WIDE
          ch &= A_CHARTEXT;
@@ -16,7 +16,6 @@ diff -ruN curses/wincon/pdcdisp.c cursesb/wincon/pdcdisp.c
 +                buffer[n_out++] = (WCHAR)ch;
 +            continue;
 +        }
-+#ifdef USING_COMBINING_CHARACTER_SCHEME
 +        /* Skip the placeholder cell that follows a fullwidth character.
 +         * Writing the noncharacter U+10FFFF here would (a) display garbage
 +         * in some terminals and (b) break ZWJ joining of adjacent emoji,
@@ -67,7 +66,6 @@ diff -ruN curses/wincon/pdcdisp.c cursesb/wincon/pdcdisp.c
 +            }
 +            continue;
 +        }
-+#endif
          if( ch <= MAX_UNICODE)
          {
              if( IS_SUPPLEMENTAL_MULTILINGUAL_PLANE( ch))

@@ -1,6 +1,6 @@
 --- a/curses/vt/pdcdisp.c	2026-06-03 08:02:13.765790796 -0400
 +++ b/curses/vt/pdcdisp.c	2026-06-03 08:10:25.105787569 -0400
-@@ -24,6 +24,24 @@
+@@ -24,6 +24,31 @@
  #include "../common/acs_defs.h"
  #include "../common/pdccolor.h"
  
@@ -8,16 +8,23 @@
 +{
 +    const uint32_t c = (uint32_t)(ch & A_CHARTEXT);
 +
++    if ((c >= '0' && c <= '9') || c == '#' || c == '*') return true;
 +    return( c == 0x200d                     /* ZWJ */
++         || c == 0x200c                     /* ZWNJ */
 +         || c == 0x20e3                     /* combining enclosing keycap */
 +         || (c >= 0xfe00 && c <= 0xfe0f)    /* variation selectors */
-+         || (c >= 0x231a && c <= 0x23fa)    /* Misc Symbols: clocks, timers, watches */
-+         || (c >= 0x25aa && c <= 0x26fd)    /* Misc Symbols: shapes, weather, sport, misc emoji */
-+         || (c >= 0x2702 && c <= 0x27bf)    /* Dingbats emoji subset */
++         || (c >= 0x2300 && c <= 0x26ff)    /* Misc Symbols */
++         || (c >= 0x2700 && c <= 0x27bf)    /* Dingbats */
++         || (c >= 0x1100 && c <= 0x11ff)    /* Hangul Jamo */
++         || (c >= 0x16a0 && c <= 0x16ff)    /* Runic */
++         || (c >= 0x2e80 && c <= 0x9fff)    /* CJK, Hangul compat, Katakana, CJK unified */
++         || (c >= 0xac00 && c <= 0xd7af)    /* Hangul syllables */
++         || (c >= 0xf900 && c <= 0xfaff)    /* CJK compatibility ideographs */
++         || (c >= 0xff00 && c <= 0xffef)    /* fullwidth/halfwidth forms */
++         || (c >= 0xe0020 && c <= 0xe007f)  /* Unicode Tags (flags) */
 +         || (c >= 0x1f1e6 && c <= 0x1f1ff)  /* regional indicators */
 +         || (c >= 0x1f3fb && c <= 0x1f3ff)  /* skin tone modifiers */
-+         || (c >= 0x1f300 && c <= 0x1faff)  /* SMP emoji blocks */
-+         || (c >= 0xe0020 && c <= 0xe007f)  /* Unicode Tags (flag sequences) */
++         || (c >= 0x10000 && c <= 0x1faff)  /* emoji blocks (SMP) */
 +         || c == MAX_UNICODE                /* wide-char continuation dummy */
 +         || c > MAX_UNICODE);               /* combined char (base+VS/ZWJ) */
 +}
@@ -25,7 +32,7 @@
  int PDC_get_terminal_fd( void)
  {
      static int stdout_fd = -1;
-@@ -285,10 +302,32 @@
+@@ -285,10 +302,30 @@
  
  void PDC_transform_line(int lineno, int x, int len, const chtype *srcp)
  {
@@ -38,14 +45,12 @@
 +    while (start_col > 0 && (full_line[start_col] & A_CHARTEXT) == MAX_UNICODE)
 +        start_col--;
 +
-+    while (start_col > 0 &&
-+           (full_line[start_col - 1] & A_CHARTEXT) != MAX_UNICODE &&
-+           PDC_has_emoji_or_joiner(full_line[start_col - 1]))
++    while (start_col > 0 && (PDC_has_emoji_or_joiner(full_line[start_col - 1]) ||
++           (full_line[start_col - 1] & A_CHARTEXT) == MAX_UNICODE))
 +        start_col--;
 +
-+    while (end_col < SP->cols &&
-+           (full_line[end_col] & A_CHARTEXT) != MAX_UNICODE &&
-+           PDC_has_emoji_or_joiner(full_line[end_col]))
++    while (end_col < SP->cols && (PDC_has_emoji_or_joiner(full_line[end_col]) ||
++           (full_line[end_col] & A_CHARTEXT) == MAX_UNICODE))
 +        end_col++;
 +
 +    srcp = full_line + start_col;
