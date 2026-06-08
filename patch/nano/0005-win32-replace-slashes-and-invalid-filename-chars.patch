@@ -41,7 +41,7 @@ index f93acc0..36f8c3a 100644
  					thename[i] = '!';
  		} else
  			thename = copy_of(tail(realname));
-@@ -2323,6 +2326,8 @@ char *real_dir_from_tilde(const char *path)
+@@ -2321,6 +2324,8 @@ char *real_dir_from_tilde(const char *path)
  
  	free(tilded);
  
@@ -66,7 +66,7 @@ diff --git a/src/prototypes.h b/src/prototypes.h
 index 488a686..8553779 100644
 --- a/src/prototypes.h
 +++ b/src/prototypes.h
-@@ -558,6 +558,7 @@ void complete_a_word(void);
+@@ -556,6 +556,7 @@ void complete_a_word(void);
  /* All functions in utils.c. */
  void get_homedir(void);
  const char *tail(const char *path);

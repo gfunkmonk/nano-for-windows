@@ -32,12 +32,12 @@
  	endif
  endif
  
-@@ -77,16 +85,35 @@
+@@ -77,16 +85,31 @@
  	CFLAGS  += -g -DPDCDEBUG
  	LDFLAGS = -g
  else
 -	CFLAGS  += -O3
-+	CFLAGS  += -O2 -DPDC_WINCON
++	CFLAGS  += -O3 -DPDC_WINCON
  	LDFLAGS =
  endif
  
@@ -54,10 +54,6 @@
 +
  CFLAGS += -I$(PDCURSES_SRCDIR)
  
-+ifdef CHTYPE_64
-+	CFLAGS += -DCHTYPE_64
-+endif
-+
  ifdef CHTYPE_32
  	CFLAGS += -DCHTYPE_32
  endif
@@ -69,7 +65,7 @@
  ifeq ($(UTF8),Y)
  	CFLAGS += -DPDC_FORCE_UTF8
  else
-@@ -99,7 +127,7 @@
+@@ -99,7 +123,7 @@
  	PDCCFLAGS += -DHAVE_NO_INFOEX
  endif
  

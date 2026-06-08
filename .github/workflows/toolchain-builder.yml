@@ -42,17 +42,6 @@ jobs:
         REV=$(git ls-remote https://github.com/mstorsjo/llvm-mingw.git HEAD | cut -f1)
         echo "rev=${REV}" >> $GITHUB_OUTPUT
 
-    #- name: "💾 Cache Toolchain"
-    #  uses: actions/cache@v5
-    #  id: cache-toolchain
-    #  with:
-    #    path: llvm-mingw
-        # FIX: was "llvm-mingw-${{ github.run_id }}" — unique per run means
-        # restore-keys never find a warm cache. Now keyed on upstream HEAD SHA.
-    #    key: llvm-mingw-${{ steps.llvm-rev.outputs.rev }}
-    #    restore-keys: |
-    #      llvm-mingw-
-
     - name: "🔧 Prepare debug session"
       if: github.event.inputs.debug_enabled == 'true'
       shell: bash
@@ -92,6 +81,8 @@ jobs:
 
         # Verify ccache is active
         which gcc # Should return /root/.local/bin/gcc
+
+        export MAKEFLAGS="-j$(nproc)"
 
         echo "Using SHELL: $SHELL"
         if [ ! -d "llvm" ]; then

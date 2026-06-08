@@ -1,6 +1,6 @@
 --- a/curses/wincon/pdcdisp.c	2026-06-03 07:41:37.015798918 -0400
 +++ b/curses/wincon/pdcdisp.c	2026-06-03 07:50:46.875795307 -0400
-@@ -14,6 +14,24 @@
+@@ -14,6 +14,30 @@
  
  #include "../common/acs_defs.h"
  
@@ -13,19 +13,25 @@
 +         || c == 0x200c                     /* ZWNJ */
 +         || c == 0x20e3                     /* combining enclosing keycap */
 +         || (c >= 0xfe00 && c <= 0xfe0f)    /* variation selectors */
++         || (c >= 0x2600 && c <= 0x270f)    /* Various Emoji */
++         || (c >= 0x1100 && c <= 0x11ff)    /* Hangul Jamo */
++         || (c >= 0x16a0 && c <= 0x16ff)    /* Runic */
++         || (c >= 0x2e80 && c <= 0x9fff)    /* CJK, Hangul compat, Katakana, CJK unified */
++         || (c >= 0xac00 && c <= 0xd7af)    /* Hangul syllables */
++         || (c >= 0xf900 && c <= 0xfaff)    /* CJK compatibility ideographs */
++         || (c >= 0xff00 && c <= 0xffef)    /* fullwidth/halfwidth forms */
 +         || (c >= 0xe0020 && c <= 0xe007f)  /* Unicode Tags (flags) */
-+         || (c >= 0x1f3fb && c <= 0x1f3ff)  /* skin tone modifiers */
 +         || (c >= 0x1f1e6 && c <= 0x1f1ff)  /* regional indicators */
-+         || (c >= 0x10000 && c <= 0x1faff)  /* emoji blocks */
-+         || (c >= 0x2600 && c <= 0x27bf)    /* misc symbols */
-+         || c == MAX_UNICODE                /* Wide character continuation */
++         || (c >= 0x1f3fb && c <= 0x1f3ff)  /* skin tone modifiers */
++         || (c >= 0x10000 && c <= 0x1faff)  /* emoji blocks (SMP) */
++         || c == MAX_UNICODE                /* wide-char continuation dummy */
 +         || c > MAX_UNICODE);               /* combined char (base+VS/ZWJ) */
 +}
 +
  DWORD pdc_last_blink;
  static bool blinked_off = FALSE;
  static bool in_italic = FALSE;
-@@ -380,7 +380,6 @@
+@@ -359,7 +377,6 @@
      bool blink, ansi;
 
      assert( len >= 0);

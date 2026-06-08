@@ -22,36 +22,7 @@
  
  #include "../common/acs_defs.h"
  
-@@ -204,7 +219,7 @@
-     if( !*PDC_font_name)
-         wcscpy( PDC_font_name, _T("Courier New"));
-     if( font_idx & 4)
--        wcscpy( lf.lfFaceName, _T("Unifont"));
-+        wcscpy( lf.lfFaceName, _T("Segoe UI Emoji"));
-     else
-         wcscpy( lf.lfFaceName, PDC_font_name );
- /*  wprintf( L"New font: %s\n", PDC_font_name); */
-@@ -212,7 +227,7 @@
-     if( !*PDC_font_name)
-         strcpy( PDC_font_name, "Courier New");
-     if( font_idx & 4)
--        strcpy( lf.lfFaceName, "Unifont");
-+        strcpy( lf.lfFaceName, "Segoe UI Emoji");
-     else
-         strcpy( lf.lfFaceName, PDC_font_name);
- #endif
-@@ -220,6 +235,10 @@
-     lf.lfPitchAndFamily = FF_MODERN;
-     lf.lfWeight = ((font_idx & 1) ? FW_EXTRABOLD : FW_NORMAL);
-     lf.lfItalic = ((font_idx & 2) ? TRUE : FALSE);
-+    /* Fallback font (font_idx & 4): use Segoe UI Emoji for color emoji
-+       coverage.  It is proportional so relax pitch/family constraints. */
-+    if( font_idx & 4)
-+        lf.lfPitchAndFamily = FF_DONTCARE | DEFAULT_PITCH;
-     lf.lfCharSet = ANSI_CHARSET;
-     lf.lfQuality = PROOF_QUALITY;
-     lf.lfOutPrecision = OUT_RASTER_PRECIS;
-@@ -327,6 +344,308 @@
+@@ -327,6 +344,316 @@
  
  #define BUFFSIZE 50
  
@@ -344,16 +315,24 @@
 +    return( c == 0x200d                     /* ZWJ */
 +         || c == 0x200c                     /* ZWNJ */
 +         || c == 0x20e3                     /* combining enclosing keycap */
-+         || (c >= 0xD800 && c <= 0xd87f)    /* high surrogates */
-+         || (c >= 0xDc00 && c <= 0xdfff)    /* low surrogates */
-+         || (c >= 0x0000 && c <= 0xffff)    /* bmp symbol */
++         || (c >= 0x0021 && c <= 0xffdf)    /* BMP */
 +         || (c >= 0xfe00 && c <= 0xfe0f)    /* variation selectors */
++         || (c >= 0x0180 && c <= 0x024f)    /* Latin Extended */
++         || (c >= 0x0250 && c <= 0x02af)    /* Linguistics */
++         || (c >= 0x1100 && c <= 0x11ff)    /* Hangul Jamo */
++         || (c >= 0x16a0 && c <= 0x16ff)    /* Runic */
++         || (c >= 0x2e80 && c <= 0x9fff)    /* CJK, Hangul compat, Katakana, CJK unified */
++         || (c >= 0xac00 && c <= 0xd7af)    /* Hangul syllables */
++         || (c >= 0xf900 && c <= 0xfaff)    /* CJK compatibility ideographs */
++         || (c >= 0x20d0 && c <= 0x20ff)    /* Combining Diacritical Marks */
++         || (c >= 0xff00 && c <= 0xffef)    /* fullwidth/halfwidth forms */
++         || (c >= 0x2200 && c <= 0x22ff)    /* math symbols */
++         || (c >= 0x2600 && c <= 0x27ff)    /* misc symbols */
 +         || (c >= 0xe0020 && c <= 0xe007f)  /* Unicode Tags (flags) */
-+         || (c >= 0x1f3fb && c <= 0x1f3ff)  /* skin tone modifiers */
 +         || (c >= 0x1f1e6 && c <= 0x1f1ff)  /* regional indicators */
-+         || (c >= 0x10000 && c <= 0x1faff)  /* emoji blocks */
-+         || (c >= 0x2600 && c <= 0x27bf)    /* misc symbols */
-+         || c == MAX_UNICODE                /* Wide character continuation */
++         || (c >= 0x1f3fb && c <= 0x1f3ff)  /* skin tone modifiers */
++         || (c >= 0x10000 && c <= 0x1faff)  /* emoji blocks (SMP) */
++         || c == MAX_UNICODE                /* wide-char continuation dummy */
 +         || c > MAX_UNICODE);               /* combined char (base+VS/ZWJ) */
 +}
 +
@@ -368,8 +347,7 @@
          for( i = 0; i < N_CACHED_FONTS; i++)
              if( hFonts[i])
              {
-@@ -357,7 +611,15 @@
-     assert( x >= 0);
+@@ -358,6 +676,14 @@
      assert( len <= SP->cols - x);
      assert( lineno < SP->lines && len > 0 && lineno >= 0);
  #ifdef PDC_WIDE
@@ -383,7 +361,7 @@
 +
      assert( (srcp[len - 1] & A_CHARTEXT) != MAX_UNICODE);
  #endif
- 
+
 @@ -369,6 +653,7 @@
          RECT clip_rect;
          wchar_t buff[BUFFSIZE];
