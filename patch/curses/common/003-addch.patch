@@ -1,6 +1,6 @@
 --- a/curses/pdcurses/addch.c   2026-05-26 01:45:38.868322267 -0400
 +++ b/curses/pdcurses/addch.c   2026-05-26 01:48:21.478321199 -0400
-@@ -535,10 +535,47 @@
+@@ -535,10 +535,51 @@
 
      if( x || y)
      {
@@ -20,25 +20,29 @@
 +        }
 +        if (is_variation_selector) {
 +            if (x > 0) {
-+                chtype prev = win->_y[y][x - 1] & A_CHARTEXT;
-+                if (prev != DUMMY_CHAR_NEXT_TO_FULLWIDTH && prev <= 0x2BFF) {
-+                    win->_y[y][x - 1] = COMBINED_CHAR_START
-+                        + PDC_find_combined_char_idx(win->_y[y][x - 1], text);
++                int vs_base = x - 1;
++                if ((win->_y[y][vs_base] & A_CHARTEXT) == DUMMY_CHAR_NEXT_TO_FULLWIDTH)
++                    vs_base--;
++                if (vs_base >= 0) {
++                    chtype prev = win->_y[y][vs_base] & A_CHARTEXT;
++                    if (text == 0xFE0F || prev <= 0x2BFF) {
++                        win->_y[y][vs_base] = COMBINED_CHAR_START
++                            + PDC_find_combined_char_idx(win->_y[y][vs_base], text);
++                    }
 +                }
 +            }
 +            return OK;
 +        }
-+        if (is_zwj && x > 0) {
-+            chtype prev_full = win->_y[y][x - 1];
-+            chtype prev = prev_full & A_CHARTEXT;
-+            if (prev > MAX_UNICODE) {
-+                cchar_t added;
-+                chtype root = PDC_expand_combined_characters(prev, &added);
-+                if (added == 0x200D) {
-+                    win->_y[y][x - 1] = COMBINED_CHAR_START + PDC_find_combined_char_idx(text, added);
-+                    return OK;
-+                }
++        if (is_skin_tone_modifier || is_zwj) {
++            int base_x = x - 1;
++            if (base_x >= 0 &&
++                (win->_y[y][base_x] & A_CHARTEXT) == DUMMY_CHAR_NEXT_TO_FULLWIDTH)
++                base_x--;
++            if (base_x >= 0) {
++                win->_y[y][base_x] = COMBINED_CHAR_START
++                    + PDC_find_combined_char_idx(win->_y[y][base_x], text);
 +            }
++            return OK;
 +        }
 +
          const bool is_combining = (text && !text_width);
