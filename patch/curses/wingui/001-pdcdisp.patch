@@ -22,7 +22,7 @@
  
  #include "../common/acs_defs.h"
  
-@@ -327,6 +344,316 @@
+@@ -327,6 +344,307 @@
  
  #define BUFFSIZE 50
  
@@ -224,8 +224,6 @@
 +    static COLORREF cached_bg_color = 0;
 +    D2D1_COLOR_F bg_color, fg_color;
 +    D2D1_RECT_F  layout_rect;
-+    extern int PDC_cxChar;
-+    int pad = PDC_cxChar;
 +    D2D1_POINT_2F origin = {0.0f, 0.0f};
 +    IDWriteTextLayout *layout = NULL;
 +    HRESULT hr;
@@ -234,23 +232,16 @@
 +    nchars = PDC_srcp_to_utf16(srcp, src_cells, u16, BUFFSIZE * 2);
 +    if (nchars <= 0) return;
 +
-+    /* Bind the DC render target to the exact cell rectangle on the window DC. */
-+    float desired_left = dst_x - pad;
-+    float max_right = (float)(SP->cols * PDC_cxChar);
-+    float desired_right = dst_x + px_w + cell_w + pad;
-+    bind_rect.left = (desired_left > 0.0f) ? desired_left : 0.0f;
-+    bind_rect.right = (desired_right < max_right) ? desired_right : max_right;
-+    if (bind_rect.right <= bind_rect.left)
-+    {
-+        bind_rect.right = bind_rect.left + PDC_cxChar; /* safe fallback */
-+    }
++    /* Bind to the exact run rectangle; avoid clearing neighboring cells. */
++    bind_rect.left = dst_x;
++    bind_rect.right = dst_x + px_w;
 +    bind_rect.top    = dst_y;
 +    bind_rect.bottom = dst_y + cell_h;
 +    hr = ID2D1DCRenderTarget_BindDC(g_d2d_rt, hdc, &bind_rect);
 +    if (FAILED(hr)) return;
 +
 +    /* Draw relative to the bound rectangle origin. */
-+    origin.x = 0.0f;
++    origin.x = (float)dst_x - (float)bind_rect.left;
 +    origin.y = 0.0f;
 +
 +    if (bg != cached_bg_color || !cached_bg_brush) {
