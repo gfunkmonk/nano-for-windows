@@ -1,7 +1,7 @@
 diff -ruN nano/src/files.c nanob/src/files.c
 --- a/src/files.c	2026-05-15 06:16:54.265033390 -0400
 +++ b/src/files.c	2026-05-15 06:19:30.885032362 -0400
-@@ -1407,7 +1407,7 @@
+@@ -1420,7 +1420,7 @@
   * file stream opened in read-write mode.  On error, return NULL. */
  char *safe_tempfile(FILE **stream)
  {
@@ -10,7 +10,7 @@ diff -ruN nano/src/files.c nanob/src/files.c
  	char *tempdir = NULL, *tempfile_name = NULL;
  	char *extension;
  	int descriptor;
-@@ -1421,7 +1421,7 @@
+@@ -1434,7 +1434,7 @@
  		tempdir = check_writable_directory(P_tmpdir);
  
  	if (tempdir == NULL)

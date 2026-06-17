@@ -1,0 +1,45 @@
+--- a/curses/wincon/pdckbd.c
++++ b/curses/wincon/pdckbd.c
+@@ -12,6 +12,10 @@
+ static SHORT left_key;
+ static int key_count = 0;
+ static int save_press = 0;
++#ifdef PDC_WIDE
++/* Pending high surrogate for pasted/typed non-BMP characters (e.g. emoji). */
++static WCHAR pending_high_surrogate = 0;
++#endif
+ 
+ #define KEV save_ip.Event.KeyEvent
+ #define MEV save_ip.Event.MouseEvent
+@@ -477,6 +481,31 @@ static int _process_key_event(void)
+     WORD vk = KEV.wVirtualKeyCode;
+     DWORD state = KEV.dwControlKeyState;
+ 
++#ifdef PDC_WIDE
++    /* wincon delivers non-BMP code points as UTF-16 surrogate pairs.
++       Combine them so callers receive a single Unicode code point. */
++    if (pending_high_surrogate)
++    {
++        if (key >= 0xDC00 && key <= 0xDFFF)
++            key = 0x10000 + (((int)pending_high_surrogate - 0xD800) << 10)
++                + (key - 0xDC00);
++
++        pending_high_surrogate = 0;
++    }
++
++    if (key >= 0xD800 && key <= 0xDBFF)
++    {
++        pending_high_surrogate = (WCHAR)key;
++        return -1;
++    }
++
++    if (key >= 0xDC00 && key <= 0xDFFF)
++    {
++        /* Isolated low surrogate: ignore invalid UTF-16 fragment. */
++        return -1;
++    }
++#endif
++
+     int idx;
+     BOOL enhanced;
+ 

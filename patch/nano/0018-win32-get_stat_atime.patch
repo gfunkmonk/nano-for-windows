@@ -8,7 +8,7 @@
  
  #define RW_FOR_ALL  (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH)
  
-@@ -1646,8 +1647,8 @@
+@@ -1659,8 +1660,8 @@
  
  	/* Set the backup's timestamps to those of the original file.
  	 * Failure is unimportant: saving the file apparently worked. */
