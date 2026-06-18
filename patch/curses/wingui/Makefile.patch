@@ -1,11 +1,5 @@
 --- a/curses/wingui/Makefile	2026-06-08 20:29:08.766640573 -0400
 +++ b/curses/wingui/Makefile	2026-06-08 20:46:18.476642266 -0400
-@@ -1,4 +1,4 @@
--# GNU MAKE Makefile for PDCurses library - WIN32/64/ARM MinGW GCC/LLVM
-+     # GNU MAKE Makefile for PDCurses library - WIN32/64/ARM MinGW GCC/LLVM
- #
- # Usage: [g]make [-f path\Makefile] [DEBUG=Y] [DLL=Y] [WIDE=Y] [UTF8=Y]
- #        [LIBNAME=(name)] [DLLNAME=(name)] [target]
 @@ -23,7 +23,7 @@
  
  CAT		= cat

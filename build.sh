@@ -202,7 +202,9 @@ EOF
     cp "${BASE_DIR}/.nanorc" .
     rm -rf bin share rnano*
     file nano.exe
-    upx --lzma --best nano.exe || true
+    if [[ "${ARCH}" == "x86_64" || "${ARCH}" == "i686" ]]; then
+        upx --lzma --best nano.exe || true
+    fi
     ls -als
     7z a -mx9 -mm=Deflate64 -mmt$(nproc) "${BASE_DIR}/dist/nano-for-windows_${ARCH}_${PDT_PRETTY}_$(date +%h%d%Y_%I:%M:%S%p).zip" * .nanorc
 done
