@@ -5,7 +5,7 @@ diff -ruN curses/wincon/pdcdisp.c cursesb/wincon/pdcdisp.c
 
  #ifdef PDC_WIDE
          ch &= A_CHARTEXT;
-+        if ((ch >= 0x1F3FB && ch <= 0x1F3FF) || ch == 0xFE0F)
++        if (ch == 0x200D || ch == 0x200C || ch == 0xFE0F || (ch >= 0x1F3FB && ch <= 0x1F3FF))
 +        {
 +            if (IS_SUPPLEMENTAL_MULTILINGUAL_PLANE(ch))
 +            {
@@ -36,11 +36,11 @@ diff -ruN curses/wincon/pdcdisp.c cursesb/wincon/pdcdisp.c
 +            int     n_added = 0;
 +            int     k, depth = 0;
 +
-+            while( depth++ < 31 &&
-+                   (root = PDC_expand_combined_characters( root,
-+                                   &added[n_added])) > MAX_UNICODE)
++            while( depth++ < 31 && root > MAX_UNICODE)
++            {
++                root = PDC_expand_combined_characters( root, &added[n_added]);
 +                n_added++;
-+
++            }
 +            if( root <= MAX_UNICODE)
 +            {
 +                if( IS_SUPPLEMENTAL_MULTILINGUAL_PLANE( root))

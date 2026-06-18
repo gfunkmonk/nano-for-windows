@@ -1,0 +1,25 @@
+--- a/curses/pdcurses/addch.c	2026-06-11 12:36:07.510939922 -0400
++++ b/curses/pdcurses/addch.c	2026-06-11 12:40:15.890940331 -0400
+@@ -540,7 +540,21 @@
+         const bool is_skin_tone_modifier = (text >= 0x1F3FB && text <= 0x1F3FF);
+         const bool is_keycap_joiner = (text == 0x20E3);
+         const bool is_regional_indicator = (text >= 0x1F1E6 && text <= 0x1F1FF);
++        const bool is_emoji = (text >= 0x2100 && text <= 0x214F) ||    /* Letterlike Symbols */
++                              (text >= 0x238C && text <= 0x2454) ||    /* Misc items */
++                              (text >= 0x2600 && text <= 0x26FF) ||    /* Misc symbols */
++                              (text >= 0x2700 && text <= 0x27BF) ||    /* Dingbats */
++                              (text >= 0x1F018 && text <= 0x1F270) ||  /* Various asian characters */
++                              (text >= 0x1F300 && text <= 0x1F3FA) ||  /* Misc Symbols and Pictographs (excl skin tones) */
++                              (text >= 0x1F400 && text <= 0x1F5FF) ||  /* Misc Symbols and Pictographs (cont) */
++                              (text >= 0x1F600 && text <= 0x1F64F) ||  /* Emoticons */
++                              (text >= 0x1F680 && text <= 0x1F6FF) ||  /* Transport */
++                              (text >= 0x1F700 && text <= 0x1F77F) ||  /* Alchemical */
++                              (text >= 0x1F900 && text <= 0x1F9FF) ||  /* Supplemental Symbols and Pictographs */
++                              (text >= 0x1FA00 && text <= 0x1FAFF);    /* Symbols and Pictographs Extended-A */
+ 
++        if (is_emoji || is_variation_selector)
++            text_width = 2;
+         if (is_regional_indicator)
+             text_width = 1;
+         if (is_keycap_joiner) {
+ 

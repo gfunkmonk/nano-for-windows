@@ -17,7 +17,7 @@ diff --git a/src/definitions.h b/src/definitions.h
 index 18cd28e..498842a 100644
 --- a/src/definitions.h
 +++ b/src/definitions.h
-@@ -393,7 +393,7 @@ typedef struct colortype {
+@@ -388,7 +388,7 @@ typedef struct colortype {
  		/* This combo's background color. */
  	short pairnum;
  		/* The pair number for this foreground/background color combination. */

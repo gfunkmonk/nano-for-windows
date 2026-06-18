@@ -51,7 +51,7 @@
      lf.lfCharSet = ANSI_CHARSET;
      lf.lfQuality = PROOF_QUALITY;
      lf.lfOutPrecision = OUT_RASTER_PRECIS;
-@@ -327,6 +344,308 @@
+@@ -327,6 +344,307 @@
  
  #define BUFFSIZE 50
  
@@ -253,8 +253,6 @@
 +    static COLORREF cached_bg_color = 0;
 +    D2D1_COLOR_F bg_color, fg_color;
 +    D2D1_RECT_F  layout_rect;
-+    extern int PDC_cxChar;
-+    int pad = PDC_cxChar;
 +    D2D1_POINT_2F origin = {0.0f, 0.0f};
 +    IDWriteTextLayout *layout = NULL;
 +    HRESULT hr;
@@ -263,23 +261,16 @@
 +    nchars = PDC_srcp_to_utf16(srcp, src_cells, u16, BUFFSIZE * 2);
 +    if (nchars <= 0) return;
 +
-+    /* Bind the DC render target to the exact cell rectangle on the window DC. */
-+    float desired_left = dst_x - pad;
-+    float max_right = (float)(SP->cols * PDC_cxChar);
-+    float desired_right = dst_x + px_w + cell_w + pad;
-+    bind_rect.left = (desired_left > 0.0f) ? desired_left : 0.0f;
-+    bind_rect.right = (desired_right < max_right) ? desired_right : max_right;
-+    if (bind_rect.right <= bind_rect.left)
-+    {
-+        bind_rect.right = bind_rect.left + PDC_cxChar; /* safe fallback */
-+    }
++    /* Bind to the exact run rectangle; avoid clearing neighboring cells. */
++    bind_rect.left = dst_x;
++    bind_rect.right = dst_x + px_w;
 +    bind_rect.top    = dst_y;
 +    bind_rect.bottom = dst_y + cell_h;
 +    hr = ID2D1DCRenderTarget_BindDC(g_d2d_rt, hdc, &bind_rect);
 +    if (FAILED(hr)) return;
 +
 +    /* Draw relative to the bound rectangle origin. */
-+    origin.x = 0.0f;
++    origin.x = (float)dst_x - (float)bind_rect.left;
 +    origin.y = 0.0f;
 +
 +    if (bg != cached_bg_color || !cached_bg_brush) {
@@ -344,16 +335,24 @@
 +    return( c == 0x200d                     /* ZWJ */
 +         || c == 0x200c                     /* ZWNJ */
 +         || c == 0x20e3                     /* combining enclosing keycap */
-+         || (c >= 0xD800 && c <= 0xd87f)    /* high surrogates */
-+         || (c >= 0xDc00 && c <= 0xdfff)    /* low surrogates */
-+         || (c >= 0x0000 && c <= 0xffff)    /* bmp symbol */
++         || (c >= 0x0021 && c <= 0xffdf)    /* BMP */
 +         || (c >= 0xfe00 && c <= 0xfe0f)    /* variation selectors */
++         || (c >= 0x0180 && c <= 0x024f)    /* Latin Extended */
++         || (c >= 0x0250 && c <= 0x02af)    /* Linguistics */
++         || (c >= 0x1100 && c <= 0x11ff)    /* Hangul Jamo */
++         || (c >= 0x16a0 && c <= 0x16ff)    /* Runic */
++         || (c >= 0x2e80 && c <= 0x9fff)    /* CJK, Hangul compat, Katakana, CJK unified */
++         || (c >= 0xac00 && c <= 0xd7af)    /* Hangul syllables */
++         || (c >= 0xf900 && c <= 0xfaff)    /* CJK compatibility ideographs */
++         || (c >= 0x20d0 && c <= 0x20ff)    /* Combining Diacritical Marks */
++         || (c >= 0xff00 && c <= 0xffef)    /* fullwidth/halfwidth forms */
++         || (c >= 0x2200 && c <= 0x22ff)    /* math symbols */
++         || (c >= 0x2600 && c <= 0x27ff)    /* misc symbols */
 +         || (c >= 0xe0020 && c <= 0xe007f)  /* Unicode Tags (flags) */
-+         || (c >= 0x1f3fb && c <= 0x1f3ff)  /* skin tone modifiers */
 +         || (c >= 0x1f1e6 && c <= 0x1f1ff)  /* regional indicators */
-+         || (c >= 0x10000 && c <= 0x1faff)  /* emoji blocks */
-+         || (c >= 0x2600 && c <= 0x27bf)    /* misc symbols */
-+         || c == MAX_UNICODE                /* Wide character continuation */
++         || (c >= 0x1f3fb && c <= 0x1f3ff)  /* skin tone modifiers */
++         || (c >= 0x10000 && c <= 0x1faff)  /* emoji blocks (SMP) */
++         || c == MAX_UNICODE                /* wide-char continuation dummy */
 +         || c > MAX_UNICODE);               /* combined char (base+VS/ZWJ) */
 +}
 +
@@ -368,8 +367,7 @@
          for( i = 0; i < N_CACHED_FONTS; i++)
              if( hFonts[i])
              {
-@@ -357,7 +611,15 @@
-     assert( x >= 0);
+@@ -358,6 +676,14 @@
      assert( len <= SP->cols - x);
      assert( lineno < SP->lines && len > 0 && lineno >= 0);
  #ifdef PDC_WIDE
@@ -383,7 +381,7 @@
 +
      assert( (srcp[len - 1] & A_CHARTEXT) != MAX_UNICODE);
  #endif
- 
+
 @@ -369,6 +653,7 @@
          RECT clip_rect;
          wchar_t buff[BUFFSIZE];

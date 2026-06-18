@@ -34,13 +34,13 @@ env:
   CLICOLOR_FORCE: "1"
   WT_SESSION: "1"        # This triggers pdc_wt = TRUE
   ConEmuANSI: "ON"       # This is a fallback if WT_SESSION isn't found
-  CFLAGS: "-O2 -fno-math-errno -flto -std=c17 -Wno-error -DCHTYPE_64 -DPDC_WIDE -DPDC_FORCE_UTF8 -D_GNU_SOURCE"
+  CFLAGS: "-O2 -fno-math-errno -flto -std=c17 -Wno-error -DPDC_WIDE -DPDC_FORCE_UTF8 -D_GNU_SOURCE"
   CPPFLAGS: "-D__USE_MINGW_ANSI_STDIO -DHAVE_NCURSESW_NCURSES_H -DNCURSES_STATIC"
 
 jobs:
   ## PRECHECK ##############################################################################
   checks:
-    name: "✔️ Pre-build checks"
+    name: "✅ Pre-build checks"
     runs-on: ubuntu-latest
     timeout-minutes: 3
     # Use the Bash shell regardless whether the GitHub Actions runner is ubuntu-latest, macos-latest, or windows-latest
@@ -51,7 +51,7 @@ jobs:
       pdterms: ${{ steps.checks.outputs.pdterms }}
       tag_suffix: ${{ steps.checks.outputs.tag_suffix }}
     steps:
-    - name: "✔️ Pre-build checks"
+    - name: "✅ Pre-build checks"
       id: checks
       shell: bash
       run: |
@@ -147,7 +147,7 @@ jobs:
   build:
     needs: [ checks ]
     if: needs.checks.outputs.cancel != 'true'
-    name: "⚙️ nano4Win ${{ matrix.pretty }} (${{ matrix.pdterm == 'wincon' && 'Windows Console' || matrix.pdterm == 'wingui' && 'Windows GUI' || 'Virtual Terminal' }}) build"
+    name: "🚧 nano4Win ${{ matrix.pretty }} (${{ matrix.pdterm == 'wincon' && 'Windows Console' || matrix.pdterm == 'wingui' && 'Windows GUI' || 'Virtual Terminal' }}) build"
     runs-on: ubuntu-latest
     container: alpine:edge
     strategy:
@@ -175,11 +175,11 @@ jobs:
         apk update && apk upgrade
         apk add bash curl jq tar xz github-cli \
           git make texinfo groff gettext-dev automake autoconf pkgconf coreutils upx p7zip python3 sed patch
-        echo "PATH=$(pwd)/llvm-mingw/bin:$PATH" >> $GITHUB_ENV
         # this seems to be needed when running in a container (because of UID mismatch??)
         git config --global --add safe.directory '*'
 
-    - name: "⏬ Download LLVM-MinGW from Toolchain Workflow"
+    - name: "🔍 Get latest successful toolchain run ID"
+      id: toolchain-run
       shell: bash
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -194,16 +194,39 @@ jobs:
           echo "::error::Could not find a successful completed run for toolchain-builder.yml"
           exit 1
         fi
-        echo "Attempting to download artifact from Run ID: $RUN_ID"
-        gh run download $RUN_ID \
+        echo "run_id=${RUN_ID}" >> $GITHUB_OUTPUT
+
+    - name: "💾 Restore toolchain from cache"
+      id: toolchain-cache
+      uses: actions/cache@v5
+      with:
+        path: llvm-mingw
+        key: llvm-mingw-run-${{ steps.toolchain-run.outputs.run_id }}
+
+    - name: "⏬ Download LLVM-MinGW from Toolchain Workflow"
+      if: steps.toolchain-cache.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        echo "Cache miss — downloading artifact from Run ID: ${{ steps.toolchain-run.outputs.run_id }}"
+        gh run download ${{ steps.toolchain-run.outputs.run_id }} \
           --repo ${{ github.repository }} \
           --name llvm-mingw \
           --dir llvm-mingw
+        if [ ! -d "llvm-mingw" ]; then
+          echo "::error::Directory 'llvm-mingw' not found after download!"
+          exit 1
+        fi
+
+    - name: "🔧 Add toolchain to PATH"
+      shell: bash
+      run: |
         if [ -d "llvm-mingw" ]; then
-          echo "Toolchain restored successfully."
+          echo "Toolchain ready (cache-hit: ${{ steps.toolchain-cache.outputs.cache-hit }})."
           echo "$(pwd)/llvm-mingw/bin" >> $GITHUB_PATH
         else
-          echo "::error::Directory 'llvm-mingw' not found after download!"
+          echo "::error::Directory 'llvm-mingw' not found!"
           exit 1
         fi
 
@@ -215,8 +238,7 @@ jobs:
         git clone https://github.com/coreutils/gnulib.git --depth 1
         autopoint --force
         glibmodules="
-            base32
-            base64
+            canonicalize-lgpl
             futimens
             getdelim
             getline
@@ -225,8 +247,8 @@ jobs:
             isblank
             iswblank
             lstat
-            mbrlen
             mbchar
+            mbrlen
             mkstemps
             nl_langinfo
             regex
@@ -239,8 +261,6 @@ jobs:
             strnlen
             sys_wait-h
             uniwidth
-            unitypes
-            unictype/property-emoji
             vsnprintf-posix
             wchar-h
             wctype-h
@@ -263,7 +283,7 @@ jobs:
           patch -p1 < "$p" || exit 1
         done < <(find "${CWD}/patch/nano" -maxdepth 1 -type f -name '*.patch' | sort -V)
 
-    - name: ❤️‍🩹 PDCurses Patcheses (common)
+    - name: 🏴‍☠️ PDCurses Patcheses (common)
       run: |
         CWD=$(pwd)
         cd nano
@@ -313,7 +333,7 @@ jobs:
         ##     APPLY PATCHES    ##
         ##                      ##
         ##########################
-        # 1. >realpath< function doesn't exist on Windows, which isn't fully POSIX compliant.
+        # >realpath< function doesn't exist on Windows, which isn't fully POSIX compliant.
         echo -e "\n\nPATCH: realpath() workaround applied."
         cp -p ./src/definitions.h{,.bak}
         echo " " >> ./src/definitions.h
@@ -493,22 +513,8 @@ jobs:
             meta_key\=PDC_get_key_modifiers\() \& PDC_KEY_MODIFIER_ALT;" src/winio.c
         _diff
 
-        echo -e "\n\nPATCH: PDC_display_utf8 = TRUE"
-        sed -i.bak 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wincon/*.c
-        sed -i.bak 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/vt/*.c
-        sed -i.bak 's/PDC_display_utf8 = FALSE/PDC_display_utf8 = TRUE/g' curses/wingui/*.c
-        _diff
-
         echo -e "\n\nPATCH: Make MAX_UNICODE suck less."
         sed -i.bak 's|MAX_UNICODE 0x110000|MAX_UNICODE 0x10ffff|g' curses/curspriv.h
-        _diff
-
-        # Force the UTF-8 decoder to process 4-byte sequences (emojis)
-        # even if the system defines a small WCHAR_MAX
-        echo -e "\n\nPATCH: Force 4-byte UTF-8 emoji input in VT keyboard driver."
-        sed -i.bak 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/vt/pdckbd.c
-        sed -i.bak 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/wincon/pdckbd.c
-        sed -i.bak 's/#if WCHAR_MAX > 65535/#if 1 \/\/ Forced for 64-bit chtype/g' curses/wingui/pdckbd.c
         _diff
 
         ####                               ####
@@ -550,7 +556,7 @@ jobs:
           wingui) echo "PDT_PRETTY=WinGUI" >> $GITHUB_ENV ;;
         esac
 
-    - name: "⚙️ Compile curses lib for ${{ matrix.name}}"
+    - name: "👷 Compile curses lib for ${{ matrix.name}}"
       run: |
         ##########################
         ##                      ##
@@ -564,15 +570,15 @@ jobs:
         export CXXFLAGS="${CFLAGS}"
         unset NCURSESW_CFLAGS
         cd "nano/curses/${PDTERM}"
-          make -j$(($(nproc)*2)) WIDE=Y UTF8=Y CHTYPE_64=Y DLL=N _${{matrix.short}}=Y
+          make -j$(($(nproc)*2)) WIDE=Y UTF8=Y DLL=N _${{matrix.short}}=Y
 
-    - name: "🐞 SSH session"
+    - name: "💻 SSH session"
       uses: mxschmitt/action-tmate@v3
       if: github.event.inputs.debugssh == 'true'
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: "🔧 Configure Nano Build"
+    - name: "🛠️ Configure Nano Build"
       run: |
         ##########################
         ##                      ##
@@ -595,12 +601,13 @@ jobs:
         export LIBS="-lbcrypt -lshlwapi"
         if [ "${PDTERM}" = "wingui" ]; then
           export LIBS="${LIBS} -lole32 -lgdi32 -lcomdlg32"
+          export CFLAGS="${CFLAGS} -DSAVE_GUI"
         fi
         # Configure nano
         mkdir -p nano/build
         cd nano/build
           ../configure --host="${TARGET}" --prefix="${OUTDIR}" \
-              --enable-{utf8,threads=windows,extra,color,nanorc} --disable-{nls,dependency-tracking} \
+              --enable-{utf8,threads=windows,extras,color,nanorc} --disable-{nls,dependency-tracking} \
               --sysconfdir="C:\\ProgramData" || cat config.log
           echo "
             #define HAVE_FREXP_IN_LIBC 1
@@ -621,7 +628,7 @@ jobs:
           BRANDING="GNU nano $NANOVER for ${{ matrix.name }}"
           echo "#define REVISION \"${BRANDING}\"" > src/revision.h
 
-    - name: "⚙️ Build for Windows ${{ matrix.pretty }}"
+    - name: "👷‍♂️ Build for Windows ${{ matrix.pretty }}"
       run: |
         ##########################
         ##                      ##
@@ -674,7 +681,7 @@ jobs:
       run:
         shell: bash
     steps:
-    - name: "📬 Receive Packages"
+    - name: "📥 Receive Packages"
       uses: actions/download-artifact@v8
       with:
         path: ./
@@ -690,7 +697,7 @@ jobs:
         sha256sum *.zip > hashes.txt
         echo "${{ needs.checks.outputs.body }}" | base64 -d > body.txt
 
-    - name: "👍 Upload nano-for-windows_${{ needs.checks.outputs.build }} as Artifact"
+    - name: "📤 Upload nano-for-windows_${{ needs.checks.outputs.build }} as Artifact"
       uses: actions/upload-artifact@v7
       if: github.event.inputs.release == 'Artifact'
       with:
@@ -699,7 +706,7 @@ jobs:
           *.zip
           *.txt
 
-    - name: "🎉 Publish Release ${{ needs.checks.outputs.build }}"
+    - name: "🥂 Publish Release ${{ needs.checks.outputs.build }}"
       uses: softprops/action-gh-release@v3
       # WARNING: before using this action go to https://github.com/OWNER/REPO/settings/actions
       # and in **Workflow Permissions** section give actions **Read and Write permissions**.
@@ -715,4 +722,3 @@ jobs:
         files: |
           ./*.zip
           ./hashes.txt
-

@@ -15,7 +15,7 @@ diff --git a/src/files.c b/src/files.c
 index f93acc0..36f8c3a 100644
 --- a/src/files.c
 +++ b/src/files.c
-@@ -1380,6 +1380,8 @@ char *get_full_path(const char *origpath)
+@@ -1393,6 +1393,8 @@ char *get_full_path(const char *origpath)
  
  	free(untilded);
  
@@ -24,7 +24,7 @@ index f93acc0..36f8c3a 100644
  	return target;
  }
  
-@@ -1422,6 +1424,7 @@ char *safe_tempfile(FILE **stream)
+@@ -1435,6 +1437,7 @@ char *safe_tempfile(FILE **stream)
  		tempdir = copy_of("/tmp/");
  
  	extension = strrchr(openfile->filename, '.');
@@ -32,7 +32,7 @@ index f93acc0..36f8c3a 100644
  
  	if (!extension || strchr(extension, '/'))
  		extension = openfile->filename + strlen(openfile->filename);
-@@ -1562,7 +1565,7 @@ bool make_backup_of(char *realname)
+@@ -1575,7 +1578,7 @@ bool make_backup_of(char *realname)
  		 * just use the file-name portion of the given path. */
  		if (thename) {
  			for (int i = 0; thename[i] != '\0'; i++)
@@ -41,7 +41,7 @@ index f93acc0..36f8c3a 100644
  					thename[i] = '!';
  		} else
  			thename = copy_of(tail(realname));
-@@ -2323,6 +2326,8 @@ char *real_dir_from_tilde(const char *path)
+@@ -2334,6 +2337,8 @@ char *real_dir_from_tilde(const char *path)
  
  	free(tilded);
  
@@ -66,7 +66,7 @@ diff --git a/src/prototypes.h b/src/prototypes.h
 index 488a686..8553779 100644
 --- a/src/prototypes.h
 +++ b/src/prototypes.h
-@@ -558,6 +558,7 @@ void complete_a_word(void);
+@@ -556,6 +556,7 @@ void complete_a_word(void);
  /* All functions in utils.c. */
  void get_homedir(void);
  const char *tail(const char *path);
