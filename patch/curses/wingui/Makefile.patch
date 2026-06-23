@@ -1,0 +1,37 @@
+--- a/curses/wingui/Makefile	2026-06-08 20:29:08.766640573 -0400
++++ b/curses/wingui/Makefile	2026-06-08 20:46:18.476642266 -0400
+@@ -23,7 +23,7 @@
+ 
+ CAT		= cat
+ PREFIX		=
+-PATH_SEP		= /
++PATH_SEP	= /
+ CP		= cp
+ RM		= rm -f
+ 
+@@ -56,10 +56,15 @@
+ # Only decision is:  are we doing a 64-bit compile (_w64 defined)?
+ 
+ ifndef ON_WINDOWS
+-	PREFIX  = i686-w64-mingw32-
++	ifdef _w32
++		PREFIX  = i686-w64-mingw32-
++	endif
+ 	ifdef _w64
+ 		PREFIX  = x86_64-w64-mingw32-
+ 	endif
++	ifdef _a32
++		PREFIX  = armv7-w64-mingw32-
++	endif
+ 	ifdef _a64
+ 		PREFIX  = aarch64-w64-mingw32-
+ 	endif
+@@ -77,7 +82,7 @@
+ 	CFLAGS  += -g -DPDCDEBUG
+ 	LDFLAGS = -g
+ else
+-	CFLAGS  += -O3
++	CFLAGS  += -O2 -fomit-frame-pointer
+ 	LDFLAGS =
+ endif
+ 

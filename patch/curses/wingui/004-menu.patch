@@ -1,0 +1,137 @@
+--- a/curses/wingui/pdcscrn.c	2026-06-18 01:33:25.241869190 -0400
++++ b/curses/wingui/pdcscrn.c	2026-06-18 01:36:32.341869498 -0400
+@@ -1026,6 +1026,17 @@
+ #define WM_TOGGLE_MENU        (WM_USER + 4)
+ #define WM_EXIT_GRACELESSLY   (WM_USER + 5)
+ #define WM_CHOOSE_FONT        (WM_USER + 6)
++#define WM_EDIT_COPY          (WM_USER + 7)
++#define WM_EDIT_CUT           (WM_USER + 8)
++#define WM_EDIT_PASTE         (WM_USER + 9)
++#define WM_EDIT_UNDO          (WM_USER + 10)
++#define WM_EDIT_REDO          (WM_USER + 11)
++#define WM_FILE_SAVE          (WM_USER + 12)
++#define WM_FILE_EXIT          (WM_USER + 13)
++#define WM_SEARCH_FIND        (WM_USER + 14)
++#define WM_SEARCH_REPLACE     (WM_USER + 15)
++#define WM_SEARCH_GOTO        (WM_USER + 16)
++#define WM_HELP               (WM_USER + 17)
+ 
+ static int add_resize_key = 1;
+ static int resize_limits_set = 0;
+@@ -1514,9 +1523,43 @@
+ {
+     const HMENU hMenu = CreateMenu( );
+ #ifdef PDC_WIDE
++    HMENU hFileMenu = CreatePopupMenu();
++    AppendMenu(hFileMenu, MF_STRING, WM_FILE_SAVE, L"Save");
++    AppendMenu(hFileMenu, MF_STRING, WM_FILE_EXIT, L"Exit");
++    AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hFileMenu, L"File");
+     AppendMenu( hMenu, MF_STRING, WM_CHOOSE_FONT, L"Font");
++    HMENU hEditMenu = CreatePopupMenu();
++    AppendMenu(hEditMenu, MF_STRING, WM_EDIT_COPY, L"Copy");
++    AppendMenu(hEditMenu, MF_STRING, WM_EDIT_CUT, L"Cut");
++    AppendMenu(hEditMenu, MF_STRING, WM_EDIT_PASTE, L"Paste");
++    AppendMenu(hEditMenu, MF_STRING, WM_EDIT_UNDO, L"Undo");
++    AppendMenu(hEditMenu, MF_STRING, WM_EDIT_REDO, L"Redo");
++    AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hEditMenu, L"Edit");
++    HMENU hSearchMenu = CreatePopupMenu();
++    AppendMenu(hSearchMenu, MF_STRING, WM_SEARCH_FIND, L"Find");
++    AppendMenu(hSearchMenu, MF_STRING, WM_SEARCH_REPLACE, L"Replace");
++    AppendMenu(hSearchMenu, MF_STRING, WM_SEARCH_GOTO, L"Goto");
++    AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hSearchMenu, L"Search");
++    AppendMenu( hMenu, MF_STRING, WM_HELP, L"Help");
+ #else
++    HMENU hFileMenu = CreatePopupMenu();
++    AppendMenu(hFileMenu, MF_STRING, WM_FILE_SAVE, "Save");
++    AppendMenu(hFileMenu, MF_STRING, WM_FILE_EXIT, "Exit");
++    AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hFileMenu, "File");
+     AppendMenu( hMenu, MF_STRING, WM_CHOOSE_FONT, "Font");
++    HMENU hEditMenu = CreatePopupMenu();
++    AppendMenu(hEditMenu, MF_STRING, WM_EDIT_COPY, "Copy");
++    AppendMenu(hEditMenu, MF_STRING, WM_EDIT_CUT, "Cut");
++    AppendMenu(hEditMenu, MF_STRING, WM_EDIT_PASTE, "Paste");
++    AppendMenu(hEditMenu, MF_STRING, WM_EDIT_UNDO, "Undo");
++    AppendMenu(hEditMenu, MF_STRING, WM_EDIT_REDO, "Redo");
++    AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hEditMenu, "Edit");
++    HMENU hSearchMenu = CreatePopupMenu();
++    AppendMenu(hSearchMenu, MF_STRING, WM_SEARCH_FIND, "Find");
++    AppendMenu(hSearchMenu, MF_STRING, WM_SEARCH_REPLACE, "Replace");
++    AppendMenu(hSearchMenu, MF_STRING, WM_SEARCH_GOTO, "Goto");
++    AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hSearchMenu, "Search");
++    AppendMenu( hMenu, MF_STRING, WM_HELP, "Help");
+ #endif
+     return( hMenu);
+ }
+@@ -1821,6 +1858,72 @@
+             HandleMenuToggle( &ignore_resize);
+             return 0;
+         }
++        else if( wParam == WM_FILE_SAVE)
++        {
++            /* Send Ctrl-O key for save (nano default) */
++            add_key_to_queue(0x0F);
++            return 0;
++        }
++        else if( wParam == WM_FILE_EXIT)
++        {
++            /* Send Ctrl-X key for exit (nano default) */
++            add_key_to_queue(0x18);
++            return 0;
++        }
++        else if( wParam == WM_EDIT_COPY)
++        {
++            /* Send Alt-6 key for copy (nano default) */
++            add_key_to_queue(ALT_6);
++            return 0;
++        }
++        else if( wParam == WM_EDIT_CUT)
++        {
++            /* Send Ctrl-K key for cut (nano default) */
++            add_key_to_queue(0x0B);
++            return 0;
++        }
++        else if( wParam == WM_EDIT_PASTE)
++        {
++            /* Send Ctrl-U key for paste (nano default) */
++            add_key_to_queue(0x15);
++            return 0;
++        }
++        else if( wParam == WM_EDIT_UNDO)
++        {
++            /* Send Alt-U key for undo (nano default) */
++            add_key_to_queue(ALT_U);
++            return 0;
++        }
++        else if( wParam == WM_EDIT_REDO)
++        {
++            /* Send Alt-E key for redo (nano default) */
++            add_key_to_queue(ALT_E);
++            return 0;
++        }
++        else if( wParam == WM_SEARCH_FIND)
++        {
++            /* Send Ctrl-w key for find (nano default) */
++            add_key_to_queue(0x17);
++            return 0;
++        }
++        else if( wParam == WM_SEARCH_REPLACE)
++        {
++            /* Send Ctrl-\ key for replace (nano default) */
++            add_key_to_queue(0x1C);
++            return 0;
++        }
++        else if( wParam == WM_SEARCH_GOTO)
++        {
++            /* Send Ctrl-/ key for goto line (nano default) */
++            add_key_to_queue(0x1F);
++            return 0;
++        }
++        else if( wParam == WM_HELP)
++        {
++            /* Send Ctrl-G key for help (nano default) */
++            add_key_to_queue(0x07);
++            return 0;
++        }
+         return DefWindowProc(hwnd, message, wParam, lParam);
+ 
+     case WM_DESTROY:

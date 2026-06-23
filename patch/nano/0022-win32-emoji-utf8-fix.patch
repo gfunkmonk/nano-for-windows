@@ -1,0 +1,121 @@
+--- a/src/winio.c	2026-05-15 10:06:13.484943033 -0400
++++ b/src/winio.c	2026-05-15 10:12:32.034940547 -0400
+@@ -1072,9 +1072,15 @@
+ #endif
+ #ifdef ENABLE_UTF8
+ 			else if (0xC0 <= keycode && keycode <= 0xFF && using_utf8) {
++#ifdef _WIN32
++                       /* On Windows, allow UTF-8 sequences for emoji and symbol support.
++                        * Don't treat them as foreign sequences that get discarded. */
++                       return keycode;
++#else
+ 				while (waiting_codes && 0x80 <= nextcodes[0] && nextcodes[0] <= 0xBF)
+ 					get_input(NULL);
+ 				return FOREIGN_SEQUENCE;
++#endif
+ 			}
+ #endif
+ 			else if (keycode < 0x20 && !last_escape_was_alone)
+@@ -1796,6 +1802,9 @@
+ 		/* The actual column where that first character starts. */
+ 	size_t stowaways = 20;
+ 		/* The number of zero-width characters for which to reserve space. */
++#ifdef _WIN32
++	bool preceded_by_zwj = FALSE;
++#endif
+ 	size_t allocsize = (COLS + stowaways) * MAXCHARLEN + 1;
+ 		/* The amount of memory to reserve for the displayable string. */
+ 	char *converted = nmalloc(allocsize);
+@@ -1905,6 +1914,33 @@
+ 
+ 		/* Convert a multibyte character to a single code. */
+ 		charlength = mbtowide(&wc, text);
++		uint32_t true_cp = wc;
++
++#ifdef _WIN32
++               /* On Windows, mbtowide (gnulib mbrtowc) can fail for valid UTF-8 when
++                * the C locale isn't UTF-8. Decode valid UTF-8 manually so symbol and
++                * emoji width handling still works. */
++               if (charlength < 0 && (unsigned char)text[0] >= 0xC0) {
++                 unsigned char b0 = (unsigned char)text[0];
++                 int seqlen = (b0 >= 0xF0 && b0 <= 0xF4) ? 4 : (b0 >= 0xE0) ? 3 : 2;
++                 unsigned int codepoint = (b0 >= 0xF0 && b0 <= 0xF4) ? (b0 & 0x07) :
++                                               (b0 >= 0xE0) ? (b0 & 0x0F) : (b0 & 0x1F);
++                 int k;
++
++                 for (k = 1; k < seqlen && text[k] != '\0'; k++) {
++                       unsigned char bx = (unsigned char)text[k];
++                       if (bx < 0x80 || bx > 0xBF)
++                               break;
++                       codepoint = (codepoint << 6) | (bx & 0x3F);
++                 }
++
++                 if (k == seqlen) {
++                       wc = (wchar_t)codepoint;
++                       true_cp = codepoint;
++                       charlength = seqlen;
++                 }
++               }
++#endif
+ 
+ 		/* Represent an invalid character with the Replacement Character. */
+ 		if (charlength < 0) {
+@@ -1917,7 +1953,57 @@
+ 		}
+ 
+ 		/* Determine whether the character takes zero, one, or two columns. */
+-		charwidth = uc_width(wc, "UTF-8");
++		if (wc == 0xFFFD)
++			true_cp = 0xFFFD;
++		charwidth = uc_width(true_cp, "UTF-8");
++
++#ifdef _WIN32
++               /* Keep common emoji cluster joiners zero-width so nano's column
++                * accounting doesn't double-count them.  Only collapse the width
++                * of an emoji that directly follows a ZWJ when it is itself an
++                * SMP emoji (>= U+1F000); don't zero-out plain BMP text. */
++               if (true_cp == 0x200D)
++                 charwidth = 0;
++               else if (true_cp == 0xFE0F)
++                 charwidth = 0;
++               else if (true_cp >= 0x1F3FB && true_cp <= 0x1F3FF)
++                 charwidth = 0;
++               else if (preceded_by_zwj && true_cp >= 0x1F000 && charwidth > 0)
++                 charwidth = 0;
++               else if (charwidth == 2 &&
++                        ((true_cp >= 0x231A && true_cp <= 0x26FD) ||
++                         (true_cp >= 0x2702 && true_cp <= 0x27BF))) {
++                 /* Peek at next codepoint. */
++                 uint32_t next_cp = 0;
++                 unsigned char nb = (unsigned char)text[charlength];
++                 if (nb >= 0xF0 && nb <= 0xF4) {
++                   next_cp = (nb & 0x07);
++                   for (int _k = 1; _k < 4; _k++) {
++                     unsigned char bx = (unsigned char)text[charlength + _k];
++                     if (bx < 0x80 || bx > 0xBF) { next_cp = 0; break; }
++                     next_cp = (next_cp << 6) | (bx & 0x3F);
++                   }
++                 } else if (nb >= 0xE0) {
++                   next_cp = (nb & 0x0F);
++                   for (int _k = 1; _k < 3; _k++) {
++                     unsigned char bx = (unsigned char)text[charlength + _k];
++                     if (bx < 0x80 || bx > 0xBF) { next_cp = 0; break; }
++                     next_cp = (next_cp << 6) | (bx & 0x3F);
++                   }
++                 } else if (nb >= 0xC0) {
++                   next_cp = (nb & 0x1F);
++                   unsigned char bx = (unsigned char)text[charlength + 1];
++                   if (bx < 0x80 || bx > 0xBF) next_cp = 0;
++                   else next_cp = (next_cp << 6) | (bx & 0x3F);
++                 } else {
++                   next_cp = nb;
++                 }
++                 if (next_cp == 0xFE0F || (next_cp >= 0x1F3FB && next_cp <= 0x1F3FF))
++                   charwidth = 1;
++               }
++
++               preceded_by_zwj = (true_cp == 0x200D);
++#endif
+ 
+ 		/* Watch the number of zero-widths, to keep ample memory reserved. */
+ 		if (charwidth == 0 && --stowaways == 0) {

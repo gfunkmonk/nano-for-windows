@@ -1,0 +1,28 @@
+The Cards (Base): ♠ ♥ ♣ ♦
+The Chess Pieces: ♔ ♕ ♖ ♗ ♘ ♙
+The Weather: ☀  ☁  ☂  ☃
+The Cards (Emoji Style): ♠️ ♥️ ♣️ ♦️
+
+Warning & Info: ⚠️ ℹ️ ⛔️
+Check & Cross: ✔️ ✖️
+
+Classic Smileys: 😀 😂 😜 😇 🙃
+Expressions: 🥶 🤯 🥳 🥺 🥸
+
+Tools & Objects: 🔨 🪟 💡 🔋 📱
+Food & Drink: 🍕 🍔 🍟 🌭 🌮
+Transport: 🚗 ✈️  🚀 ⛵ 🚂
+
+Default: 👍  💃  🖐  👱  
+Light:   👍🏻💃🏻🖐🏻👱🏻
+Dark:    👍🏿💃🏿🖐🏿👱🏿
+
+United States: 🇺🇸
+United Kingdom: 🇬🇧
+Japan: 🇯🇵
+United Nations: 🇺🇳
+
+Woman Farmer (Woman + ZWJ + Wheat): 👩‍🌾
+Black Cat (Cat + ZWJ + Black Square): 🐈‍⬛
+Polar Bear (Bear + ZWJ + Snowflake): 🐻‍❄️
+Family of Four (Man + ZWJ + Woman + ZWJ + Girl + ZWJ + Boy): 👨‍👩‍👧‍👦

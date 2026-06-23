@@ -1,0 +1,89 @@
+diff -ruN a/doc/nanorc.5 b/doc/nanorc.5
+--- a/doc/nanorc.5	2026-06-07 05:48:42.203573852 -0400
++++ b/doc/nanorc.5	2026-06-07 05:55:43.993571082 -0400
+@@ -751,6 +751,9 @@
+ .B settabsize
+ Prompts for a new tabsize to be set.
+ .TP
++.B togglelinenumbers
++Toggles the display of line numbers for the current buffer.
++.TP
+ .B execute
+ Prompts for a program to execute.  The program's output is inserted
+ into the current buffer \[em] or into a new buffer when \fBM\-F\fR is toggled.
+diff -ruN a/src/global.c b/src/global.c
+--- a/src/global.c	2026-06-07 05:48:42.203573852 -0400
++++ b/src/global.c	2026-06-07 05:52:22.153572408 -0400
+@@ -696,6 +696,7 @@
+ 	const char *suspend_gist = N_("Suspend the editor (return to the shell)");
+ 	const char *settabsize_gist = N_("Set new tabsize");
+ 	const char *setsyntax_gist = N_("Set new syntax highlighting");
++	const char *togglelinenumbers_gist = N_("Toggle line numbers on/off");
+ #endif
+ 	const char *refresh_gist = N_("Refresh (redraw) the current screen");
+ #ifdef ENABLE_WORDCOMPLETION
+@@ -1056,6 +1057,8 @@
+ 			N_("Set Tabsize"), WHENHELP(settabsize_gist), TOGETHER);
+ 	add_to_funcs(do_set_syntax, MMAIN,
+ 			N_("Set Syntax"), WHENHELP(setsyntax_gist), TOGETHER);
++	add_to_funcs(do_toggle_linenumbers, MMAIN,
++			N_("Toggle Line Nums"), WHENHELP(togglelinenumbers_gist), TOGETHER);
+ 	add_to_funcs(chop_previous_word, MMAIN,
+ 			/* TRANSLATORS: The next two strings refer to deleting words. */
+ 			N_("Chop Left"), WHENHELP(chopwordleft_gist), TOGETHER);
+@@ -1477,6 +1480,7 @@
+ 	add_to_sclist(MMAIN, "M-D", 0, count_lines_words_and_characters, 0);
+ 	add_to_sclist(MMAIN, "M-4", 0, do_set_tabsize, 0);
+ 	add_to_sclist(MMAIN, "M-5", 0, do_set_syntax, 0);
++	add_to_sclist(MMAIN, "M-2", 0, do_toggle_linenumbers, 0);
+ #else
+ 	add_to_sclist(MMAIN, "M-H", 0, do_help, 0);
+ #endif
+diff -ruN a/src/prototypes.h b/src/prototypes.h
+--- a/src/prototypes.h	2026-06-07 05:48:42.203573852 -0400
++++ b/src/prototypes.h	2026-06-07 05:52:53.523572202 -0400
+@@ -549,6 +549,7 @@
+ void count_lines_words_and_characters(void);
+ void do_set_tabsize(void);
+ void do_set_syntax(void);
++void do_toggle_linenumbers(void);
+ #endif
+ void do_verbatim_input(void);
+ #ifdef ENABLE_WORDCOMPLETION
+diff -ruN a/src/rcfile.c b/src/rcfile.c
+--- a/src/rcfile.c	2026-06-07 05:48:42.213573852 -0400
++++ b/src/rcfile.c	2026-06-07 05:53:29.763571964 -0400
+@@ -312,6 +312,8 @@
+ 		s->func = count_lines_words_and_characters;
+ 	else if (!strcmp(input, "setsyntax"))
+ 		s->func = do_set_syntax;
++	else if (!strcmp(input, "togglelinenumbers"))
++		s->func = do_toggle_linenumbers;
+ 	else if (!strcmp(input, "recordmacro"))
+ 		s->func = record_macro;
+ 	else if (!strcmp(input, "runmacro"))
+diff -ruN a/src/text.c b/src/text.c
+--- a/src/text.c	2026-06-07 05:48:42.203573852 -0400
++++ b/src/text.c	2026-06-07 05:54:28.903571575 -0400
+@@ -3273,6 +3273,21 @@
+          tabsize = new_tabsize;
+          statusline(REMARK, _("Tabsize set to %d"), tabsize);
+ }
++/* Toggle line numbers on the fly for the current buffer (M-6).
++ * Binds to 'togglelinenumbers' in .nanorc. */
++void do_toggle_linenumbers(void)
++{
++#ifdef ENABLE_LINENUMBERS
++	TOGGLE(LINE_NUMBERS);
++	/* Recompute the left-margin width so the edit area reflows. */
++	confirm_margin();
++	refresh_needed = TRUE;
++	statusline(REMARK, ISSET(LINE_NUMBERS) ? _("Line numbers enabled") :
++	                                         _("Line numbers disabled"));
++#else
++	statusline(AHEM, _("Line numbers support is not compiled in"));
++#endif
++}
+ #endif /* !NANO_TINY */
+ 
+ /* Get verbatim input. */
