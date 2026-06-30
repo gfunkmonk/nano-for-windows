@@ -7,12 +7,48 @@ fi
 
 set -euo pipefail
 
-if [ $# -lt 2 ]; then
-    echo "Usage: $0 [x86_64|i686|aarch64|armv7|all] [wincon|wingui|vt|all]"
-    echo "Example: $0 i686 wincon"
-    echo "Example: $0 all all"
+usage() {
+echo ""
+echo -e "${GREEN}$(basename "${0}") ${GREEN}[${BWHITE}ARCH${GREEN}] [${BWHITE}PDTERM${GREEN}] [${BWHITE}OPTIONS${GREEN}]${NC}"
+echo ""
+echo -e "${LAGOON}Where:${NC}"
+echo -e "${JUNEBUD}  ARCH   ${MAUVE}-- ${BLUE}[${YELLOW}x86_64${BLUE}|${YELLOW}i686${BLUE}|${YELLOW}aarch64${BLUE}|${YELLOW}armv7${BLUE}|${YELLOW}all${BLUE}]${NC}"
+echo -e "${NEONRED}  PDTERM ${MAUVE}-- ${BLUE}[${YELLOW}wincon${BLUE}|${YELLOW}wingui${BLUE}|${YELLOW}vt${BLUE}|${YELLOW}all${BLUE}]${NC}"
+echo ""
+echo -e "${LAGOON}Options:${NC}"
+echo -e "${CARIBBEAN} --no-save-gui        ${BWHITE}= Disable SAVE_GUI (wingui only)${NC}"
+echo -e "${CARIBBEAN} --no-pdterm-release  ${BWHITE}= Omit PDTERM from release version string${NC}"
+echo ""
+echo -e "${LAGOON}Examples:${NC}"
+echo -e "${VIOLET}  Single build:   ${PEACH}./build.sh i686 wincon${NC}"
+echo -e "${VIOLET}  All archs:      ${PEACH}./build.sh all wingui${NC}"
+echo -e "${VIOLET}  All everything: ${PEACH}./build.sh all all${NC}"
+echo -e "${VIOLET}  With options:   ${PEACH}./build.sh all wingui --no-save-gui --no-pdterm-release${NC}"
+echo ""
+}
+
+if [ "${1:-}" = "--help" ] || [ $# -lt 2 ]; then
+    # Load shared colors for usage(), if available
+    source "$(dirname "$0")/common.sh" 2>/dev/null || true
+    usage
     exit 1
 fi
+
+ARCH_ARG="$1"
+PDTERM_ARG="$2"
+shift 2
+SAVE_GUI=1
+PDTERM_RELEASE=1
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --no-save-gui)       SAVE_GUI=0 ;;
+        #--save-gui)          SAVE_GUI=1 ;;
+        --no-pdterm-release) PDTERM_RELEASE=0 ;;
+        #--pdterm-release)    PDTERM_RELEASE=1 ;;
+        *) echo "Invalid option: $1"; exit 1 ;;
+    esac
+    shift
+done
 
 # Load shared colors, check_deps, sync_repo
 source "$(dirname "$0")/common.sh"
@@ -20,33 +56,36 @@ source "$(dirname "$0")/common.sh"
 # --- Check Dependencies (exits on first missing tool) ---
 check_deps git curl tar patch sed perl make autoconf automake 7z jq
 
+#SAVE_GUI_FLAG=$([ "$SAVE_GUI" -eq 0 ] && echo "--no-save-gui" || echo "--save-gui")
+#PDTERM_RELEASE_FLAG=$([ "$PDTERM_RELEASE" -eq 0 ] && echo "--no-pdterm-release" || echo "--pdterm-release")
+
 # Handle 'all' for architecture
-if [ "$1" = "all" ]; then
+if [ "$ARCH_ARG" = "all" ]; then
     for ARCH in x86_64 i686 aarch64 armv7; do
-        "$0" "$ARCH" "$2"
+        "$0" "$ARCH" "$PDTERM_ARG" "$SAVE_GUI_FLAG" "$PDTERM_RELEASE_FLAG"
     done
     exit 0
 fi
 
 # Handle 'all' for PDTERM
-if [ "$2" = "all" ]; then
+if [ "$PDTERM_ARG" = "all" ]; then
     for PDT in wincon wingui vt; do
-        "$0" "$1" "$PDT"
+        "$0" "$ARCH_ARG" "$PDT" "$SAVE_GUI_FLAG" "$PDTERM_RELEASE_FLAG"
     done
     exit 0
 fi
 
 # Map the input to the full triplet
-case "$1" in
+case "$ARCH_ARG" in
     x86_64|amd64|x64)    TARGETS=("x86_64-w64-mingw32") ;;
     i686|i386|x86|x32)   TARGETS=("i686-w64-mingw32") ;;
     aarch64|arm64|armv8) TARGETS=("aarch64-w64-mingw32") ;;
     armv7|arm|arm32)     TARGETS=("armv7-w64-mingw32") ;;
-    *) echo "Invalid architecture: $1"; exit 1 ;;
+    *) echo "Invalid architecture: $ARCH_ARG"; exit 1 ;;
 esac
 
 # Padding for banner alignment
-case "$1" in
+case "$ARCH_ARG" in
     x86_64)  PAD="###" ;;
     amd64)   PAD="##" ;;
     x64)     PAD="" ;;
@@ -63,7 +102,7 @@ case "$1" in
 esac
 
 # Map PDTERM
-PDTERM="$2"
+PDTERM="$PDTERM_ARG"
 case "$PDTERM" in
     vt)
         export PDT_PRETTY="VT"
@@ -84,16 +123,16 @@ case "$PDTERM" in
 esac
 
 echo -e "${BLUE}################################################${PAD}${PAD2}"
-echo -e "${BLUE}@@  ${BWHITE}Building ${JUNEBUD}nano ${BWHITE}for ${NEONPINK}$1 ${GREEN}with ${YELLOW}PDTERM ${RED}$BANNER_NAME  ${BLUE}@@${NC}"
+echo -e "${BLUE}@@  ${BWHITE}Building ${JUNEBUD}nano ${BWHITE}for ${NEONPINK}$ARCH_ARG ${GREEN}with ${YELLOW}PDTERM ${RED}$BANNER_NAME  ${BLUE}@@${NC}"
 echo -e "${BLUE}################################################${PAD}${PAD2}"
 sleep 2
 
 # Global variables
 export CFLAGS="-O2 -fno-math-errno -flto -std=c17 -Wno-error -DPDC_WIDE -DPDC_FORCE_UTF8 -D_GNU_SOURCE"
 export LDFLAGS="-L${BUILDDIR}/nano/curses/$PDTERM -static -static-libgcc $BUILDDIR/nano/curses/$PDTERM/pdcurses.a"
-export LIBS="-l:pdcurses.a -lwinmm -lbcrypt -lshlwapi"
+export LIBS="-l:pdcurses.a -lwinmm -lbcrypt"
 export NCURSES_CFLAGS="-I${BUILDDIR}/nano/curses/ -DNCURSES_STATIC -DENABLE_MOUSE"
-export NCURSES_LIBS="-l:pdcurses.a -lwinmm -lbcrypt -lshlwapi"
+export NCURSES_LIBS="-l:pdcurses.a -lwinmm -lbcrypt"
 export CPPFLAGS="-D__USE_MINGW_ANSI_STDIO -DHAVE_NCURSESW_NCURSES_H -DNCURSES_STATIC"
 export WT_SESSION="1"
 export ConEmuANSI="ON"
@@ -101,8 +140,10 @@ export ConEmuANSI="ON"
 if [[ "$PDTERM" == "vt" ]]; then
     export PDC_VT="RGB UNDERLINE BLINK DIM STANDOUT"
 elif [[ "$PDTERM" == "wingui" ]]; then
-    export LIBS="${LIBS} -lole32 -lgdi32 -lcomdlg32"
-    export CFLAGS="${CFLAGS} -DSAVE_GUI"
+    export LIBS="${LIBS} -lole32 -lgdi32 -lcomdlg32 -lshlwapi"
+    if [ "$SAVE_GUI" -eq 1 ]; then
+        export CFLAGS="${CFLAGS} -DSAVE_GUI"
+    fi
 fi
 
 setup_toolchain
@@ -150,7 +191,7 @@ for TRIPLET in "${TARGETS[@]}"; do
     ../configure --host="$TRIPLET" --prefix="$PREFIX" \
         --enable-utf8 --enable-threads=windows --disable-nls \
         --sysconfdir="C:\\ProgramData" --enable-extras --enable-color \
-	--enable-nanorc --disable-dependency-tracking \
+        --enable-nanorc --disable-dependency-tracking \
         CFLAGS="${CFLAGS} -DPDC_NCMOUSE" \
         CXXFLAGS="${CFLAGS}" \
         LDFLAGS="${LDFLAGS}" \
@@ -174,7 +215,11 @@ EOF
     sed -i "/#define NEED_PRINTF_UNBOUNDED_PRECISION 1/d" config.h
 
     NANOVER=$(grep -m1 "PACKAGE_VERSION =" Makefile | cut -d'=' -f2 | xargs)
-    echo "#define REVISION \"GNU nano $NANOVER for $NAME\"" > src/revision.h
+    if [[ "$PDTERM_RELEASE" == "1" ]]; then
+        echo "#define REVISION \"GNU nano $NANOVER for $NAME on $PDT_PRETTY\"" > src/revision.h
+    else
+        echo "#define REVISION \"GNU nano $NANOVER for $NAME\"" > src/revision.h
+    fi
 
     make -j$(nproc) && make install
     "$TRIPLET-strip" -s "$PREFIX/bin/nano.exe"

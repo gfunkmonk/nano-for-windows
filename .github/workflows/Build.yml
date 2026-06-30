@@ -1,7 +1,7 @@
 name: Build
 on:
   schedule:
-    - cron: '51 8 * * MON'
+    - cron: '51 8 * * *'
   workflow_dispatch:
     inputs:
       release:
@@ -577,7 +577,7 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: "🛠️ Configure Nano Build"
+    - name: "🛠️ Configure Nano Build""
       run: |
         ##########################
         ##                      ##
@@ -596,10 +596,10 @@ jobs:
         export CXXFLAGS="${CFLAGS}"
         export LDFLAGS="-L${CURSES_DIR}/${PDTERM} -static -static-libgcc ${CURSES_DIR}/${PDTERM}/pdcurses.a"
         export NCURSESW_CFLAGS="-I${CURSES_DIR} -DNCURSES_STATIC  -DENABLE_MOUSE"
-        export NCURSESW_LIBS="-l:pdcurses.a -lwinmm -lbcrypt -lshlwapi"
-        export LIBS="-lbcrypt -lshlwapi"
+        export NCURSESW_LIBS="-l:pdcurses.a -lwinmm -lbcrypt"
+        export LIBS="-lbcrypt"
         if [ "${PDTERM}" = "wingui" ]; then
-          export LIBS="${LIBS} -lole32 -lgdi32 -lcomdlg32"
+          export LIBS="${LIBS} -lole32 -lgdi32 -lcomdlg32 -lshlwapi"
           export CFLAGS="${CFLAGS} -DSAVE_GUI"
         fi
         # Configure nano
@@ -624,7 +624,7 @@ jobs:
           # sed -i "/#define __GETOPT_PREFIX rpl_/d" config.h
           #BRANDING="GNU nano for Windows ${{ matrix.pretty }}, ${{ needs.checks.outputs.build }} $(TZ=UTC date +'%Y.%m.%d')"
           NANOVER=$(echo "${{ needs.checks.outputs.build }}" | grep -Eo "v[0-9]+\.[0-9]+")
-          BRANDING="GNU nano $NANOVER for ${{ matrix.name }}"
+          BRANDING="GNU nano $NANOVER for ${{ matrix.name }} on $PDT_PRETTY"
           echo "#define REVISION \"${BRANDING}\"" > src/revision.h
 
     - name: "🚀 Build for Windows ${{ matrix.pretty }}"
