@@ -33,7 +33,7 @@ env:
   CLICOLOR_FORCE: "1"
   WT_SESSION: "1"
   ConEmuANSI: "ON"
-  CFLAGS: "-O2 -fno-math-errno -flto -std=c17 -Wno-error -DPDC_WIDE -DPDC_FORCE_UTF8 -D_GNU_SOURCE"
+  CFLAGS: "-Oz -fno-math-errno -flto -std=c17 -Wno-error -DPDC_WIDE -DPDC_FORCE_UTF8 -D_GNU_SOURCE -ftree-vectorize -fomit-frame-pointer -D_FORTIFY_SOURCE=3"
   CPPFLAGS: "-D__USE_MINGW_ANSI_STDIO -DHAVE_NCURSESW_NCURSES_H -DNCURSES_STATIC"
 
 jobs:
