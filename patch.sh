@@ -46,7 +46,7 @@ sleep 2
 
 cd "${BUILDDIR}"
 
-sync_repo "https://github.com/GitMirroring/nano.git" "nano" "$CARIBBEAN"
+sync_repo "https://github.com/gfunkmonk/nano-upstream.git" "nano" "$CARIBBEAN"
 cd nano
 sync_repo "https://github.com/Bill-Gray/PDCursesMod.git" "curses" "$CARIBBEAN"
 sync_repo "https://github.com/coreutils/gnulib.git" "gnulib" "$CARIBBEAN"

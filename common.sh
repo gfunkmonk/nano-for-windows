@@ -61,7 +61,7 @@ sync_repo() {
     local color=$3
     if [[ ! -d "$dir" ]]; then
         echo -e "$color Cloning $dir...${NC}"
-        git clone "$url" --depth=1 "$dir"
+        git clone -b master "$url" --depth=1 "$dir"
     else
         echo -e "$color Syncing $dir...${NC}"
         pushd "$dir" > /dev/null

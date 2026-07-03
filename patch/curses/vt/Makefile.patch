@@ -10,7 +10,7 @@
  	CFLAGS  += -g -DPDCDEBUG
  else
 -	CFLAGS  += -O2
-+	CFLAGS  += -O2 -DVT -DPDC_VT=RGB -DPDC_RGB -fomit-frame-pointer
++	CFLAGS  += -O3 -DVT -DPDC_VT=RGB -DPDC_RGB
  endif
  
  ifeq ($(DOS),Y)

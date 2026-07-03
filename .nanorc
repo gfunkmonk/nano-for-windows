@@ -34,6 +34,19 @@ set numbercolor #d80
 set keycolor #93c
 set functioncolor bold,#94b
 
+## Peach dream
+#set titlecolor #202,peach
+#set promptcolor bold,cocoa,salmon
+#set statuscolor cocoa,peach
+#set errorcolor bold,scarlet,canary
+#set spotlightcolor bold,black,banana
+#set selectedcolor bold,maroon,carrot
+#set stripecolor ,pink
+#set scrollercolor peach
+#set numbercolor gold
+#set keycolor bold,lemon
+#set functioncolor coral
+
 ## If you want ^F, ^B, M-F and M-B to do what they did before version 8.0:
 # bind ^F forward main
 # bind ^B back main
