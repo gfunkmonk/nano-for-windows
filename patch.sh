@@ -55,6 +55,8 @@ sync_repo "https://github.com/coreutils/gnulib.git" "gnulib" "$CARIBBEAN"
 #./gnulib/gnulib-tool --import $modules
 #autopoint --force && aclocal -I m4 && autoconf && autoheader && automake --add-missing
 
+patch_glib "$PURPLE"
+
 patch_nano "$RED"
 
 patch_curses "common" "$TEAL"
