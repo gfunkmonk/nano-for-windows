@@ -239,7 +239,7 @@ jobs:
     - name: 🩹 Glib Patches
       run: |
         CWD=$(pwd)
-        cd glib
+        cd nano
         while IFS= read -r p; do
           [ -n "$p" ] || continue
           echo -e "\033[1;35mApplying $(basename "$p")...\033[0m"
