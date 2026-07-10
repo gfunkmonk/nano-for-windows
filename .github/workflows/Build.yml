@@ -246,7 +246,7 @@ jobs:
           patch -p1 < "$p" || exit 1
         done < <(find "${CWD}/patch/glib" -maxdepth 1 -type f -name '*.patch' | sort -V)
 
-    - name: "⏬ Download Sources"
+    - name: "🔩 Build Glib"
       run: |
         CWD=$(pwd)
         cd nano
