@@ -88,20 +88,6 @@ patch_nano() {
     fi
 }
 
-patch_glib() {
-    local color=$1
-
-    # Patch gnulib
-    if [ -d "$BASE_DIR/patch/glib" ]; then
-        echo -e "${BWHITE} Patches for glib"
-        while IFS= read -r p; do
-            [ -n "$p" ] || continue
-            echo -e "$color Applying $(basename "$p") to glib${NC}"
-            patch -p1 < "$p" || exit 1
-        done < <(find "$BASE_DIR/patch/glib" -maxdepth 1 -type f -name '*.patch' | sort -V)
-    fi
-}
-
 patch_curses() {
     local type=$1
     local color=$2

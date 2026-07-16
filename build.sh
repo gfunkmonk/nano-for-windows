@@ -154,8 +154,6 @@ cd nano
 sync_repo "https://github.com/Bill-Gray/PDCursesMod.git" "curses" "$NEONBLUE"
 sync_repo "https://github.com/coreutils/gnulib.git" "gnulib" "$ORANGE"
 
-patch_glib "$NEONBLUE"
-
 modules="canonicalize-lgpl futimens getdelim getline getopt-gnu glob isblank iswblank lstat mbchar mbrlen mkstemps nl_langinfo regex rewinddir sigaction snprintf-posix stdarg-h strcase strcasestr-simple strnlen sys_wait-h uniwidth vsnprintf-posix wchar-h wctype-h wcwidth"
 ./gnulib/gnulib-tool --import $modules
 autopoint --force && aclocal -I m4 && autoconf && autoheader && automake --add-missing

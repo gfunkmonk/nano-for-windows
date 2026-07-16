@@ -68,8 +68,6 @@ sync_repo "https://github.com/coreutils/gnulib.git" "gnulib" "$MAUVE"
 #./gnulib/gnulib-tool --import $modules
 #autopoint --force && aclocal -I m4 && autoconf && autoheader && automake --add-missing
 
-patch_glib "$BROWN"
-
 patch_nano "$BLUE"
 
 patch_curses "common" "$PURPLE"
