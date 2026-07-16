@@ -41,7 +41,7 @@ index f93acc0..36f8c3a 100644
  					thename[i] = '!';
  		} else
  			thename = copy_of(tail(realname));
-@@ -2334,6 +2337,8 @@ char *real_dir_from_tilde(const char *path)
+@@ -2324,6 +2327,8 @@ char *real_dir_from_tilde(const char *path)
  
  	free(tilded);
  

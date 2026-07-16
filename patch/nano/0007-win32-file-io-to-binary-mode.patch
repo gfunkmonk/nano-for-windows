@@ -37,7 +37,7 @@ diff -ruN a/src/files.c b/src/files.c
  
  	/* Create the backup file (or truncate the existing one). */
  	descriptor = open(backupname, creation_flags, S_IRUSR|S_IWUSR);
-@@ -1808,7 +1808,7 @@
+@@ -1804,7 +1804,7 @@
  #endif
  
  		/* Now open the file.  Use O_EXCL for an emergency file. */
@@ -64,7 +64,7 @@ diff -ruN a/src/nano.c b/src/nano.c
 diff -ruN a/src/text.c b/src/text.c
 --- a/src/text.c	2026-06-07 01:06:48.253684926 -0400
 +++ b/src/text.c	2026-06-07 01:07:16.653684739 -0400
-@@ -2361,7 +2361,7 @@
+@@ -2371,7 +2371,7 @@
  	/* Fork a process to run spell in. */
  	if ((pid_spell = fork()) == 0) {
  		/* Child: open the temporary file that holds the text to be checked. */

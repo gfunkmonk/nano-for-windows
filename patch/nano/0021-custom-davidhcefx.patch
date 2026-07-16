@@ -1,7 +1,7 @@
 diff -ruN a/doc/nano.1 nano/doc/nano.1
 --- a/doc/nano.1	2026-05-15 05:36:18.685049385 -0400
 +++ nano/doc/nano.1	2026-05-15 05:37:41.655048840 -0400
-@@ -372,6 +372,9 @@
+@@ -374,6 +374,9 @@
  .BR \-x ", " \-\-nohelp
  Don't show the two help lines at the bottom of the screen.
  .TP
@@ -51,7 +51,7 @@ diff -ruN a/src/definitions.h b/src/definitions.h
 diff -ruN a/src/global.c b/src/global.c
 --- a/src/global.c	2026-05-15 05:36:18.685049385 -0400
 +++ b/src/global.c	2026-05-15 05:43:11.965046671 -0400
-@@ -694,6 +694,8 @@
+@@ -695,6 +695,8 @@
  	const char *wordcount_gist =
  		N_("Count the number of lines, words, and characters");
  	const char *suspend_gist = N_("Suspend the editor (return to the shell)");
@@ -60,7 +60,7 @@ diff -ruN a/src/global.c b/src/global.c
  #endif
  	const char *refresh_gist = N_("Refresh (redraw) the current screen");
  #ifdef ENABLE_WORDCOMPLETION
-@@ -1050,6 +1052,10 @@
+@@ -1051,6 +1053,10 @@
  			N_("Delete"), WHENHELP(delete_gist), BLANKAFTER);
  
  #ifndef NANO_TINY
@@ -71,7 +71,7 @@ diff -ruN a/src/global.c b/src/global.c
  	add_to_funcs(chop_previous_word, MMAIN,
  			/* TRANSLATORS: The next two strings refer to deleting words. */
  			N_("Chop Left"), WHENHELP(chopwordleft_gist), TOGETHER);
-@@ -1469,6 +1475,8 @@
+@@ -1470,6 +1476,8 @@
  	add_to_sclist(MEXECUTE, "^Z", 0, do_suspend, 0);
  	add_to_sclist(MMAIN, "^Z", 0, suggest_ctrlT_ctrlZ, 0);
  	add_to_sclist(MMAIN, "M-D", 0, count_lines_words_and_characters, 0);
@@ -153,7 +153,7 @@ diff -ruN a/src/rcfile.c b/src/rcfile.c
 diff -ruN a/src/search.c b/src/search.c
 --- a/src/search.c	2026-05-15 05:36:18.685049385 -0400
 +++ b/src/search.c	2026-05-15 05:49:04.205044358 -0400
-@@ -250,7 +250,13 @@
+@@ -253,7 +253,13 @@
  		/* If we've reached the start or end of the buffer, wrap around;
  		 * but stop when spell-checking or replacing in a region. */
  		if (line == NULL) {
@@ -171,7 +171,7 @@ diff -ruN a/src/search.c b/src/search.c
 diff -ruN a/src/text.c b/src/text.c
 --- a/src/text.c	2026-05-15 05:36:18.685049385 -0400
 +++ b/src/text.c	2026-05-15 05:51:34.575043370 -0400
-@@ -3213,6 +3213,66 @@
+@@ -3219,6 +3219,66 @@
  						words, P_("word", "words", words),
  						chars, P_("character", "characters", chars));
  }

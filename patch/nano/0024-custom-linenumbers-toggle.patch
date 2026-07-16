@@ -14,7 +14,7 @@ diff -ruN a/doc/nanorc.5 b/doc/nanorc.5
 diff -ruN a/src/global.c b/src/global.c
 --- a/src/global.c	2026-06-07 05:48:42.203573852 -0400
 +++ b/src/global.c	2026-06-07 05:52:22.153572408 -0400
-@@ -696,6 +696,7 @@
+@@ -697,6 +697,7 @@
  	const char *suspend_gist = N_("Suspend the editor (return to the shell)");
  	const char *settabsize_gist = N_("Set new tabsize");
  	const char *setsyntax_gist = N_("Set new syntax highlighting");
@@ -22,7 +22,7 @@ diff -ruN a/src/global.c b/src/global.c
  #endif
  	const char *refresh_gist = N_("Refresh (redraw) the current screen");
  #ifdef ENABLE_WORDCOMPLETION
-@@ -1056,6 +1057,8 @@
+@@ -1057,6 +1058,8 @@
  			N_("Set Tabsize"), WHENHELP(settabsize_gist), TOGETHER);
  	add_to_funcs(do_set_syntax, MMAIN,
  			N_("Set Syntax"), WHENHELP(setsyntax_gist), TOGETHER);
@@ -31,7 +31,7 @@ diff -ruN a/src/global.c b/src/global.c
  	add_to_funcs(chop_previous_word, MMAIN,
  			/* TRANSLATORS: The next two strings refer to deleting words. */
  			N_("Chop Left"), WHENHELP(chopwordleft_gist), TOGETHER);
-@@ -1477,6 +1480,7 @@
+@@ -1478,6 +1481,7 @@
  	add_to_sclist(MMAIN, "M-D", 0, count_lines_words_and_characters, 0);
  	add_to_sclist(MMAIN, "M-4", 0, do_set_tabsize, 0);
  	add_to_sclist(MMAIN, "M-5", 0, do_set_syntax, 0);
@@ -65,7 +65,7 @@ diff -ruN a/src/rcfile.c b/src/rcfile.c
 diff -ruN a/src/text.c b/src/text.c
 --- a/src/text.c	2026-06-07 05:48:42.203573852 -0400
 +++ b/src/text.c	2026-06-07 05:54:28.903571575 -0400
-@@ -3273,6 +3273,21 @@
+@@ -3279,6 +3279,21 @@
           tabsize = new_tabsize;
           statusline(REMARK, _("Tabsize set to %d"), tabsize);
  }

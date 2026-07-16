@@ -36,7 +36,7 @@ index 55feb92..3a7e47c 100644
  }
  
  /* Ask ncurses for a keycode, or assign a default one. */
-@@ -2484,9 +2475,6 @@ int main(int argc, char **argv)
+@@ -2488,9 +2479,6 @@ int main(int argc, char **argv)
  	shiftaltup = get_keycode("kUP4", SHIFT_ALT_UP);
  	shiftaltdown = get_keycode("kDN4", SHIFT_ALT_DOWN);
  

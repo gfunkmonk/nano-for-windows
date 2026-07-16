@@ -61,7 +61,7 @@ index 72c25f4..b751566 100644
  
  	editwincols = COLS - margin - sidebar;
  
-@@ -2433,7 +2433,7 @@ int main(int argc, char **argv)
+@@ -2437,7 +2437,7 @@ int main(int argc, char **argv)
  
  #ifndef NANO_TINY
  	sidebar = (ISSET(INDICATOR) && LINES > 5 && COLS > 9) ? 1 : 0;

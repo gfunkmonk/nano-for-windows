@@ -60,7 +60,7 @@ diff --git a/src/global.c b/src/global.c
 index b93f035..8a6b985 100644
 --- a/src/global.c
 +++ b/src/global.c
-@@ -376,8 +376,28 @@ int keycode_from_string(const char *keystring)
+@@ -377,8 +377,28 @@ int keycode_from_string(const char *keystring)
  			return -1;
  	} else if (keystring[0] == 'M') {
  		if (keystring[1] == '-' && keystring[3] == '\0') {
@@ -91,7 +91,7 @@ index b93f035..8a6b985 100644
  			else
  				return keystring[2];
  		}
-@@ -1348,7 +1368,7 @@ void shortcut_init(void)
+@@ -1349,7 +1369,7 @@ void shortcut_init(void)
  	add_to_sclist(MMAIN, "M-;", 0, run_macro, 0);
  	add_to_sclist(MMAIN, "M-U", 0, do_undo, 0);
  	add_to_sclist(MMAIN, "M-E", 0, do_redo, 0);
