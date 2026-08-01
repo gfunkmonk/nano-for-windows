@@ -53,7 +53,7 @@ diff --git a/src/nano.c b/src/nano.c
 index 6fc3e20..c11048e 100644
 --- a/src/nano.c
 +++ b/src/nano.c
-@@ -1855,7 +1855,7 @@ int main(int argc, char **argv)
+@@ -1856,7 +1856,7 @@ int main(int argc, char **argv)
  #ifdef ENABLE_UTF8
  	/* If setting the locale is successful and it uses UTF-8, we will
  	 * need to use the multibyte functions for text processing. */

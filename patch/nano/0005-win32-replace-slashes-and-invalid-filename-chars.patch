@@ -54,7 +54,7 @@ diff --git a/src/history.c b/src/history.c
 index b1f245c..cf5451d 100644
 --- a/src/history.c
 +++ b/src/history.c
-@@ -413,6 +413,7 @@ void load_positions_register(void)
+@@ -414,6 +414,7 @@ void load_positions_register(void)
  
  	/* Read and parse each line, and store the extracted data. */
  	while (count++ < 200 && (length = getline(&phrase, &dummy, registry)) > 1) {

@@ -49,7 +49,7 @@ diff -ruN a/src/files.c b/src/files.c
 diff -ruN a/src/nano.c b/src/nano.c
 --- a/src/nano.c	2026-06-07 01:06:48.253684926 -0400
 +++ b/src/nano.c	2026-06-07 01:07:02.863684830 -0400
-@@ -1830,6 +1830,11 @@
+@@ -1831,6 +1831,11 @@
  		{NULL, 0, NULL, 0}
  	};
  

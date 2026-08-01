@@ -1,7 +1,7 @@
 diff -ruN a/doc/nanorc.5 b/doc/nanorc.5
 --- a/doc/nanorc.5	2026-06-07 05:48:42.203573852 -0400
 +++ b/doc/nanorc.5	2026-06-07 05:55:43.993571082 -0400
-@@ -751,6 +751,9 @@
+@@ -752,6 +752,9 @@
  .B settabsize
  Prompts for a new tabsize to be set.
  .TP
@@ -53,7 +53,7 @@ diff -ruN a/src/prototypes.h b/src/prototypes.h
 diff -ruN a/src/rcfile.c b/src/rcfile.c
 --- a/src/rcfile.c	2026-06-07 05:48:42.213573852 -0400
 +++ b/src/rcfile.c	2026-06-07 05:53:29.763571964 -0400
-@@ -312,6 +312,8 @@
+@@ -313,6 +313,8 @@
  		s->func = count_lines_words_and_characters;
  	else if (!strcmp(input, "setsyntax"))
  		s->func = do_set_syntax;

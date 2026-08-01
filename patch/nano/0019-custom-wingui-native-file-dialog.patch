@@ -100,7 +100,7 @@
 +#if defined(_WIN32) && defined(SAVE_GUI)
 +		wingui_insert_done:
 +#endif
- 		if (response == -1 || (response == -2 && !ISSET(MULTIBUFFER))) {
+ 		if (response == -1 || (response == -2 && !ISSET(NEW_BUFFER))) {
  			statusbar(_("Cancelled"));
  			break;
 @@ -2091,6 +2173,18 @@

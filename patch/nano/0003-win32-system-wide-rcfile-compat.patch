@@ -12,7 +12,7 @@ diff --git a/src/rcfile.c b/src/rcfile.c
 index 696599b..2531959 100644
 --- a/src/rcfile.c
 +++ b/src/rcfile.c
-@@ -1733,8 +1733,19 @@ void do_rcfiles(void)
+@@ -1734,8 +1734,19 @@ void do_rcfiles(void)
  			parse_one_nanorc();
  	} else {
  		const char *xdgconfdir;
