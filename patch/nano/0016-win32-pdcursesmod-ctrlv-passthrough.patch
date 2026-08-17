@@ -12,7 +12,7 @@ diff --git a/src/nano.c b/src/nano.c
 index b751566..a5bba98 100644
 --- a/src/nano.c
 +++ b/src/nano.c
-@@ -1839,6 +1839,13 @@ int main(int argc, char **argv)
+@@ -1840,6 +1840,13 @@ int main(int argc, char **argv)
  	 */
  	_set_fmode(_O_BINARY);
  

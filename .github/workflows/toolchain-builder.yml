@@ -10,14 +10,73 @@ on:
         required: false
         default: false
         type: boolean
+      skip_unchanged:
+        description: 'Skip build if LLVM-MinGW upstream unchanged'
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
 
 jobs:
+  ## PRECHECK ##############################################################################
+  precheck:
+    name: "✅ Pre-build check"
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      actions: read
+    outputs:
+      rev: ${{ steps.check.outputs.rev }}
+      skip: ${{ steps.check.outputs.skip }}
+    steps:
+    - name: "🔍 Check if LLVM-MinGW upstream changed"
+      id: check
+      shell: bash
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        INPUT_DEBUG: ${{ github.event.inputs.debug_enabled }}
+        INPUT_SKIP_UNCHANGED: ${{ github.event.inputs.skip_unchanged }}
+      run: |
+        # Use the upstream HEAD SHA as cache key so the cache is
+        # invalidated whenever llvm-mingw is updated, not every run.
+        REV=$(git ls-remote https://github.com/mstorsjo/llvm-mingw.git HEAD | cut -f1)
+        echo "rev=${REV}" >> "$GITHUB_OUTPUT"
+        echo "LLVM-MinGW HEAD: ${REV}"
+
+        # A ccache entry keyed on this rev only exists if we've already
+        # built it successfully before. If so, and nobody explicitly asked
+        # for a debug session or a forced rebuild, skip the (expensive)
+        # build job entirely instead of just cache-accelerating it.
+        if [[ "${INPUT_DEBUG}" == "true" ]]; then
+          echo "Debug session requested — build will not be skipped."
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+        elif [[ "${INPUT_SKIP_UNCHANGED}" == "false" ]]; then
+          echo "Force build requested — skipping upstream change check."
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+        else
+          EXISTING=$(gh api "repos/${{ github.repository }}/actions/caches?key=ccache-llvm-${REV}" --jq '.actions_caches | length' 2>/dev/null || echo 0)
+          if [ "${EXISTING}" -gt 0 ]; then
+            echo "LLVM-MinGW unchanged since last successful build. Skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+        fi
+
+  ## BUILD ##############################################################################
   build:
+    needs: precheck
+    if: needs.precheck.outputs.skip != 'true'
     name: Builds toolchain
     runs-on: ubuntu-latest
+    timeout-minutes: 225
     container:
       image: alpine:edge
       options: --user root
+    permissions:
+      actions: write
     env:
       # Use all available cores and setup ccache path
       MAKEFLAGS: "-j$(nproc)"
@@ -33,14 +92,10 @@ jobs:
         echo "PATH=$HOME/.local/bin:$PATH" >> $GITHUB_ENV
         git config --global --add safe.directory '*'
 
-    - name: "🕐 Get latest LLVM-MinGW commit hash for cache key"
+    - name: "🕐 Reuse LLVM-MinGW commit hash from precheck"
       id: llvm-rev
       shell: bash
-      run: |
-        # FIX: use the upstream HEAD SHA as cache key so the cache is
-        # invalidated whenever llvm-mingw is updated, not every run.
-        REV=$(git ls-remote https://github.com/mstorsjo/llvm-mingw.git HEAD | cut -f1)
-        echo "rev=${REV}" >> $GITHUB_OUTPUT
+      run: echo "rev=${{ needs.precheck.outputs.rev }}" >> "$GITHUB_OUTPUT"
 
     - name: "🔧 Prepare debug session"
       if: github.event.inputs.debug_enabled == 'true'
@@ -58,7 +113,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: "💾 Restore ccache"
-      uses: actions/cache@v5
+      uses: actions/cache@v6
       with:
         path: .ccache
         key: ccache-llvm-${{ steps.llvm-rev.outputs.rev }}
@@ -100,8 +155,9 @@ jobs:
     - name: "📦 Upload Toolchain Artifact"
       # Make the toolchain available as a downloadable artifact in addition
       # to the cache, so other workflows can fetch it via download-artifact.
-      uses: actions/upload-artifact@v7  # FIX: was missing entirely
+      uses: actions/upload-artifact@v7
       with:
         name: llvm-mingw
         path: llvm-mingw
         retention-days: 9
+

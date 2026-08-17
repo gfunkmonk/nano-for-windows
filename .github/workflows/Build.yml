@@ -1,7 +1,7 @@
 name: Build
 on:
   schedule:
-    - cron: '51 8 * * MON'
+    - cron: '51 8 * * *'
   workflow_dispatch:
     inputs:
       release:
@@ -22,6 +22,11 @@ on:
           - wincon
           - wingui
           - vt
+      skip_unchanged:
+        description: Skip build if upstream unchanged
+        required: false
+        default: true
+        type: boolean
       debugssh:
         description: SSH Server
         required: false
@@ -33,8 +38,15 @@ env:
   CLICOLOR_FORCE: "1"
   WT_SESSION: "1"
   ConEmuANSI: "ON"
-  CFLAGS: "-O2 -fno-math-errno -flto -std=c17 -Wno-error -DPDC_WIDE -DPDC_FORCE_UTF8 -D_GNU_SOURCE"
+  CFLAGS: "-Oz -fno-math-errno -flto -std=c17 -Wno-error -DPDC_WIDE -DPDC_FORCE_UTF8 -D_GNU_SOURCE -ftree-vectorize -fomit-frame-pointer -D_FORTIFY_SOURCE=3"
   CPPFLAGS: "-D__USE_MINGW_ANSI_STDIO -DHAVE_NCURSESW_NCURSES_H -DNCURSES_STATIC"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   ## PRECHECK ##############################################################################
@@ -53,27 +65,28 @@ jobs:
     - name: "✔️ Pre-build checks"
       id: checks
       shell: bash
+      env:
+        INPUT_PDTERM: ${{ github.event.inputs.pdterm }}
+        INPUT_SKIP_UNCHANGED: ${{ github.event.inputs.skip_unchanged }}
       run: |
         # Generate the pdterms matrix based on input
-        if [[ "${{ github.event.inputs.pdterm }}" == "all" ]] || [[ -z "${{ github.event.inputs.pdterm }}" ]]; then
+        if [[ "${INPUT_PDTERM}" == "all" ]] || [[ -z "${INPUT_PDTERM}" ]]; then
           echo 'pdterms=["wincon", "wingui", "vt"]' >> $GITHUB_OUTPUT
           echo "tag_suffix=" >> $GITHUB_OUTPUT
         else
-          echo 'pdterms=["${{ github.event.inputs.pdterm }}"]' >> $GITHUB_OUTPUT
-          echo "tag_suffix=-${{ github.event.inputs.pdterm }}" >> $GITHUB_OUTPUT
+          echo "pdterms=[\"${INPUT_PDTERM}\"]" >> $GITHUB_OUTPUT
+          echo "tag_suffix=-${INPUT_PDTERM}" >> $GITHUB_OUTPUT
         fi
-        git clone --depth=1 -n https://github.com/GitMirroring/nano.git
-        cd nano
-        LAST_NANO=$( TZ=UTC git show --quiet --date='format-local:%Y-%m-%dT%H:%M:%SZ' --format="%cd" )
-        CHANGES_NANO="$(git log -1 --pretty=%B)"
-        git clone --depth=1 -n https://github.com/Bill-Gray/PDCursesMod.git curses
-        cd curses
+        # Query latest upstream commit info via the API instead of cloning
+        # the full repos - same info, no repo transfer.
+        NANO_COMMIT_JSON=$(curl -fsSL -H "Accept: application/vnd.github+json" "https://api.github.com/repos/gfunkmonk/nano-upstream/commits/master")
+        LAST_NANO=$(echo "$NANO_COMMIT_JSON" | jq -r '.commit.committer.date')
+        CHANGES_NANO=$(echo "$NANO_COMMIT_JSON" | jq -r '.commit.message')
         echo "Nano last commit DATE:    $LAST_NANO"
-        LAST_CURSES=$( TZ=UTC git show --quiet --date='format-local:%Y-%m-%dT%H:%M:%SZ' --format="%cd" )
+        CURSES_COMMIT_JSON=$(curl -fsSL -H "Accept: application/vnd.github+json" "https://api.github.com/repos/Bill-Gray/PDCursesMod/commits/master")
+        LAST_CURSES=$(echo "$CURSES_COMMIT_JSON" | jq -r '.commit.committer.date')
+        CHANGES_CURSES=$(echo "$CURSES_COMMIT_JSON" | jq -r '.commit.message')
         echo "Curses last commit DATE:  $LAST_CURSES"
-        CHANGES_CURSES="$(git log -1 --pretty=%B)"
-        cd ../..
-        rm -rf nano
         LAST_RELEASE_JSON=$(curl -fsSL -H "Accept: application/vnd.github+json" "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/latest" 2>/dev/null || true)
         LAST_RELEASE=""
         LAST_BUILD=""
@@ -99,17 +112,18 @@ jobs:
           echo >> body.txt
           echo "$CHANGES_CURSES" >> body.txt
         fi
-        if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
-          echo "NEW WINDOWS PATCHES!!!!"
+        # When skip_unchanged=false (force build), bypass the upstream check entirely.
+        if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]] && \
+           [[ "${INPUT_SKIP_UNCHANGED}" == "false" ]]; then
+          echo "Force build requested — skipping upstream change check."
           [ -f body.txt ] && echo >> body.txt
-          echo "# WINDOWS PORTABILITY PATCHES" >> body.txt
-          echo >> body.txt
+          echo "# FORCED BUILD" >> body.txt
         fi
 
         if [ -f body.txt ]; then
-          NANO_VERSION=$(curl -s https://api.github.com/repos/GitMirroring/nano/tags | jq -r '.[0].name')
+          NANO_VERSION=$(curl -s https://api.github.com/repos/gfunkmonk/nano-upstream/tags | jq -r '.[0].name')
           echo "Nano main VERSION: $NANO_VERSION"
-          NANO_SUBVER=$(curl -s "https://api.github.com/repos/GitMirroring/nano/compare/${NANO_VERSION}...master" | jq -r '.ahead_by')
+          NANO_SUBVER=$(curl -s "https://api.github.com/repos/gfunkmonk/nano-upstream/compare/${NANO_VERSION}...master" | jq -r '.ahead_by')
           echo "Nano SUBVERSION: $NANO_SUBVER"
           [[ "$NANO_SUBVER" =~ ^[0-9]+$ ]] && [ "$NANO_SUBVER" -gt 0 ] && NANO_VERSION="${NANO_VERSION}-${NANO_SUBVER}"
           echo "Current nano version: ${NANO_VERSION}"
@@ -149,6 +163,9 @@ jobs:
     name: "🚧 nano4Win ${{ matrix.pretty }} (${{ matrix.pdterm == 'wincon' && 'Windows Console' || matrix.pdterm == 'wingui' && 'Windows GUI' || 'Virtual Terminal' }}) build"
     runs-on: ubuntu-latest
     container: alpine:edge
+    timeout-minutes: 45
+    permissions:
+      actions: read
     strategy:
       fail-fast: false
       matrix:
@@ -164,7 +181,7 @@ jobs:
         shell: bash
     steps:
     - name: 🛒 Checkout
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
          fetch-depth: 1
     - name: "⏬ Download OS tools"
@@ -197,7 +214,7 @@ jobs:
 
     - name: "💾 Restore toolchain from cache"
       id: toolchain-cache
-      uses: actions/cache@v5
+      uses: actions/cache@v6
       with:
         path: llvm-mingw
         key: llvm-mingw-run-${{ steps.toolchain-run.outputs.run_id }}
@@ -231,10 +248,15 @@ jobs:
 
     - name: "⏬ Download Sources"
       run: |
-        git clone https://github.com/GitMirroring/nano.git --depth=1
+        git clone https://github.com/gfunkmonk/nano-upstream.git -b master --depth=1 nano
         cd nano
         git clone https://github.com/Bill-Gray/PDCursesMod.git  curses
         git clone https://github.com/coreutils/gnulib.git --depth 1
+
+    - name: "🔩 Build Glib"
+      run: |
+        CWD=$(pwd)
+        cd nano
         autopoint --force
         glibmodules="
             canonicalize-lgpl
@@ -596,17 +618,17 @@ jobs:
         export CXXFLAGS="${CFLAGS}"
         export LDFLAGS="-L${CURSES_DIR}/${PDTERM} -static -static-libgcc ${CURSES_DIR}/${PDTERM}/pdcurses.a"
         export NCURSESW_CFLAGS="-I${CURSES_DIR} -DNCURSES_STATIC  -DENABLE_MOUSE"
-        export NCURSESW_LIBS="-l:pdcurses.a -lwinmm -lbcrypt -lshlwapi"
-        export LIBS="-lbcrypt -lshlwapi"
+        export NCURSESW_LIBS="-l:pdcurses.a -lwinmm -lbcrypt"
+        export LIBS="-lbcrypt"
         if [ "${PDTERM}" = "wingui" ]; then
-          export LIBS="${LIBS} -lole32 -lgdi32 -lcomdlg32"
+          export LIBS="${LIBS} -lole32 -lgdi32 -lcomdlg32 -lshlwapi"
           export CFLAGS="${CFLAGS} -DSAVE_GUI"
         fi
         # Configure nano
         mkdir -p nano/build
         cd nano/build
           ../configure --host="${TARGET}" --prefix="${OUTDIR}" \
-              --enable-{utf8,threads=windows,extras,color,nanorc} --disable-{nls,dependency-tracking} \
+              --enable-{utf8,threads=windows,extra,color,nanorc} --disable-{nls,dependency-tracking} \
               --sysconfdir="C:\\ProgramData" || cat config.log
           echo "
             #define HAVE_FREXP_IN_LIBC 1
@@ -624,7 +646,7 @@ jobs:
           # sed -i "/#define __GETOPT_PREFIX rpl_/d" config.h
           #BRANDING="GNU nano for Windows ${{ matrix.pretty }}, ${{ needs.checks.outputs.build }} $(TZ=UTC date +'%Y.%m.%d')"
           NANOVER=$(echo "${{ needs.checks.outputs.build }}" | grep -Eo "v[0-9]+\.[0-9]+")
-          BRANDING="GNU nano $NANOVER for ${{ matrix.name }}"
+          BRANDING="GNU nano $NANOVER for ${{ matrix.name }} on $PDT_PRETTY"
           echo "#define REVISION \"${BRANDING}\"" > src/revision.h
 
     - name: "🚀 Build for Windows ${{ matrix.pretty }}"
@@ -676,6 +698,9 @@ jobs:
     - build
     name: "📨 Publish ${{ github.event.inputs.release }}"
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
     defaults:
       run:
         shell: bash
@@ -706,18 +731,21 @@ jobs:
           *.txt
 
     - name: "🥂 Publish Release ${{ needs.checks.outputs.build }}"
-      uses: softprops/action-gh-release@v3
-      # WARNING: before using this action go to https://github.com/OWNER/REPO/settings/actions
-      # and in **Workflow Permissions** section give actions **Read and Write permissions**.
+      uses: Wandalen/wretry.action@v3
       if: github.event_name != 'workflow_dispatch' || github.event.inputs.release == 'Release'
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        prerelease: false
-        draft: false
-        make_latest: true
-        tag_name: ${{ needs.checks.outputs.build }}${{ needs.checks.outputs.tag_suffix }}
-        body_path: body.txt
-        files: |
-          ./*.zip
-          ./hashes.txt
+        action: softprops/action-gh-release@v3
+        attempt_limit: 3
+        attempt_delay: 15000
+        with: |
+          prerelease: false
+          draft: false
+          make_latest: true
+          tag_name: ${{ needs.checks.outputs.build }}${{ needs.checks.outputs.tag_suffix }}
+          body_path: body.txt
+          files: |
+            ./*.zip
+            ./hashes.txt
+

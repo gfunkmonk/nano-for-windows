@@ -58,7 +58,7 @@ BUILDDIR="${BASE_DIR}/build"
 mkdir -p "${BUILDDIR}"
 cd "${BUILDDIR}"
 
-sync_repo "https://github.com/GitMirroring/nano.git" "nano" "$MAUVE"
+sync_repo "https://github.com/gfunkmonk/nano-upstream.git" "nano" "$MAUVE"
 cd nano
 sync_repo "https://github.com/Bill-Gray/PDCursesMod.git" "curses" "$MAUVE"
 sync_repo "https://github.com/coreutils/gnulib.git" "gnulib" "$MAUVE"

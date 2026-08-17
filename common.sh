@@ -61,7 +61,7 @@ sync_repo() {
     local color=$3
     if [[ ! -d "$dir" ]]; then
         echo -e "$color Cloning $dir...${NC}"
-        git clone "$url" --depth=1 "$dir"
+        git clone -b master "$url" --depth=1 "$dir"
     else
         echo -e "$color Syncing $dir...${NC}"
         pushd "$dir" > /dev/null
@@ -79,7 +79,7 @@ patch_nano() {
 
     # Patch Nano
     if [ -d "$BASE_DIR/patch/nano" ]; then
-        echo -e "${BWHITE} Patches from nano"
+        echo -e "${BWHITE}\033[0;100m Patches from nano${NC}"
         while IFS= read -r p; do
             [ -n "$p" ] || continue
             echo -e "$color Applying $(basename "$p") to nano${NC}"
@@ -94,7 +94,7 @@ patch_curses() {
 
     # Patch Curses
     if [ -d "$BASE_DIR/patch/curses/$type" ]; then
-        echo -e "${BWHITE} Patches from $type"
+        echo -e "${BWHITE}\033[0;100m Patches from $type${NC}"
         while IFS= read -r p; do
             [ -n "$p" ] || continue
             echo -e "$color Applying $(basename "$p") to curses${NC}"

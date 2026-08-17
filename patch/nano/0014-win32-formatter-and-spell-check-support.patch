@@ -1,6 +1,6 @@
 --- a/src/text.c	2026-05-30 14:04:46.716678002 -0400
 +++ b/src/text.c	2026-05-30 14:06:45.576677222 -0400
-@@ -2228,6 +2228,174 @@
+@@ -2238,6 +2238,174 @@
  		statusline(REMARK, _("Finished checking spelling"));
  	else
  		statusline(REMARK, _("Buffer has been processed"));
@@ -175,7 +175,7 @@
  #endif
  }
  #endif /* ENABLE_SPELLER || ENABLE_FORMATTER */
-@@ -2571,9 +2741,11 @@
+@@ -2577,9 +2745,11 @@
  
  	if (alt_speller && *alt_speller)
  		treat(temp_name, alt_speller, TRUE);
