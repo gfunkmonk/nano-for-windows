@@ -51,7 +51,7 @@ diff -ruN a/src/definitions.h b/src/definitions.h
 diff -ruN a/src/global.c b/src/global.c
 --- a/src/global.c	2026-05-15 05:36:18.685049385 -0400
 +++ b/src/global.c	2026-05-15 05:43:11.965046671 -0400
-@@ -697,6 +697,8 @@
+@@ -701,6 +701,8 @@
  	const char *wordcount_gist =
  		N_("Count the number of lines, words, and characters");
  	const char *suspend_gist = N_("Suspend the editor (return to the shell)");
@@ -60,7 +60,7 @@ diff -ruN a/src/global.c b/src/global.c
  #endif
  	const char *refresh_gist = N_("Refresh (redraw) the current screen");
  #ifdef ENABLE_WORDCOMPLETION
-@@ -1057,6 +1059,10 @@
+@@ -1061,6 +1063,10 @@
  			N_("Delete"), WHENHELP(delete_gist), BLANKAFTER);
  
  #ifndef NANO_TINY
@@ -71,14 +71,14 @@ diff -ruN a/src/global.c b/src/global.c
  	add_to_funcs(chop_previous_word, MMAIN,
  			/* TRANSLATORS: The next two strings refer to deleting words. */
  			N_("Chop Left"), WHENHELP(chopwordleft_gist), TOGETHER);
-@@ -1476,6 +1482,8 @@
- 	add_to_sclist(MEXECUTE, "^Z", 0, do_suspend, 0);
- 	add_to_sclist(MMAIN, "^Z", 0, suggest_ctrlT_ctrlZ, 0);
- 	add_to_sclist(MMAIN, "M-D", 0, count_lines_words_and_characters, 0);
-+	add_to_sclist(MMAIN, "M-4", 0, do_set_tabsize, 0);
-+	add_to_sclist(MMAIN, "M-5", 0, do_set_syntax, 0);
+@@ -1480,6 +1486,8 @@
+ 	add_to_sclist(MEXECUTE, "^Z", 0, do_suspend);
+ 	add_to_sclist(MMAIN, "^Z", 0, suggest_ctrlT_ctrlZ);
+ 	add_to_sclist(MMAIN, "M-D", 0, count_lines_words_and_characters);
++	add_to_sclist(MMAIN, "M-4", 0, do_set_tabsize);
++	add_to_sclist(MMAIN, "M-5", 0, do_set_syntax);
  #else
- 	add_to_sclist(MMAIN, "M-H", 0, do_help, 0);
+ 	add_to_sclist(MMAIN, "M-H", 0, do_help);
  #endif
 diff -ruN a/src/nano.c b/src/nano.c
 --- a/src/nano.c	2026-05-15 05:36:18.685049385 -0400
