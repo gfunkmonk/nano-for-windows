@@ -71,6 +71,7 @@ jobs:
     if: needs.precheck.outputs.skip != 'true'
     name: Builds toolchain
     runs-on: ubuntu-latest
+    timeout-minutes: 285
     container:
       image: alpine:edge
       options: --user root
