@@ -1,6 +1,6 @@
 --- a/src/winio.c	2026-05-15 10:06:13.484943033 -0400
 +++ b/src/winio.c	2026-05-15 10:12:32.034940547 -0400
-@@ -1072,9 +1072,15 @@
+@@ -1067,9 +1067,15 @@
  #endif
  #ifdef ENABLE_UTF8
  			else if (0xC0 <= keycode && keycode <= 0xFF && using_utf8) {
@@ -16,7 +16,7 @@
  			}
  #endif
  			else if (keycode < 0x20 && !last_escape_was_alone)
-@@ -1794,6 +1800,9 @@
+@@ -1791,6 +1797,9 @@
  		/* The actual column where that first character starts. */
  	size_t stowaways = 20;
  		/* The number of zero-width characters for which to reserve space. */
@@ -26,7 +26,7 @@
  	size_t allocsize = (COLS + stowaways) * MAXCHARLEN + 1;
  		/* The amount of memory to reserve for the displayable string. */
  	char *converted = nmalloc(allocsize);
-@@ -1903,6 +1912,33 @@
+@@ -1900,6 +1909,33 @@
  
  		/* Convert a multibyte character to a single code. */
  		charlength = mbtowide(&wc, text);
@@ -60,7 +60,7 @@
  
  		/* Represent an invalid character with the Replacement Character. */
  		if (charlength < 0) {
-@@ -1915,7 +1951,57 @@
+@@ -1912,7 +1948,57 @@
  		}
  
  		/* Determine whether the character takes zero, one, or two columns. */

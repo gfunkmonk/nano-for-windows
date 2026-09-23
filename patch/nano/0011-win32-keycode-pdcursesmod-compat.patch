@@ -104,7 +104,7 @@ diff --git a/src/winio.c b/src/winio.c
 index 42225df..7818a7b 100644
 --- a/src/winio.c
 +++ b/src/winio.c
-@@ -266,10 +266,13 @@ void read_keys_from(WINDOW *frame)
+@@ -261,10 +261,13 @@ void read_keys_from(WINDOW *frame)
  	if (!key_buffer)
  		reserve_space_for(capacity);
  
@@ -121,7 +121,7 @@ index 42225df..7818a7b 100644
  
  #ifndef NANO_TINY
  	/* Cancel the highlighting of a search match, if there still is one. */
-@@ -306,9 +309,12 @@ void read_keys_from(WINDOW *frame)
+@@ -301,9 +304,12 @@ void read_keys_from(WINDOW *frame)
  			break;
  
  		/* When the keystroke buffer is full, extend it. */
@@ -135,7 +135,7 @@ index 42225df..7818a7b 100644
  		key_buffer[waiting_codes++] = input;
  	}
  
-@@ -1020,6 +1026,7 @@ int parse_kbinput(WINDOW *frame)
+@@ -1015,6 +1021,7 @@ int parse_kbinput(WINDOW *frame)
  
  	/* Get one code from the input stream. */
  	keycode = get_input(frame);
@@ -143,7 +143,7 @@ index 42225df..7818a7b 100644
  
  	/* For an Esc, remember whether the last two arrived by themselves.
  	 * Then increment the counter, rolling around on three escapes. */
-@@ -1036,8 +1043,15 @@ int parse_kbinput(WINDOW *frame)
+@@ -1031,8 +1038,15 @@ int parse_kbinput(WINDOW *frame)
  		return ERR;
  
  	if (escapes == 0) {
@@ -160,7 +160,7 @@ index 42225df..7818a7b 100644
  			return keycode;
  	} else if (escapes == 1) {
  		escapes = 0;
-@@ -1204,27 +1218,24 @@ int parse_kbinput(WINDOW *frame)
+@@ -1199,27 +1213,24 @@ int parse_kbinput(WINDOW *frame)
  		return FOREIGN_SEQUENCE;
  #endif
  
@@ -196,7 +196,7 @@ index 42225df..7818a7b 100644
  			switch (keycode) {
  				case KEY_UP:    return ALT_UP;
  				case KEY_DOWN:  return ALT_DOWN;
-@@ -1238,7 +1249,7 @@ int parse_kbinput(WINDOW *frame)
+@@ -1233,7 +1244,7 @@ int parse_kbinput(WINDOW *frame)
  		}
  #endif
  		/* Is Ctrl being held? */
@@ -205,7 +205,7 @@ index 42225df..7818a7b 100644
  			switch (keycode) {
  				case KEY_UP:    return CONTROL_UP;
  				case KEY_DOWN:  return CONTROL_DOWN;
-@@ -1248,10 +1259,12 @@ int parse_kbinput(WINDOW *frame)
+@@ -1243,10 +1254,12 @@ int parse_kbinput(WINDOW *frame)
  				case KEY_END:   return CONTROL_END;
  				case KEY_DC:    return CONTROL_DELETE;
  			}
@@ -219,12 +219,13 @@ index 42225df..7818a7b 100644
  			switch (keycode) {
  				case KEY_UP:    return KEY_PPAGE;
  				case KEY_DOWN:  return KEY_NPAGE;
-@@ -1261,7 +1274,6 @@ int parse_kbinput(WINDOW *frame)
+@@ -1256,8 +1269,7 @@ int parse_kbinput(WINDOW *frame)
  		}
  #endif
  	}
 -#endif /* __linux__ */
  
+ #if (NCURSES_VERSION_PATCH > 20230506) && (NCURSES_VERSION_PATCH < 20231028)
  	/* Spurious codes from VTE -- see https://sv.gnu.org/bugs/?64578. */
  	if (keycode == mousefocusin || keycode == mousefocusout)
 -- 

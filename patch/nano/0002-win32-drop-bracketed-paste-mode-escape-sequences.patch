@@ -24,7 +24,7 @@ diff -ruN nano/src/nano.c nano-p/src/nano.c
  }
  
  /* Ask ncurses for a keycode, or assign a default one. */
-@@ -2488,12 +2479,6 @@
+@@ -2488,14 +2479,8 @@
  	shiftaltright = get_keycode("kRIT4", SHIFT_ALT_RIGHT);
  	shiftaltup = get_keycode("kUP4", SHIFT_ALT_UP);
  	shiftaltdown = get_keycode("kDN4", SHIFT_ALT_DOWN);
@@ -34,13 +34,15 @@ diff -ruN nano/src/nano.c nano-p/src/nano.c
 -	define_key("\e[200~", START_OF_PASTE);
 -	define_key("\e[201~", END_OF_PASTE);
 -#endif
- #endif
+ #endif /* NANO_TINY */
+
+ #if (NCURSES_VERSION_PATCH > 20230506) && (NCURSES_VERSION_PATCH < 20231028)
  	mousefocusin = get_keycode("kxIN", FOCUS_IN);
  	mousefocusout = get_keycode("kxOUT", FOCUS_OUT);
 diff -ruN nano/src/winio.c nano-p/src/winio.c
 --- a/src/winio.c	2026-08-17 13:30:32.905447995 -0400
 +++ b/src/winio.c	2026-08-17 13:32:57.925448531 -0400
-@@ -1531,12 +1531,6 @@
+@@ -1528,12 +1528,6 @@
  	if (!ISSET(RAW_SEQUENCES))
  		keypad(frame, FALSE);
  
@@ -53,7 +55,7 @@ diff -ruN nano/src/winio.c nano-p/src/winio.c
  	linger_after_escape = TRUE;
  
  	/* Read in a single byte or two escapes. */
-@@ -1554,12 +1548,6 @@
+@@ -1551,12 +1545,6 @@
  
  	linger_after_escape = FALSE;
  

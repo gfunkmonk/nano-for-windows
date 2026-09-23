@@ -74,7 +74,7 @@ index 9a2ae42..7967390 100644
  
  #include <ctype.h>
  #ifdef __linux__
-@@ -1898,7 +1899,7 @@ char *display_string(const char *text, size_t column, size_t span,
+@@ -1895,7 +1896,7 @@ char *display_string(const char *text, size_t column, size_t span,
  		}
  
  		/* Determine whether the character takes zero, one, or two columns. */

@@ -131,7 +131,7 @@ diff --git a/src/winio.c b/src/winio.c
 index 7818a7b..762001b 100644
 --- a/src/winio.c
 +++ b/src/winio.c
-@@ -2302,7 +2302,7 @@ void statusline(message_type importance, const char *msg, ...)
+@@ -2299,7 +2299,7 @@ void statusline(message_type importance, const char *msg, ...)
  	static size_t start_col = 0;
  	char *compound, *message;
  	bool bracketed;
