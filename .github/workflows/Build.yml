@@ -194,24 +194,34 @@ jobs:
         # this seems to be needed when running in a container (because of UID mismatch??)
         git config --global --add safe.directory '*'
 
-    - name: "🔍 Get latest successful toolchain run ID"
+    - name: "🔍 Get latest toolchain run ID with artifacts"
       id: toolchain-run
       shell: bash
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        RUN_ID=$(gh run list \
-          --workflow toolchain-builder.yml \
-          --repo ${{ github.repository }} \
-          --limit 20 \
-          --json databaseId,status,conclusion \
-          --jq '[.[] | select(.status == "completed" and .conclusion == "success")][0].databaseId')
-        if [ -z "$RUN_ID" ] || [ "$RUN_ID" == "null" ]; then
-          echo "::error::Could not find a successful completed run for toolchain-builder.yml"
+        RUN_ID=""
+        for id in $(gh run list \
+            --workflow toolchain-builder.yml \
+            --repo "${{ github.repository }}" \
+            --status success \
+            --limit 50 \
+            --json databaseId \
+            --jq '.[].databaseId'); do
+          COUNT=$(gh api "repos/${{ github.repository }}/actions/runs/${id}/artifacts" \
+            --jq '[.artifacts[] | select(.expired == false)] | length')
+          if [ "${COUNT:-0}" -gt 0 ]; then
+            RUN_ID="$id"
+            break
+          fi
+        done
+        if [ -z "$RUN_ID" ]; then
+          echo "::error::No successful toolchain-builder.yml run in the last 50 has non-expired artifacts"
           exit 1
         fi
-        echo "run_id=${RUN_ID}" >> $GITHUB_OUTPUT
-
+        echo "Using run ${RUN_ID}"
+        echo "run_id=${RUN_ID}" >> "$GITHUB_OUTPUT"
+        
     - name: "💾 Restore toolchain from cache"
       id: toolchain-cache
       uses: actions/cache@v6
