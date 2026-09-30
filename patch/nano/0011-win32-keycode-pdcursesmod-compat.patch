@@ -219,15 +219,6 @@ index 42225df..7818a7b 100644
  			switch (keycode) {
  				case KEY_UP:    return KEY_PPAGE;
  				case KEY_DOWN:  return KEY_NPAGE;
-@@ -1256,8 +1269,7 @@ int parse_kbinput(WINDOW *frame)
- 		}
- #endif
- 	}
--#endif /* __linux__ */
- 
- #if (NCURSES_VERSION_PATCH > 20230506) && (NCURSES_VERSION_PATCH < 20231028)
- 	/* Spurious codes from VTE -- see https://sv.gnu.org/bugs/?64578. */
- 	if (keycode == mousefocusin || keycode == mousefocusout)
 -- 
 2.54.0.windows.1
 

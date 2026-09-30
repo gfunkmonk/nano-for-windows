@@ -1,0 +1,10 @@
+--- a/src/winio.c
++++ b/src/winio.c
+@@ -1269,7 +1269,6 @@
+ 		}
+ #endif
+ 	}
+-#endif /* __linux__ */
+ 
+ 	switch (keycode) {
+ 		case KEY_SLEFT:
