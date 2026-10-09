@@ -1,21 +1,5 @@
 --- a/src/winio.c	2026-05-15 10:06:13.484943033 -0400
 +++ b/src/winio.c	2026-05-15 10:12:32.034940547 -0400
-@@ -1067,9 +1067,15 @@
- #endif
- #ifdef ENABLE_UTF8
- 			else if (0xC0 <= keycode && keycode <= 0xFF && using_utf8) {
-+#ifdef _WIN32
-+                       /* On Windows, allow UTF-8 sequences for emoji and symbol support.
-+                        * Don't treat them as foreign sequences that get discarded. */
-+                       return keycode;
-+#else
- 				while (waiting_codes && 0x80 <= nextcodes[0] && nextcodes[0] <= 0xBF)
- 					get_input(NULL);
- 				return FOREIGN_SEQUENCE;
-+#endif
- 			}
- #endif
- 			else if (keycode < 0x20 && !last_escape_was_alone)
 @@ -1791,6 +1797,9 @@
  		/* The actual column where that first character starts. */
  	size_t stowaways = 20;

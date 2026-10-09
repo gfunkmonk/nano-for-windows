@@ -54,7 +54,7 @@ done
 source "$(dirname "$0")/common.sh"
 
 # --- Check Dependencies (exits on first missing tool) ---
-check_deps git curl tar patch sed perl make autoconf automake 7z jq
+check_deps git curl tar patch sed perl make autoconf automake 7z jq pkg-config autopoint python3 gettext
 
 #SAVE_GUI_FLAG=$([ "$SAVE_GUI" -eq 0 ] && echo "--no-save-gui" || echo "--save-gui")
 #PDTERM_RELEASE_FLAG=$([ "$PDTERM_RELEASE" -eq 0 ] && echo "--no-pdterm-release" || echo "--pdterm-release")
