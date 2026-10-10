@@ -31,7 +31,7 @@
  	LDFLAGS = -g
  else
 -	CFLAGS  += -O3
-+	CFLAGS  += -O2
++	CFLAGS  += -O3 -fomit-frame-pointer
  	LDFLAGS =
  endif
  

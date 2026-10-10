@@ -103,3 +103,4 @@
  
  		/* Watch the number of zero-widths, to keep ample memory reserved. */
  		if (charwidth == 0 && --stowaways == 0) {
+

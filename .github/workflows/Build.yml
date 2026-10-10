@@ -71,7 +71,7 @@ jobs:
       run: |
         # Generate the pdterms matrix based on input
         if [[ "${INPUT_PDTERM}" == "all" ]] || [[ -z "${INPUT_PDTERM}" ]]; then
-          echo 'pdterms=["wincon", "wingui", "vt"]' >> $GITHUB_OUTPUT
+          echo 'pdterms=["wincon", "wingui"]' >> $GITHUB_OUTPUT
           echo "tag_suffix=" >> $GITHUB_OUTPUT
         else
           echo "pdterms=[\"${INPUT_PDTERM}\"]" >> $GITHUB_OUTPUT

@@ -37,26 +37,12 @@
      if( force_reset_all_attribs || (!x && !lineno))
      {
          force_reset_all_attribs = FALSE;
-@@ -320,6 +327,27 @@
+@@ -320,6 +327,13 @@
         size_t bytes_out = 0;
  
  #ifdef PDC_WIDE
 +       if( ch == DUMMY_CHAR_NEXT_TO_FULLWIDTH)
 +       {
-+           srcp++;
-+           len--;
-+           x++;
-+           continue;
-+       }
-+       if( (ch >= 0x1F3FB && ch <= 0x1F3FF) || ch == 0xFE0F)
-+       {
-+           char zbuf[8];
-+           size_t zlen = PDC_wc_to_utf8( zbuf, (int32_t)ch);
-+           if( zlen > 0)
-+           {
-+               zbuf[zlen] = '\0';
-+               PDC_puts_to_stdout( zbuf);
-+           }
 +           srcp++;
 +           len--;
 +           x++;
