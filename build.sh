@@ -128,7 +128,7 @@ echo -e "${BLUE}################################################${PAD}${PAD2}"
 sleep 2
 
 # Global variables
-export CFLAGS="-Oz -fno-math-errno -flto -std=c17 -Wno-error -DPDC_WIDE -DPDC_FORCE_UTF8 -D_GNU_SOURCE -ftree-vectorize -fomit-frame-pointer -D_FORTIFY_SOURCE=3"
+export CFLAGS="-Oz -fno-math-errno -flto -std=c17 -Wno-error -DPDC_WIDE -DPDC_FORCE_UTF8 -D_GNU_SOURCE -ftree-vectorize -fomit-frame-pointer -D_FORTIFY_SOURCE=3 -Wno-int-conversion"
 export LDFLAGS="-L${BUILDDIR}/nano/curses/$PDTERM -static -static-libgcc $BUILDDIR/nano/curses/$PDTERM/pdcurses.a"
 export LIBS="-l:pdcurses.a -lwinmm -lbcrypt"
 export NCURSES_CFLAGS="-I${BUILDDIR}/nano/curses/ -DNCURSES_STATIC -DENABLE_MOUSE"

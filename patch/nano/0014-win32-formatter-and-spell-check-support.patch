@@ -1,6 +1,18 @@
---- a/src/text.c	2026-05-30 14:04:46.716678002 -0400
-+++ b/src/text.c	2026-05-30 14:06:45.576677222 -0400
-@@ -2238,6 +2238,174 @@
+From 53b972abc9c1744e45a16b94f53a726a18bf82f5 Mon Sep 17 00:00:00 2001
+From: Chawye Hsu <su+git@chawyehsu.com>
+Date: Thu, 16 Apr 2026 03:48:29 +0800
+Subject: [PATCH 14/18] win32: formatter and spell check support
+
+Signed-off-by: Chawye Hsu <su+git@chawyehsu.com>
+---
+ src/text.c | 173 ++++++++++++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 171 insertions(+), 2 deletions(-)
+
+diff --git a/src/text.c b/src/text.c
+index 3180c36..094a741 100644
+--- a/src/text.c
++++ b/src/text.c
+@@ -2228,6 +2228,172 @@ void treat(char *tempfile_name, char *theprogram, bool spelling)
  		statusline(REMARK, _("Finished checking spelling"));
  	else
  		statusline(REMARK, _("Buffer has been processed"));
@@ -51,8 +63,8 @@
 +
 +	/* Build command line string from arguments array. */
 +	for (int i = 0; arguments[i] != NULL; i++) {
-+		/* Account for the argument length, plus two quotes and a space. */
-+		cmd_len += strlen(arguments[i]) + 3;
++		/* Account for the argument length plus a space. */
++		cmd_len += strlen(arguments[i]) + 1;
 +	}
 +
 +	command_line = nmalloc(cmd_len + 1);
@@ -61,9 +73,7 @@
 +	for (int i = 0; arguments[i] != NULL; i++) {
 +		if (i > 0)
 +			strcat(command_line, " ");
-+		strcat(command_line, "\"");
 +		strcat(command_line, arguments[i]);
-+		strcat(command_line, "\"");
 +	}
 +
 +	/* Initialize structures for CreateProcess. */
@@ -175,17 +185,20 @@
  #endif
  }
  #endif /* ENABLE_SPELLER || ENABLE_FORMATTER */
-@@ -2577,9 +2745,11 @@
+@@ -2571,8 +2737,11 @@ void do_spell(void)
  
  	if (alt_speller && *alt_speller)
  		treat(temp_name, alt_speller, TRUE);
 -	else
 -		spell_check(temp_name);
--
-+       else {
-+               // spell_check(temp_name);
-+               statusline(ALERT, _("Internal spell checker is not supported in this build"));
-+               return;
-+       }
++	else {
++		// spell_check(temp_name);
++		statusline(ALERT, _("Internal spell checker is not supported in this build"));
++		return;
++	}
+ 
  	unlink(temp_name);
  	free(temp_name);
+-- 
+2.54.0.windows.1
+

@@ -1,20 +1,29 @@
---- a/src/files.c	2026-11-01 05:34:35.904321485 -0500
-+++ b/src/files.c	2026-11-01 05:38:07.742897595 -0500
-@@ -844,7 +844,7 @@
- #endif
+From bb9694557a22a4a935eaffb652afa9f7f47184fe Mon Sep 17 00:00:00 2001
+From: Chawye Hsu <su+git@chawyehsu.com>
+Date: Thu, 16 Apr 2026 00:41:51 +0800
+Subject: [PATCH 07/18] win32: file io to binary mode
+
+Signed-off-by: Chawye Hsu <su+git@chawyehsu.com>
+---
+ src/nano.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/src/nano.c b/src/nano.c
+index 59f2074..2288494 100644
+--- a/src/nano.c
++++ b/src/nano.c
+@@ -1830,6 +1830,11 @@ int main(int argc, char **argv)
+ 		{NULL, 0, NULL, 0}
+ 	};
  
- 	/* Try opening the file. */
--	fd = open(filename, O_RDONLY);
-+	fd = open(full_filename, O_RDONLY | _O_BINARY | _O_BINARY);
++	/* Default file i/o operation to binary mode as linux does.
++	 *  https://learn.microsoft.com/en-us/cpp/c-runtime-library/text-and-binary-mode-file-i-o
++	 */
++	_set_fmode(_O_BINARY);
++
+ #ifdef __linux__
+ 	struct vt_stat dummy;
  
- #ifndef NANO_TINY
- 	restore_handler_for_Ctrl_C();
-@@ -1786,7 +1786,7 @@
- #endif
- 
- 		/* Now open the file.  Use O_EXCL for an emergency file. */
--		descriptor = open(filename, O_WRONLY | O_CREAT | ((method == APPEND) ?
-+		descriptor = open(realname, O_WRONLY | _O_BINARY | _O_BINARY | O_CREAT | ((method == APPEND) ?
- 					O_APPEND : (normal ? O_TRUNC : O_EXCL)), permissions);
- 
- #ifndef NANO_TINY
+-- 
+2.54.0.windows.1
+

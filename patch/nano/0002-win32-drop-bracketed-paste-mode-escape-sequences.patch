@@ -1,7 +1,19 @@
-diff -ruN nano/src/nano.c nano-p/src/nano.c
---- a/src/nano.c	2026-08-17 13:24:28.645446649 -0400
-+++ b/src/nano.c	2026-08-17 13:32:15.845448376 -0400
-@@ -230,10 +230,6 @@
+From 68826d8274a1f1e950168b6bafd22c69908c2ea3 Mon Sep 17 00:00:00 2001
+From: Chawye Hsu <su+git@chawyehsu.com>
+Date: Thu, 16 Apr 2026 00:35:54 +0800
+Subject: [PATCH 03/19] win32: drop bracketed paste mode escape sequences
+
+Signed-off-by: Chawye Hsu <su+git@chawyehsu.com>
+---
+ src/nano.c  | 12 ------------
+ src/winio.c | 10 ----------
+ 2 files changed, 22 deletions(-)
+
+diff --git a/src/nano.c b/src/nano.c
+index 129ff78..59f2074 100644
+--- a/src/nano.c
++++ b/src/nano.c
+@@ -230,10 +230,6 @@ void restore_terminal(void)
  {
  	curs_set(1);
  	endwin();
@@ -12,7 +24,7 @@ diff -ruN nano/src/nano.c nano-p/src/nano.c
  	tcsetattr(STDIN_FILENO, TCSANOW, &original_state);
  }
  
-@@ -1230,11 +1226,6 @@
+@@ -1230,11 +1226,6 @@ void terminal_init(void)
  
  	disable_kb_interrupt();
  
@@ -24,25 +36,23 @@ diff -ruN nano/src/nano.c nano-p/src/nano.c
  }
  
  /* Ask ncurses for a keycode, or assign a default one. */
-@@ -2488,14 +2479,8 @@
- 	shiftaltright = get_keycode("kRIT4", SHIFT_ALT_RIGHT);
+@@ -2489,11 +2480,6 @@ int main(int argc, char **argv)
  	shiftaltup = get_keycode("kUP4", SHIFT_ALT_UP);
  	shiftaltdown = get_keycode("kDN4", SHIFT_ALT_DOWN);
--
+ 
 -#ifdef HAVE_DEFINE_KEY
 -	/* Tell ncurses to transform bracketed-paste sequences into keycodes. */
 -	define_key("\e[200~", START_OF_PASTE);
 -	define_key("\e[201~", END_OF_PASTE);
 -#endif
  #endif /* NANO_TINY */
-
+ 
  #if (NCURSES_VERSION_PATCH > 20230506) && (NCURSES_VERSION_PATCH < 20231028)
- 	mousefocusin = get_keycode("kxIN", FOCUS_IN);
- 	mousefocusout = get_keycode("kxOUT", FOCUS_OUT);
-diff -ruN nano/src/winio.c nano-p/src/winio.c
---- a/src/winio.c	2026-08-17 13:30:32.905447995 -0400
-+++ b/src/winio.c	2026-08-17 13:32:57.925448531 -0400
-@@ -1528,12 +1528,6 @@
+diff --git a/src/winio.c b/src/winio.c
+index f0bfffe..a4e91ce 100644
+--- a/src/winio.c
++++ b/src/winio.c
+@@ -1529,11 +1529,6 @@ char *get_verbatim_kbinput(WINDOW *frame, size_t *count)
  	if (!ISSET(RAW_SEQUENCES))
  		keypad(frame, FALSE);
  
@@ -51,11 +61,10 @@ diff -ruN nano/src/winio.c nano-p/src/winio.c
 -	printf("\x1B[?2004l");
 -	fflush(stdout);
 -#endif
--
+ 
  	linger_after_escape = TRUE;
  
- 	/* Read in a single byte or two escapes. */
-@@ -1551,12 +1545,6 @@
+@@ -1552,11 +1547,6 @@ char *get_verbatim_kbinput(WINDOW *frame, size_t *count)
  
  	linger_after_escape = FALSE;
  
@@ -64,7 +73,8 @@ diff -ruN nano/src/winio.c nano-p/src/winio.c
 -	printf("\x1B[?2004h");
 -	fflush(stdout);
 -#endif
--
+ 
  	/* Turn flow control characters back on if necessary and turn the
  	 * keypad back on if necessary now that we're done. */
- 	if (ISSET(PRESERVE))
+-- 
+2.54.0.windows.1
