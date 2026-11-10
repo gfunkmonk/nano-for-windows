@@ -1,16 +1,28 @@
-diff -ruN nano/src/files.c nanob/src/files.c
---- a/src/files.c	2026-05-15 06:16:54.265033390 -0400
-+++ b/src/files.c	2026-05-15 06:19:30.885032362 -0400
-@@ -1420,7 +1420,7 @@
+From e777f600a6ce5b482f92c0c9d6af612543ed2e1a Mon Sep 17 00:00:00 2001
+From: Chawye Hsu <su+git@chawyehsu.com>
+Date: Thu, 16 Apr 2026 00:41:05 +0800
+Subject: [PATCH 07/19] win32: homedir tempdir compat
+
+Signed-off-by: Chawye Hsu <su+git@chawyehsu.com>
+---
+ src/files.c |  4 ++--
+ src/utils.c | 12 ++++--------
+ 2 files changed, 6 insertions(+), 10 deletions(-)
+
+diff --git a/src/files.c b/src/files.c
+index 4f1b46c..cb4cde7 100644
+--- a/src/files.c
++++ b/src/files.c
+@@ -1420,7 +1420,7 @@ char *check_writable_directory(const char *path)
   * file stream opened in read-write mode.  On error, return NULL. */
  char *safe_tempfile(FILE **stream)
  {
 -	const char *env_dir = getenv("TMPDIR");
 +	const char *env_dir = getenv("TEMP");
- 	char *tempdir = NULL, *tempfile_name = NULL;
+ 	char *tempdir = NULL;
+ 	char *tempfile_name;
  	char *extension;
- 	int descriptor;
-@@ -1434,7 +1434,7 @@
+@@ -1435,7 +1435,7 @@ char *safe_tempfile(FILE **stream)
  		tempdir = check_writable_directory(P_tmpdir);
  
  	if (tempdir == NULL)
@@ -19,10 +31,11 @@ diff -ruN nano/src/files.c nanob/src/files.c
  
  	extension = strrchr(openfile->filename, '.');
  	normalize_slashes(extension);
-diff -ruN nano/src/utils.c nanob/src/utils.c
---- a/src/utils.c	2026-05-15 06:16:54.265033390 -0400
-+++ b/src/utils.c	2026-05-15 06:21:35.845031541 -0400
-@@ -35,15 +35,27 @@
+diff --git a/src/utils.c b/src/utils.c
+index 004ff95..51b72da 100644
+--- a/src/utils.c
++++ b/src/utils.c
+@@ -35,15 +35,11 @@ void get_homedir(void)
  	if (homedir == NULL) {
  		const char *homenv = getenv("HOME");
  
@@ -38,23 +51,9 @@ diff -ruN nano/src/utils.c nanob/src/utils.c
 -		}
 -#endif
 +		if (homenv == NULL || *homenv == '\0')
-+                       homenv = getenv("APPDATA");
-+
-+#ifdef _WIN32
-+     /* Last resort: use the directory containing nano.exe.
-+      * This makes portable (zip-extracted) installs self-contained
-+      * even when no user profile environment variables are set. */
-+     static char exedir[MAX_PATH];
-+     if ((homenv == NULL || *homenv == '\0') && exedir[0] == '\0') {
-+        DWORD len = GetModuleFileNameA(NULL, exedir, MAX_PATH);
-+        if (len > 0 && len < MAX_PATH) {
-+           char *slash = strrchr(exedir, '\\');
-+           if (slash) *slash = '\0';
-+        }
-+     }
-+     if (homenv == NULL || *homenv == '\0')
-+        homenv = exedir[0] ? exedir : NULL;
-+#endif
++			homenv = getenv("ALLUSERSPROFILE");
  
  		/* Only set `homedir` if a home directory could be determined. */
  		if (homenv && *homenv)
+-- 
+2.54.0.windows.1

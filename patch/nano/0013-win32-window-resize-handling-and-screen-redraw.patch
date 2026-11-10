@@ -12,7 +12,7 @@ diff --git a/src/winio.c b/src/winio.c
 index 762001b..6d90e57 100644
 --- a/src/winio.c
 +++ b/src/winio.c
-@@ -223,6 +223,13 @@ void read_keys_from(WINDOW *frame)
+@@ -218,6 +218,13 @@ void read_keys_from(WINDOW *frame)
  #else
  		if (!the_window_resized)
  			input = wgetch(frame);

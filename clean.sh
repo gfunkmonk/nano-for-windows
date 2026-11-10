@@ -37,7 +37,7 @@ echo -e "${BLUE}Preparing build dir: ${WHITE}${BUILDDIR}${NC}"
 mkdir -p "${BUILDDIR}"
 cd "${BUILDDIR}"
 
-sync_repo "https://github.com/GitMirroring/nano.git" "nano" "$COOLGRAY"
+sync_repo "https://github.com/gfunkmonk/nano-upstream.git" "nano" "$COOLGRAY"
 cd nano
 sync_repo "https://github.com/Bill-Gray/PDCursesMod.git" "curses" "$COOLGRAY"
 sync_repo "https://github.com/coreutils/gnulib.git" "gnulib" "$COOLGRAY"

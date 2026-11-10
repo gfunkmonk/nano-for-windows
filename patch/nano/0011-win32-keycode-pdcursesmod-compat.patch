@@ -1,7 +1,7 @@
-From efdc7fccac68495b76291b812972c4b8d6c2145a Mon Sep 17 00:00:00 2001
+From c1c36f04d6243d5f092918374bcb83bd29bf4243 Mon Sep 17 00:00:00 2001
 From: Chawye Hsu <su+git@chawyehsu.com>
 Date: Thu, 16 Apr 2026 00:43:48 +0800
-Subject: [PATCH 11/17] win32: keycode pdcursesmod compat
+Subject: [PATCH 12/19] win32: keycode pdcursesmod compat
 
 Signed-off-by: Chawye Hsu <su+git@chawyehsu.com>
 ---
@@ -11,7 +11,7 @@ Signed-off-by: Chawye Hsu <su+git@chawyehsu.com>
  3 files changed, 65 insertions(+), 39 deletions(-)
 
 diff --git a/src/definitions.h b/src/definitions.h
-index 7fa372b..18cd28e 100644
+index 0a7728e..7dde3a0 100644
 --- a/src/definitions.h
 +++ b/src/definitions.h
 @@ -177,13 +177,13 @@
@@ -57,7 +57,7 @@ index 7fa372b..18cd28e 100644
  #define SHIFT_ALT_RIGHT  0x432
  #define SHIFT_ALT_UP     0x433
 diff --git a/src/global.c b/src/global.c
-index b93f035..8a6b985 100644
+index 06294f4..00c333a 100644
 --- a/src/global.c
 +++ b/src/global.c
 @@ -376,8 +376,28 @@ int keycode_from_string(const char *keystring)
@@ -92,16 +92,16 @@ index b93f035..8a6b985 100644
  				return keystring[2];
  		}
 @@ -1348,7 +1368,7 @@ void shortcut_init(void)
- 	add_to_sclist(MMAIN, "M-;", 0, run_macro, 0);
- 	add_to_sclist(MMAIN, "M-U", 0, do_undo, 0);
- 	add_to_sclist(MMAIN, "M-E", 0, do_redo, 0);
--	add_to_sclist(MMAIN, "M-Bsp", CONTROL_SHIFT_DELETE, chop_previous_word, 0);
-+	add_to_sclist(MMAIN, "M-Bsp", ALT_BKSP, chop_previous_word, 0);
- 	add_to_sclist(MMAIN, "Sh-^Del", CONTROL_SHIFT_DELETE, chop_previous_word, 0);
- 	add_to_sclist(MMAIN, "^Del", CONTROL_DELETE, chop_next_word, 0);
- 	add_to_sclist(MMAIN, "M-Del", ALT_DELETE, zap_text, 0);
+ 	add_to_sclist(MMAIN, "M-;", 0, run_macro);
+ 	add_to_sclist(MMAIN, "M-U", 0, do_undo);
+ 	add_to_sclist(MMAIN, "M-E", 0, do_redo);
+-	add_to_sclist(MMAIN, "M-Bsp", CONTROL_SHIFT_DELETE, chop_previous_word);
++	add_to_sclist(MMAIN, "M-Bsp", ALT_BKSP, chop_previous_word);
+ 	add_to_sclist(MMAIN, "Sh-^Del", CONTROL_SHIFT_DELETE, chop_previous_word);
+ 	add_to_sclist(MMAIN, "^Del", CONTROL_DELETE, chop_next_word);
+ 	add_to_sclist(MMAIN, "M-Del", ALT_DELETE, zap_text);
 diff --git a/src/winio.c b/src/winio.c
-index 42225df..7818a7b 100644
+index fde1524..0812267 100644
 --- a/src/winio.c
 +++ b/src/winio.c
 @@ -266,10 +266,13 @@ void read_keys_from(WINDOW *frame)
@@ -219,14 +219,13 @@ index 42225df..7818a7b 100644
  			switch (keycode) {
  				case KEY_UP:    return KEY_PPAGE;
  				case KEY_DOWN:  return KEY_NPAGE;
-@@ -1261,7 +1274,6 @@ int parse_kbinput(WINDOW *frame)
+@@ -1259,7 +1259,6 @@ int parse_kbinput(WINDOW *frame)
  		}
  #endif
  	}
 -#endif /* __linux__ */
  
- 	/* Spurious codes from VTE -- see https://sv.gnu.org/bugs/?64578. */
- 	if (keycode == mousefocusin || keycode == mousefocusout)
+ 	switch (keycode) {
+ 		case KEY_SLEFT:
 -- 
 2.54.0.windows.1
-

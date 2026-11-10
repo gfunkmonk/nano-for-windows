@@ -33,7 +33,7 @@ Pretty much everything is supported except for Linux-specific functions, includi
 - Beta native support for Windows on ARM (WoA)
 
 <div align="center"><img width="947" alt="image" src="https://github.com/user-attachments/assets/96f12597-b9af-4d20-a0d5-88950218f71d"></div>
-
+<div align="center"><img with="925" alt="image" src="https://github.com/user-attachments/assets/94db9963-cd5d-4be9-9da4-5608d0fa49dc"></div>
 <br/>
 
 # Windows-specific extras

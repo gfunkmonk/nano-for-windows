@@ -1,0 +1,18 @@
+--- a/curses/vt/pdcdisp.c
++++ b/curses/vt/pdcdisp.c
+@@ -55,6 +55,14 @@ int PDC_get_terminal_fd( void)
+     if( stdout_fd == -1)
+       {
+ #if defined( _WIN32) || defined( __DMC__)
+-/*    if( FILE_TYPE_CHAR == GetFileType( GetStdHandle( STD_OUTPUT_HANDLE)))  */
+       stdout_fd = 2;
++      /* fd 2 (STD_ERROR_HANDLE) is used for all screen output on Windows.
++       * The CRT translates bytes through the console's output code page
++       * before the write reaches the terminal.  With the system ANSI code
++       * page (e.g. CP1252) active, every UTF-8 multi-byte sequence gets
++       * re-encoded as individual Latin-1 characters, producing mojibake
++       * (e.g. U+2660 ♠ → "â™ ").
++       * _O_BINARY disables that translation so the UTF-8 bytes emitted by
++       * PDC_wc_to_utf8 reach the terminal intact. */
++      _setmode(2, _O_BINARY);
+ #else
