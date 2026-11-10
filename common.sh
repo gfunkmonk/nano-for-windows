@@ -219,6 +219,8 @@ sed_patches() {
     echo -e "${color1}[${color2}curspriv.h${color1}] ${BWHITE}Make MAX_UNICODE suck less.${NC}"
     sed -i 's|MAX_UNICODE 0x110000|MAX_UNICODE 0x10ffff|g' curses/curspriv.h
 
+    echo -e "${color1}[${color2}prototypes.h${color1}] ${BWHITE}Fix mallocstrcpy${NC}"
+    sed -i '/^char \*copy_of(const char \*string);/a static inline char *mallocstrcpy(char *dest, const char *src) { char *copy = copy_of(src == NULL ? "" : src); free(dest); return copy; }' src/prototypes.h
 }
 
 # --- Toolchain Setup ---
